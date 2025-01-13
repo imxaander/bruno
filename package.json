@@ -1,0 +1,10 @@
+{
+    "name": "bruno",
+    "version": "0.0.1",
+    "description": "xjvs bruno game",
+    "type": "commonjs",
+    "dependencies": {
+        "express": "^4.21.2",
+        "socket.io": "^4.8.1"
+    }
+}

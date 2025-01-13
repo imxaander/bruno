@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>BRUNO!</title>
+</head>
+<body>
+	<h1 align="center"> BRUNO GAME HOMEPAGE </h1>
+	<br>
+	<p align="center">This is a game like goono but with fucking superpowers!</p>
+	<br>
+
+
+	<input type="text" id="player_name_input" placeholder="Player Name...">
+	<button align="center" style="margin-left: 25%; width: 50%;" onclick="play();">PLAY!</button>
+
+
+	<script>
+		const pn_input = document.getElementById("player_name_input");
+
+
+		function play(){
+			//this is where we initiate players
+			if(localStorage.getItem("player_id")){
+				//player exists.
+			}else{
+
+				//intiialize playerid localstorage if not exist,
+				const player_id = "PID"
+				const player_name = pn_input.value;
+
+				localStorage.setItem("player_id", randstr('PID'));
+				localStorage.setItem("player_name", player_name);
+			}
+
+
+			//now go to game lobbies
+
+			window.location.href = "/game_rooms";
+		}
+
+		function randstr(prefix)
+		{
+		    return Math.random().toString(36).replace('0.',prefix || '');
+		}
+	</script>
+</body>
+</html>
