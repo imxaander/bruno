@@ -105,7 +105,14 @@
 				function play(){
 					//this is where we initiate players
 					if(localStorage.getItem("player_info")){
-						//player exists.
+						//TODO simplify this man
+						let curPI = JSON.parse(localStorage.getItem('player_info'));
+						if(curPI.in_game){
+							
+							openTab('in-lobby');
+							fetch_players_in_lobby();
+							return;
+						}
 					}else{
 						//initialize playerid localstorage if not exist,
 						const player_info = {
@@ -236,10 +243,25 @@
 		socket.on('player_leave_return', (result) => {
 			if(!result.failed){
 				openTab('rooms');
+
+				//TODO simplify this man
+				let curPI = JSON.parse(localStorage.getItem('player_info'));
+				curPI.in_game = false;
+				curPI.in_game_id = null;
+				localStorage.setItem('player_info', JSON.stringify(curPI));
 				return;
 			}
 			alert('failed to leave room');
 		});
+
+		socket.on('client_disconnect', ()=>{
+			let pinfo = JSON.parse(localStorage.getItem('player_info'));
+
+			//on success
+			if(pinfo.in_game == true){
+				socket.emit('player_leave_game', {game_id: pinfo.in_game_id, player_id: pinfo.id})
+			}
+		})
 		/*====================
 			FUNCTIONS
 		======================*/

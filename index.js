@@ -11,6 +11,8 @@ const { join } = require('node:path');
 const { Server } = require('socket.io');
 
 const { BrunoSystem, Game, g_log} = require('./game.js');
+const { disconnect } = require('node:process');
+const { log } = require('node:console');
 
 var System = new BrunoSystem();
 
@@ -20,12 +22,12 @@ const server = createServer(app);
 const io = new Server(server);
 
 app.get('/', (req, res) => {
-  res.sendFile(join(__dirname, 'views/index.html'));
-});
-
-app.get('/game', (req, res) => {
   res.sendFile(join(__dirname, 'views/game.html'));
 });
+
+// app.get('/game', (req, res) => {
+//   res.sendFile(join(__dirname, 'views/game.html'));
+// });
 
 
 io.on('connection', (socket) => {
@@ -65,12 +67,19 @@ io.on('connection', (socket) => {
   })
 
   socket.on('player_leave_game', (kickInfo)=>{
+    console.log("pls leave");
+    
     if(!System.playerLeaveGame(kickInfo)){
       socket.emit('player_leave_return', {failed: true});
     };
     socket.emit('player_leave_return', {failed: false});
 
     io.sockets.emit('players_in_lobby_return', System.getPlayersInGame(kickInfo.game_id))
+  });
+
+  socket.on('disconnect', ()=>{
+    console.log("bruh")
+    socket.emit('client_disconnect');
   });
 });
 
