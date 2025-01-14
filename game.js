@@ -1,4 +1,6 @@
-
+function g_log(type, part,  message){
+	console.log(`[${part}] - ${type}: ${message}`);
+}
 class Cards{
 	id;
 	display_name;
@@ -45,11 +47,12 @@ class ShuffleCards extends SpecialCards{
 
 
 class Player{
-	id;
-	name;
-	hand = []; //array of cards
-	isTurn; //bool
-
+	constructor(id, name){
+		this.id = id;
+		this.name = name;
+		this.hand = []; //array of cards
+		this.isTurn = false; //bool
+	}
 }
 
 class Deck{
@@ -82,7 +85,6 @@ class Pile{
 
 //game contains all mechanics of the game, and changes player's shit
 class Game{
-
 	constructor(host, name){
 		this.host = host; //player_id
 		this.name = name; //name of game/room
@@ -93,28 +95,57 @@ class Game{
 		this.is_concluding = false;
 		this.players = []; //player array
 		this.currentPlayer; //index of the current player
+		this.actions = {
+			TurnNumberCard : (args) => {
+			// args
+			}, 
+		}
 	}
 	
 	start(){};
+
 	stop(){};
-	addPlayer(player_id){};
+
+	addPlayer(player_info){
+		g_log('INFO', 'GAME', `Adding a player to game ${this.id}`);
+		console.log(player_info);
+		if(this.players.push(new Player(player_info.id, player_info.name))){
+			return true;
+		}
+
+		return false;
+	};
+	deletePlayer(player_id){
+		g_log('INFO', 'GAME', `Deleting a player to game ${this.id}`);
+		if(this.players.splice(this.getPlayerIndexWithId(player_id), 1)){
+			return true;
+		};
+
+		return false;
+	}
 	//TODO: deleteplayer
+	getPlayerCount(){
+		return this.players.length;
+	}
 
 	nextTurn(player_index){};
+
 	loop(){
 
 	}
-
-	actions = {
-
-		TurnNumberCard : (args) => {
-			// args
-		}, 
-
+	getPlayers(game_id){
+		return this.players;
 	}
-
 	getPlayerIndexWithId(player_id){
-		return players.findIndex(player => player.id === player_id);
+		let c = 0;
+		this.players.forEach((player, index)=>{
+			// console.log(game)
+			if(player.id == player_id){
+				 c = index;
+			}
+		})
+
+		return c;
 	}
 }
 
@@ -132,10 +163,73 @@ class Game{
 */
 
 class BrunoSystem{
-	games = [];
+	constructor(){
+		this.games = [];	
+	}
 
-	newGame(host_player_id){
-		games.push(new Game())
+	newGame(host_player_id, name){
+		g_log('INFO', 'BRUNO_SYSTEM', 'Creating a game...')
+		this.games.push(new Game(host_player_id, name));
+		g_log('SUCCESS', 'BRUNO_SYSTEM', `Created a game/room (name: ${name}, host_id: ${host_player_id})`);
+	}
+
+	getRooms(){
+		if(this.games.length == 0){
+			return null;
+		}
+
+		let rooms = [];
+		this.games.forEach((game)=>{
+			rooms.push({
+				id : game.id,
+				name : game.name,
+				playerCount : game.getPlayerCount(),
+			})
+		})
+
+		return rooms;
+	}
+
+	getGameIndexWithId(game_id){
+		let c = 0;
+		this.games.forEach((game, index)=>{
+			// console.log(game)
+			if(game.id == game_id){
+				 c = index;
+			}
+		})
+
+		return c;
+		// return this.games.map(function(e) { return e.id; }).indexOf(game_id);
+	}
+
+	playerJoinGame(joinInfo){
+		let gameIndex = this.getGameIndexWithId(joinInfo.game_id);
+
+		console.log("Game Index: " + gameIndex + ", Game_id: " + joinInfo.game_id);
+		g_log('INFO', 'BRUNO_SYSTEM', `Player with PID: ${joinInfo.player_info.id} is joining game ${joinInfo.game_id}`);
+		if(!this.games[gameIndex].addPlayer(joinInfo.player_info)){
+			g_log('ERROR', 'GAME.addPlayer', `Cannot add player ${joinInfo.player_info.id}`);
+			return false;
+		};
+		g_log('SUCCESS', 'BRUNO_SYSTEM', `Player with PID: ${joinInfo.player_info.id} successfully joined game ${joinInfo.game_id}`);
+		return true;
+	}
+	
+	playerLeaveGame(kickInfo){
+		let gameIndex = this.getGameIndexWithId(kickInfo.game_id);
+		g_log('INFO', 'BRUNO_SYSTEM', `Player with PID: ${kickInfo.player_id} is going to be kicked in game ${kickInfo.game_id}`);
+		if(!this.games[gameIndex].deletePlayer(kickInfo.player_id)){
+			g_log('ERROR', 'GAME.addPlayer', `Cannot delete player ${kickInfo.player_id}`);
+			return false;
+		};
+
+		g_log('SUCCESS', 'BRUNO_SYSTEM', `Player with PID: ${kickInfo.player_id} successfully left/kicked in game ${kickInfo.game_id}`);
+		return true;
+	}
+	getPlayersInGame(game_id){
+		let gameIndex = this.getGameIndexWithId(game_id);
+		return this.games[gameIndex].getPlayers();
 	}
 
 	processEmits(){
@@ -158,5 +252,8 @@ module.exports = {
     Deck,
     Pile,
     Game,
-    BrunoSystem
+    BrunoSystem,
+
+    //functions
+    g_log
 }

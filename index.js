@@ -1,10 +1,16 @@
-
+class Response{
+  constructor(name, message, failedStatus){
+    this.name = name;
+    this.failed = failedStatus;
+    this.message = message;
+  };
+}
 const express = require('express');
 const { createServer } = require('node:http');
 const { join } = require('node:path');
 const { Server } = require('socket.io');
 
-const { BrunoSystem } = require('./game.js');
+const { BrunoSystem, Game, g_log} = require('./game.js');
 
 var System = new BrunoSystem();
 
@@ -17,17 +23,63 @@ app.get('/', (req, res) => {
   res.sendFile(join(__dirname, 'views/index.html'));
 });
 
-app.get('/bruno/rooms', (req, res) => {
-  res.sendFile(join(__dirname, 'views/game_rooms.html'));
+app.get('/game', (req, res) => {
+  res.sendFile(join(__dirname, 'views/game.html'));
 });
 
 
-//USE SINGLE PAGE NAVIGATION TECHNIQUES
 io.on('connection', (socket) => {
-  console.log('a user connected');
+  g_log('INFO', 'SERVER', 'A user connected to the socket server.');
+
+  socket.on('get_rooms', ()=>{
+    let rooms = System.getRooms();
+
+    socket.emit('room_list_return', rooms);
+  });
+
+  socket.on('create_new_game', (game_info)=>{
+    System.newGame(game_info.player_info.id, game_info.name);
+  });
+
+  socket.on('player_join_game', (join_info)=>{
+    if(!System.playerJoinGame(join_info)){
+      console.log("failed");
+      let err = {
+        failed: true,
+        message: "Sad little boy, theres an error bro...",
+      }
+      socket.emit('player_join_return', err);
+    };
+
+    let succ = {
+      failed : false,
+      game_id: join_info.game_id,
+      game_name: join_info.game_name
+    }
+    socket.emit('player_join_return', succ);
+    io.sockets.emit('players_in_lobby_return', System.getPlayersInGame(join_info.game_id))
+
+  });
+  socket.on('get_players_in_lobby', (game_id)=>{
+    socket.emit('players_in_lobby_return', System.getPlayersInGame(game_id))
+  })
+
+  socket.on('player_leave_game', (kickInfo)=>{
+    if(!System.playerLeaveGame(kickInfo)){
+      socket.emit('player_leave_return', {failed: true});
+    };
+    socket.emit('player_leave_return', {failed: false});
+
+    io.sockets.emit('players_in_lobby_return', System.getPlayersInGame(kickInfo.game_id))
+  });
 });
 
-
+g_log('INFO', 'SERVER', 'Starting server...');
 server.listen(3000, () => {
-  console.log('server running at http://localhost:3000');
+  g_log('SUCCESS', 'SERVER', ' Server is running at http://localhost:3000');
+
+  //TESTS 
+  System.newGame('owow', 'nahh bruh');
+
 });
+

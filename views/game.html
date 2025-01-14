@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<script src="/socket.io/socket.io.js"></script>
+	<style>
+		html, body{
+			margin: 0;
+			padding: 0;
+/*			font-family: monospace;*/
+		}
+
+		.game-tabcontents{
+			display: none;
+			height: 100%;
+			width: 100%;
+			overflow-y: scroll;
+		}
+
+		.game-tabcontents.active{
+			display: block !important;
+		}
+
+		.modal{
+			border-radius: 5px;
+			border: 1px black solid;
+			padding:10px;
+			display: none;
+			width: 70%;
+			height: auto;
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, -50%);
+			position: fixed;
+			background-color: white;
+		}
+
+		.modal.active{
+			display: block !important;
+		}
+
+		.ui-buttons{
+			position: fixed;
+			background-color: rgba(70, 70, 70, 0.9);
+			width: 70px;
+			height: 70px;
+			cursor: pointer;
+		}
+
+		#new-game-modal-toggle-button{
+			right : 20px;
+			bottom : 20px;
+		}
+
+		#refresh-rooms-button{
+			right : 20px;
+			bottom : 110px;
+		
+		}
+
+		#leave-game-button{
+			left: 20px;
+			bottom: 110px;
+		}
+	</style>
+	<title>BRUNO GAME</title>
+</head>
+<body>
+
+	<div id="game-tabs-wrapper">
+		<div id="about-tab" class="game-tabcontents active">
+			<h1 align="center"> BRUNO GAME </h1>
+			<br>
+			<p align="center">This is a game like goono but with fucking superpowers!</p>
+			<br>
+
+			<input type="text" id="player_name_input" placeholder="Player Name...">
+			<button align="center" style="margin-left: 25%; width: 50%;" onclick="play();">PLAY!</button>
+
+
+			<script>
+				//helper functions
+				function openTab(tabName){
+					const tabContents = document.querySelectorAll('.game-tabcontents');
+					tabContents.forEach((tabContent)=>{
+						if(tabContent.id == tabName + "-tab"){
+							tabContent.classList.add("active");
+						}else{
+							tabContent.classList.remove("active");
+						}
+					})
+
+					return;
+				}
+
+				function toggleModal(modalName){
+					const modal = document.getElementById(modalName + '-modal');
+					modal.classList.toggle('active');
+					return;
+				}
+				const pn_input = document.getElementById("player_name_input");
+
+
+				function play(){
+					//this is where we initiate players
+					if(localStorage.getItem("player_info")){
+						//player exists.
+					}else{
+						//initialize playerid localstorage if not exist,
+						const player_info = {
+							id: randstr('PID'),
+							name: pn_input.value,
+							in_game: false,
+							in_game_id: null,
+						}
+						localStorage.setItem("player_info", JSON.stringify(player_info));
+					}
+
+
+					//now go to game lobbies/rooms
+					openTab("rooms");
+
+					console.log("fetching room list..");
+					fetch_room_list();
+				}
+
+				function randstr(prefix)
+				{
+				    return Math.random().toString(36).replace('0.',prefix || '');
+				}
+			</script>
+		</div>
+		<div id="rooms-tab" class="game-tabcontents">
+			<h2 align="center">Game Rooms</h2>
+			<hr>
+
+			<ul id="rooms-list">
+				<li>
+					<div>
+						<h4 style="margin: 2px">Xander's Room</h4>
+						<span > <p style="margin: 2px; display: inline;">4 / 8</p> <button style="margin: 2px; margin-top: 0px; margin-right: 20px;display: inline; float: right;">JOIN</button> </span>
+					</div>
+					<hr>
+				</li>
+			</ul>
+
+			<div id="refresh-rooms-button" class="ui-buttons" onclick="fetch_room_list();">
+				<p>Refresh Rooms</p>
+			</div>
+
+			<div id="new-game-modal-toggle-button" class="ui-buttons" onclick="toggleModal('new-game');">
+				<p>New Game</p>
+			</div>
+
+
+			<div id="new-game-modal" class="modal">
+				<label for="new-game-name">Name: </label>
+				<input id="new-game-name-input" type="text" name="new-game-name">
+				<button onclick="createNewGame()">Create New Game!</button>
+			</div>
+		</div>
+		<div id="in-lobby-tab" class="game-tabcontents">
+			<h2 id="lobby-name-label" align="center">Xander's Room</h2>
+			<hr>
+			<ul id="lobby-player-list">
+				<li>
+					<div>
+						<span> <h4 style="margin: 2px; display:inline;">Xander</h4> <p style=" display:inline;">Host</p></span>
+					</div>
+					<hr>
+				</li>
+			</ul>
+
+			<div id="leave-game-button" class="ui-buttons" onclick="leaveGame();">
+				<p>Leave Game</p>
+			</div>
+		</div>
+		<div id="in-game-tab" class="game-tabcontents">
+			<p>in game</p>
+		</div>
+		<div id="in-aftergame-tab" class="game-tabcontents">
+			<p>after game</p>
+		</div>
+	</div>
+
+
+
+	<!-- client game script -->
+	<script type="text/javascript">
+		const socket = io();
+
+		var rooms = [];
+		var players_in_lobby = [];
+		/*====================
+			SOCKET EVENT LISTENERS
+		======================*/		
+		socket.on('room_list_return', (rooms_returned) => {
+			if(rooms_returned != null){
+				rooms = rooms_returned
+			}
+			update_room_list_ui();
+		});
+
+		socket.on('player_join_return', (result) => {
+			if(result.failed){
+				alert("error in joining the game...");
+			}else{
+				//successfully joined a game, update player info to in-game and it's current game id
+				console.log("joined the game " + result.game_id)
+				let curPI = JSON.parse(localStorage.getItem('player_info'));
+
+				curPI.in_game = true;
+				curPI.in_game_id = result.game_id;
+
+				localStorage.setItem('player_info', JSON.stringify(curPI));
+
+				openTab('in-lobby');
+				let lnlabel = document.getElementById("lobby-name-label");
+				lnlabel.innerHTML = "Room: " + result.game_name;
+
+				fetch_players_in_lobby();
+			}
+		})
+
+		socket.on('players_in_lobby_return', (players) => {
+			players_in_lobby = players;
+			update_players_in_lobby_ui();
+		});
+
+		socket.on('players_in_lobby_update', (player) => {
+			players_in_lobby = players;
+			update_players_in_lobby_ui();
+		});
+
+		socket.on('player_leave_return', (result) => {
+			if(!result.failed){
+				openTab('rooms');
+				return;
+			}
+			alert('failed to leave room');
+		});
+		/*====================
+			FUNCTIONS
+		======================*/
+
+
+		function fetch_room_list(){
+			socket.emit('get_rooms');
+		}
+
+
+		const rl = document.getElementById("rooms-list");
+			//UI
+		function update_room_list_ui(){
+			rl.innerHTML = '';
+			if(rooms.length == 0){
+				rl.innerHTML += `
+					<li> <h5>No game exists bruh... u can make one though!</h5> </li>
+				`
+				return;
+			}
+			rooms.forEach((room)=>{
+				rl.innerHTML += `
+					<li>
+						<div>
+							<h4 style="margin: 2px">${room.name} - id: ${room.id}</h4>
+							<span > <p style="margin: 2px; display: inline;">${room.playerCount} / 8</p> <button style="margin: 2px; margin-top: 0px; margin-right: 20px;display: inline; float: right;" onclick="joinGame('${room.id}', '${room.name}')">JOIN</button> </span>
+						</div>
+						<hr>
+					</li>
+				`  
+			})
+		}
+
+		const ngni = document.getElementById("new-game-name-input");
+		function createNewGame(){
+			let newGameName = ngni.value;
+			let newGameInfo = {
+				name: newGameName,
+				player_info: JSON.parse(localStorage.getItem('player_info')),
+			}
+			socket.emit('create_new_game', newGameInfo);
+			fetch_room_list();
+			toggleModal('new-game');
+		}
+
+		//this player joins a game..
+		function joinGame(game_id, game_name){
+			var joinInfo = {
+				game_id: game_id,
+				game_name: game_name,
+				player_info: JSON.parse(localStorage.getItem('player_info')),
+			}
+			socket.emit('player_join_game', joinInfo);
+		}
+
+		//this player joins a game..
+		function leaveGame(){
+			let pinfo = JSON.parse(localStorage.getItem('player_info'));
+			var kickInfo = {
+				game_id: pinfo.in_game_id,
+				player_id: pinfo.id,
+			}
+			socket.emit('player_leave_game', kickInfo);
+		}
+
+
+		//get players in game
+		function fetch_players_in_lobby(){
+
+			let current_game_id = JSON.parse(localStorage.getItem("player_info")).in_game_id;
+			console.log("players " + current_game_id)
+			socket.emit("get_players_in_lobby", current_game_id);
+		}
+
+		const lpl = document.getElementById('lobby-player-list');
+		function update_players_in_lobby_ui(){
+
+			lpl.innerHTML = '';
+			players_in_lobby.forEach((player)=>{
+				lpl.innerHTML += `
+					<li>
+						<div>
+							<span> <h4 style="margin: 2px; display:inline;">${player.name}</h4> <p style=" display:inline;">Host</p></span>
+						</div>
+						<hr>
+					</li>
+				`  
+			})
+		}
+	</script>
+	<!-- client game script initializations -->
+	<script>
+		//run functions here after all declarations
+	</script>
+</body>
+</html>
