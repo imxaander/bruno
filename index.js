@@ -16,7 +16,6 @@ const { log } = require('node:console');
 
 var System = new BrunoSystem();
 
-
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
@@ -40,28 +39,43 @@ io.on('connection', (socket) => {
   });
 
   socket.on('create_new_game', (game_info)=>{
+    console.log('game info');
+    console.log(game_info);
     System.newGame(game_info.player_info.id, game_info.name);
   });
 
   socket.on('player_join_game', (join_info)=>{
-    if(!System.playerJoinGame(join_info)){
+    let result = System.playerJoinGame(join_info);
+    if(result == false){
       console.log("failed");
       let err = {
         failed: true,
         message: "Sad little boy, theres an error bro...",
       }
       socket.emit('player_join_return', err);
+      return;
     };
 
     let succ = {
       failed : false,
       game_id: join_info.game_id,
-      game_name: join_info.game_name
+      game_name: join_info.game_name,
+      host_id: result
     }
+    console.log(succ);
     socket.emit('player_join_return', succ);
     io.sockets.emit('players_in_lobby_return', System.getPlayersInGame(join_info.game_id))
 
-  });
+  })
+
+  socket.on('player_game_start', (game_id)=>{
+    if(System.startGame(game_id)){
+      io.sockets.emit('player_game_start_return', {failed: false, game_id: game_id});
+      return;
+    }
+    socket.emit('player_game_start_return', {failed: true, game_id: game_id});
+  })
+
   socket.on('get_players_in_lobby', (game_id)=>{
     socket.emit('players_in_lobby_return', System.getPlayersInGame(game_id))
   })
@@ -71,6 +85,7 @@ io.on('connection', (socket) => {
     
     if(!System.playerLeaveGame(kickInfo)){
       socket.emit('player_leave_return', {failed: true});
+      return;
     };
     socket.emit('player_leave_return', {failed: false});
 
@@ -85,10 +100,7 @@ io.on('connection', (socket) => {
 
 g_log('INFO', 'SERVER', 'Starting server...');
 server.listen(3000, () => {
-  g_log('SUCCESS', 'SERVER', ' Server is running at http://localhost:3000');
-
+  g_log('SUCCESS', 'SERVER', 'Server is running at http://localhost:3000');
   //TESTS 
-  System.newGame('owow', 'nahh bruh');
-
 });
 

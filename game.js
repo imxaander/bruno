@@ -1,4 +1,4 @@
-function g_log(type, part,  message){
+function g_log(type, part, message){
 	console.log(`[${part}] - ${type}: ${message}`);
 }
 class Cards{
@@ -52,6 +52,7 @@ class Player{
 		this.name = name;
 		this.hand = []; //array of cards
 		this.isTurn = false; //bool
+		this.isHost = false;
 	}
 }
 
@@ -85,8 +86,10 @@ class Pile{
 
 //game contains all mechanics of the game, and changes player's shit
 class Game{
-	constructor(host, name){
-		this.host = host; //player_id
+	constructor(host_id, name){
+		console.log("constr: " + host_id + "-------");
+		
+		this.host_id = host_id; //player_id
 		this.name = name; //name of game/room
 		this.id = Math.floor((Math.random() * 999) + 1); 
 
@@ -100,16 +103,37 @@ class Game{
 			// args
 			}, 
 		}
+
+		this.cardsAmmount{
+			
+		}
 	}
 	
-	start(){};
+	start(){
+		//initiate pile
 
-	stop(){};
+		//give cards to players, 10
+		return true;
+	};
+
+	loop(){
+
+	}
+
+	stop(){
+
+	};
 
 	addPlayer(player_info){
 		g_log('INFO', 'GAME', `Adding a player to game ${this.id}`);
+		console.log("add players");
 		console.log(player_info);
-		if(this.players.push(new Player(player_info.id, player_info.name))){
+		let playerToAdd = new Player(player_info.id, player_info.name);
+
+		if(player_info.id == this.host_id){
+			playerToAdd.isHost = true;
+		}
+		if(this.players.push(playerToAdd)){
 			return true;
 		}
 
@@ -130,10 +154,7 @@ class Game{
 
 	nextTurn(player_index){};
 
-	loop(){
-
-	}
-	getPlayers(game_id){
+	getPlayers(){
 		return this.players;
 	}
 	getPlayerIndexWithId(player_id){
@@ -191,7 +212,7 @@ class BrunoSystem{
 	}
 
 	getGameIndexWithId(game_id){
-		let c = 0;
+		let c = -1;
 		this.games.forEach((game, index)=>{
 			// console.log(game)
 			if(game.id == game_id){
@@ -206,32 +227,52 @@ class BrunoSystem{
 	playerJoinGame(joinInfo){
 		let gameIndex = this.getGameIndexWithId(joinInfo.game_id);
 
-		console.log("Game Index: " + gameIndex + ", Game_id: " + joinInfo.game_id);
+		// console.log("Game Index: " + gameIndex + ", Game_id: " + joinInfo.game_id);
 		g_log('INFO', 'BRUNO_SYSTEM', `Player with PID: ${joinInfo.player_info.id} is joining game ${joinInfo.game_id}`);
+
 		if(!this.games[gameIndex].addPlayer(joinInfo.player_info)){
 			g_log('ERROR', 'GAME.addPlayer', `Cannot add player ${joinInfo.player_info.id}`);
 			return false;
 		};
+
 		g_log('SUCCESS', 'BRUNO_SYSTEM', `Player with PID: ${joinInfo.player_info.id} successfully joined game ${joinInfo.game_id}`);
-		return true;
+		return this.games[gameIndex].host_id;
 	}
 	
 	playerLeaveGame(kickInfo){
 		let gameIndex = this.getGameIndexWithId(kickInfo.game_id);
-		g_log('INFO', 'BRUNO_SYSTEM', `Player with PID: ${kickInfo.player_id} is going to be kicked in game ${kickInfo.game_id}`);
-		if(!this.games[gameIndex].deletePlayer(kickInfo.player_id)){
-			g_log('ERROR', 'GAME.addPlayer', `Cannot delete player ${kickInfo.player_id}`);
-			return false;
+		if(gameIndex == -1){
+			g_log('WARNING', 'BRUNO_SYSTEM', `Player with PID: ${kickInfo.player_id} looks like he's in a game that do not exist. updating his/her data.. GAMEID: ${kickInfo.game_id}`);
+		}else{
+			g_log('INFO', 'BRUNO_SYSTEM', `Player with PID: ${kickInfo.player_id} is going to be kicked in game ${kickInfo.game_id}`);
+			if(!this.games[gameIndex].deletePlayer(kickInfo.player_id)){
+				g_log('ERROR', 'GAME.addPlayer', `Cannot delete player ${kickInfo.player_id}`);
+				return false;
+			}
 		};
 
 		g_log('SUCCESS', 'BRUNO_SYSTEM', `Player with PID: ${kickInfo.player_id} successfully left/kicked in game ${kickInfo.game_id}`);
 		return true;
 	}
+
 	getPlayersInGame(game_id){
 		let gameIndex = this.getGameIndexWithId(game_id);
+		if(gameIndex == -1){
+			return false;
+		}
 		return this.games[gameIndex].getPlayers();
 	}
-
+	
+	startGame(game_id){
+		let gameIndex = this.getGameIndexWithId(game_id);
+		g_log('INFO', 'BRUNO_SYSTEM', `Trying to start game ${game_id}...`);
+		if(this.games[gameIndex].start()){
+			g_log('SUCCESS', 'BRUNO_SYSTEM', `Game ${game_id} has Started!`);
+			return true;
+		};
+		return false;
+	}
+	
 	processEmits(){
 
 	}

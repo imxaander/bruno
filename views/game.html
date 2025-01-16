@@ -63,6 +63,11 @@
 			left: 20px;
 			bottom: 110px;
 		}
+
+		#start-game-button{
+			left: 20px;
+			bottom: 20px;
+		}
 	</style>
 	<title>BRUNO GAME</title>
 </head>
@@ -124,7 +129,6 @@
 						localStorage.setItem("player_info", JSON.stringify(player_info));
 					}
 
-
 					//now go to game lobbies/rooms
 					openTab("rooms");
 
@@ -182,9 +186,13 @@
 			<div id="leave-game-button" class="ui-buttons" onclick="leaveGame();">
 				<p>Leave Game</p>
 			</div>
+
+			<div id="start-game-button" class="ui-buttons" onclick="startGame();">
+				<p>Start Game</p>
+			</div>
 		</div>
 		<div id="in-game-tab" class="game-tabcontents">
-			<p>in game</p>
+			<p>BRUNO GAME!</p>
 		</div>
 		<div id="in-aftergame-tab" class="game-tabcontents">
 			<p>after game</p>
@@ -199,6 +207,24 @@
 
 		var rooms = [];
 		var players_in_lobby = [];
+		//TODO GAME STATE CLASS
+		class ClientGameState{
+			constructor(players){
+				this.playerCount = players.length;
+				this.players = players;
+				this.client_player_is_turn = false;
+				this.client_player_index = null;
+				this.deck_state = null;
+				this.pile_state = null;
+			}
+			//add functions
+		}
+		
+		let game_state = null;
+		//TODO: GAME ELEMENT UPDATES FUNCTIONS AND ANIMATIONS for UI
+		//this is where we call class
+
+
 		/*====================
 			SOCKET EVENT LISTENERS
 		======================*/		
@@ -214,7 +240,7 @@
 				alert("error in joining the game...");
 			}else{
 				//successfully joined a game, update player info to in-game and it's current game id
-				console.log("joined the game " + result.game_id)
+				console.log("joined the game " + result.game_id + ", host id:" + result.host_id + "player id: " + getPlayerInfo().id);
 				let curPI = JSON.parse(localStorage.getItem('player_info'));
 
 				curPI.in_game = true;
@@ -223,15 +249,27 @@
 				localStorage.setItem('player_info', JSON.stringify(curPI));
 
 				openTab('in-lobby');
+
 				let lnlabel = document.getElementById("lobby-name-label");
 				lnlabel.innerHTML = "Room: " + result.game_name;
 
 				fetch_players_in_lobby();
+				
+				let sb = document.getElementById('start-game-button')
+
+				if(result.host_id != getPlayerInfo().id){
+					//this player joined the lobby is also the host, show all buttons
+					sb.style.display = "none";
+				}else{
+					sb.style.display = "block";
+				}
 			}
 		})
-
+		console.log("asd");
 		socket.on('players_in_lobby_return', (players) => {
-			players_in_lobby = players;
+			if(players){
+				players_in_lobby = players;
+			}
 			update_players_in_lobby_ui();
 		});
 
@@ -254,6 +292,13 @@
 			alert('failed to leave room');
 		});
 
+		socket.on('player_game_start_return', (result)=>{
+			if(!(result.failed || result.game_id != getPlayerInfo().in_game_id)){
+				fetch_game_state();
+				openTab('in-game');
+			}
+		})
+
 		socket.on('client_disconnect', ()=>{
 			let pinfo = JSON.parse(localStorage.getItem('player_info'));
 
@@ -265,12 +310,17 @@
 		/*====================
 			FUNCTIONS
 		======================*/
-
-
 		function fetch_room_list(){
 			socket.emit('get_rooms');
 		}
-
+		function getPlayerInfo(){
+			let curPI = JSON.parse(localStorage.getItem('player_info'));
+			return curPI;
+		}
+		//this function is only for hosts and inside the room
+		function startGame(){
+			socket.emit('player_game_start', getPlayerInfo().in_game_id);
+		}
 
 		const rl = document.getElementById("rooms-list");
 			//UI
@@ -300,8 +350,11 @@
 			let newGameName = ngni.value;
 			let newGameInfo = {
 				name: newGameName,
-				player_info: JSON.parse(localStorage.getItem('player_info')),
+				player_info: getPlayerInfo(),
 			}
+
+			console.log(newGameInfo);
+			
 			socket.emit('create_new_game', newGameInfo);
 			fetch_room_list();
 			toggleModal('new-game');
@@ -312,14 +365,14 @@
 			var joinInfo = {
 				game_id: game_id,
 				game_name: game_name,
-				player_info: JSON.parse(localStorage.getItem('player_info')),
+				player_info: getPlayerInfo(),
 			}
 			socket.emit('player_join_game', joinInfo);
 		}
 
 		//this player joins a game..
 		function leaveGame(){
-			let pinfo = JSON.parse(localStorage.getItem('player_info'));
+			let pinfo = getPlayerInfo();
 			var kickInfo = {
 				game_id: pinfo.in_game_id,
 				player_id: pinfo.id,
@@ -341,16 +394,23 @@
 
 			lpl.innerHTML = '';
 			players_in_lobby.forEach((player)=>{
+				console.log(player.isHost);
+				
 				lpl.innerHTML += `
 					<li>
 						<div>
-							<span> <h4 style="margin: 2px; display:inline;">${player.name}</h4> <p style=" display:inline;">Host</p></span>
+							<span> <h4 style="margin: 2px; display:inline;">${player.name}</h4> <p style=" display:inline;">${(player.isHost)? "Host" : "Member"}</p></span>
 						</div>
 						<hr>
 					</li>
 				`  
 			})
 		}
+
+
+		function fetch_game_state(){
+			console.log("fetch game state...");
+		};
 	</script>
 	<!-- client game script initializations -->
 	<script>
