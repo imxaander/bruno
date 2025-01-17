@@ -1,48 +1,124 @@
 function g_log(type, part, message){
 	console.log(`[${part}] - ${type}: ${message}`);
 }
+class ClientGameState{
+	constructor(){
+		this.playerCount;
+		this.players;
+		this.playerInTurn; //player id of the player current turn
+		this.pile_state;
+		this.hand_state;
+	}
+}
+
+//contains number of cards for each color
+class CardColor{
+	constructor(name){
+		this.name = name;
+	}
+}
+
+class CardColors{
+	static Red = new CardColor("Red");
+	static Blue = new CardColor("Blue");
+	static Green = new CardColor("Green");
+	static Yellow = new CardColor("Yellow");
+}
+
+const DeckCardColors = [CardColors.Red, CardColors.Blue, CardColors.Yellow, CardColors.Green];
+const DeckCardSet = {
+	NumberCards: [
+		1, 2, 2, 2, 2, 2, 2, 2, 2, 2
+	//	0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+	], //each color
+
+	ReverseCards: 2, //each color
+	SkipCards: 2, //each color
+	Draw2Cards: 2, //each color
+	Draw4Cards: 4, 
+	SwitchColor: 4,
+	Shuffle: 1,
+}
+
 class Cards{
-	id;
-	display_name;
-	image;
+	constructor(display_name, image){
+		this.id = this.generateCardId();
+		this.display_name = display_name;
+
+		//image asset filename;
+		this.image = image; 
+	}
+	
+	generateCardId(){
+		return Math.random().toString(36).replace('0.', "CARD" || '');
+	}
 }
 
 class NumberCards extends Cards{
-	number; //number
-	color; //color
+	constructor(number, color){
+		super(number, `${color.name}_${number}.png`.toLowerCase());
+
+		this.number = number;
+		this.color = color;
+	}
 }
 
 class ReverseCards extends Cards{
-	color; //color
+	constructor(display_name, color){
+		super(display_name, "testcard_r.png")
+		this.color = color; //color
+	}
 }
 
 class SkipCards extends Cards{
-	color; //color
+	constructor(display_name, color){
+		super(display_name, "testcard_s.png")
+		this.color = color; //color
+	}
 }
 
 class SpecialCards extends Cards{
-	effectDescription; //string
-	effect; //function
+	constructor(display_name, effectDescription){
+		super(display_name);
+		this.effectDescription = effectDescription;
+	}
 }
+
+//draw cards are cards that will change the following state of the game:
+// 	drawState = true
+// 	drawCurrentValue += additionalCards
 class DrawCards extends SpecialCards{
-	additionalCards; //number
+	constructor(display_name, effectDescription, additionalCards){
+		super(display_name, effectDescription, additionalCards)
+		this.additionalCards = additionalCards;
+	}
 }
 
 class Draw4Cards extends DrawCards{
-	additionalCards = 4;
+	constructor(display_name){
+		super(display_name, "test effect desc for draw 4", 4);
+		this.image = "+4.png";
+	}
 }
 
 class Draw2Cards extends DrawCards{
-	additionalCards = 4;
-	color;
+	constructor(display_name, color){
+		super(display_name, "test effect desc for draw 2", 4);
+		this.image = `${color.name}_+2.png`.toLowerCase();
+		this.color = color;
+	}
 }
 
 class SwitchColorCards extends SpecialCards{
-
+	constructor(display_name){
+		super(display_name, "test effect desc for switch color");
+	}
 }
 
 class ShuffleCards extends SpecialCards{
-	
+	constructor(display_name){
+		super(display_name, "test effect desc for shuffle");
+	}	
 }
 
 
@@ -50,7 +126,10 @@ class Player{
 	constructor(id, name){
 		this.id = id;
 		this.name = name;
+
 		this.hand = []; //array of cards
+		this.handAmount = 0;
+
 		this.isTurn = false; //bool
 		this.isHost = false;
 	}
@@ -62,15 +141,22 @@ class Deck{
     }
 
     Draw() {
-        if (this.items.length === 0) {
+        if (this.cards.length === 0) {
             return "Underflow";
         }
-        return this.items.pop();
+        return this.cards.pop();
     }
 
     Insert(card){
-    	cards.push(card);
+    	this.cards.push(card);
     }
+
+	Shuffle(){
+		for (let i = this.cards.length - 1; i >= 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
+		}
+	}
 }
 
 class Pile{
@@ -78,10 +164,16 @@ class Pile{
         this.cards = [];
     }
 
-    Insert(element) {
-        this.items.push(element);
+    Draw() {
+        if (this.cards.length === 0) {
+            return "Underflow";
+        }
+        return this.cards.pop();
     }
 
+    Insert(card){
+    	this.cards.push(card);
+    }
 }
 
 //game contains all mechanics of the game, and changes player's shit
@@ -89,30 +181,59 @@ class Game{
 	constructor(host_id, name){
 		console.log("constr: " + host_id + "-------");
 		
+		//basic information
 		this.host_id = host_id; //player_id
 		this.name = name; //name of game/room
 		this.id = Math.floor((Math.random() * 999) + 1); 
 
+		//flags (status, etc.)
 		this.is_prepping = true;
 		this.is_ongoing = false;
 		this.is_concluding = false;
+
+		//game state information
 		this.players = []; //player array
+		this.pile = null;
+		this.deck = null;
+
+		this.turnCounter = 0;
 		this.currentPlayer; //index of the current player
+		this.currentPlayerId; //id of the current player
+
 		this.actions = {
-			TurnNumberCard : (args) => {
+			TurnNumberCard : (player_id) => {
 			// args
 			}, 
-		}
-
-		this.cardsAmmount{
-			
 		}
 	}
 	
 	start(){
-		//initiate pile
+		if(this.is_ongoing){
+			return true;
+		}
+		//update flags, no use yet :p maybe for rooms :D
+		this.is_ongoing = true;
+		this.is_prepping = false;
 
-		//give cards to players, 10
+		//initiate deck
+		this.deck = new Deck();
+		//populates deck with current DeckCardSet format
+		this.populateDeck();
+		
+		this.deck.Shuffle()
+		console.log("total cards: " + this.deck.cards.length);
+	
+		//initiate pile
+		this.pile = new Pile();
+
+		//pick first turn player
+		this.currentPlayer = Math.floor(Math.random() * this.players.length);
+		this.currentPlayerId = this.players[this.currentPlayer].id;
+
+
+		//give cards to players, 8 caards
+		this.distributeCards(8);
+		//test to give a card to first player
 		return true;
 	};
 
@@ -122,6 +243,73 @@ class Game{
 
 	stop(){
 
+	};
+
+	initClientGameState(){
+		this.game_state = new ClientGameState();
+	}
+	
+	getPlayerGameState(player_id){
+		let cGS = new ClientGameState(); //client game state
+
+		cGS.playerCount = this.players.length;
+		cGS.players = this.players;
+		cGS.playerInTurn = this.currentPlayerId;//player id of the player current turn
+		cGS.pile_state = this.pile.cards;
+		cGS.hand_state = this.players[this.getPlayerIndexWithId(player_id)].hand;
+		cGS.deckCount = this.deck.cards.length;
+		return cGS;
+	}
+
+	populateDeck(){
+		//we can bring this event back to everyone with game_id, 
+		//	but the implementation of rooms will make this easy af...
+		//	for the sake of testing, try to implement it and just throw this event to everyone
+		//	just validate the game_id... i think this wont hurt haha..
+
+		//number cards
+		DeckCardColors.forEach(color => {
+			DeckCardSet.NumberCards.forEach((amount, number)=>{
+				for(let i = 0; i < amount; i++){
+					let card = new NumberCards(number, color);
+					this.deck.Insert(card);
+				}
+			})
+
+			for(let i = 0; i < DeckCardSet.SkipCards; i++){
+				let card = new SkipCards("Skip", color);
+				this.deck.Insert(card);
+			}
+			
+			for(let i = 0; i < DeckCardSet.ReverseCards; i++){
+				let card = new ReverseCards("Reverse", color);
+				this.deck.Insert(card);
+			}
+
+			for(let i = 0; i < DeckCardSet.Draw2Cards; i++){
+				let card = new Draw2Cards("Draw 2", color);
+				this.deck.Insert(card);
+			}
+		});
+	
+		for(let i = 0; i < DeckCardSet.Draw4Cards; i++){
+			let card = new Draw4Cards("Draw 4");
+			this.deck.Insert(card);
+		}
+
+		for(let i = 0; i < DeckCardSet.SwitchColor; i++){
+			let card = new SwitchColorCards("Shuffle");
+			this.deck.Insert(card);
+		}
+
+		for(let i = 0; i < DeckCardSet.Shuffle; i++){
+
+			let card = new ShuffleCards("Shuffle");
+			this.deck.Insert(card);
+		}
+
+		// g_log('DEBUG', 'GAME_DECK', `This is the deck for game_id:${this.id}`);
+		// console.log(this.deck);
 	};
 
 	addPlayer(player_info){
@@ -136,7 +324,6 @@ class Game{
 		if(this.players.push(playerToAdd)){
 			return true;
 		}
-
 		return false;
 	};
 	deletePlayer(player_id){
@@ -165,8 +352,31 @@ class Game{
 				 c = index;
 			}
 		})
-
 		return c;
+	}
+
+	distributeCards(amount){
+		//check if amount * players are not greater than the deck size
+		let totalCardNeed = amount * this.players.length;
+		if(totalCardNeed >= this.deck.cards.size){
+			g_log('ERROR', 'GAME', `Cannot distribute cards because of the amount of distribution. ${totalCardNeed}`)
+			return false;
+		}
+
+		for(let i = 0; i < amount; i++){
+			this.players.forEach((player)=>{
+				g_log('DEBUG', 'GAME_CARD_DIST', `Giving ${1} card to ${player.id}`)
+				this.drawCard(player.id, 1);
+			});
+		}
+	}
+
+	drawCard(player_id, amount){
+		let player_index = this.getPlayerIndexWithId(player_id);
+		
+		for(let i = 0; i < amount; i++){
+			this.players[player_index].hand.push(this.deck.Draw());
+		}
 	}
 }
 
@@ -273,6 +483,11 @@ class BrunoSystem{
 		return false;
 	}
 	
+	getClientGameState(game_id, player_id){
+		let gameIndex = this.getGameIndexWithId(game_id);
+		return this.games[gameIndex].getPlayerGameState(player_id);
+	}
+
 	processEmits(){
 
 	}

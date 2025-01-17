@@ -4,71 +4,7 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<script src="/socket.io/socket.io.js"></script>
-	<style>
-		html, body{
-			margin: 0;
-			padding: 0;
-/*			font-family: monospace;*/
-		}
-
-		.game-tabcontents{
-			display: none;
-			height: 100%;
-			width: 100%;
-			overflow-y: scroll;
-		}
-
-		.game-tabcontents.active{
-			display: block !important;
-		}
-
-		.modal{
-			border-radius: 5px;
-			border: 1px black solid;
-			padding:10px;
-			display: none;
-			width: 70%;
-			height: auto;
-			left: 50%;
-			top: 50%;
-			transform: translate(-50%, -50%);
-			position: fixed;
-			background-color: white;
-		}
-
-		.modal.active{
-			display: block !important;
-		}
-
-		.ui-buttons{
-			position: fixed;
-			background-color: rgba(70, 70, 70, 0.9);
-			width: 70px;
-			height: 70px;
-			cursor: pointer;
-		}
-
-		#new-game-modal-toggle-button{
-			right : 20px;
-			bottom : 20px;
-		}
-
-		#refresh-rooms-button{
-			right : 20px;
-			bottom : 110px;
-		
-		}
-
-		#leave-game-button{
-			left: 20px;
-			bottom: 110px;
-		}
-
-		#start-game-button{
-			left: 20px;
-			bottom: 20px;
-		}
-	</style>
+	<link rel="stylesheet" href="/assets/css/game.css">
 	<title>BRUNO GAME</title>
 </head>
 <body>
@@ -131,7 +67,6 @@
 
 					//now go to game lobbies/rooms
 					openTab("rooms");
-
 					console.log("fetching room list..");
 					fetch_room_list();
 				}
@@ -191,9 +126,57 @@
 				<p>Start Game</p>
 			</div>
 		</div>
+
 		<div id="in-game-tab" class="game-tabcontents">
-			<p>BRUNO GAME!</p>
+
+
+			<div id="other-hand-container-1" class="side-card-container">
+				<!-- <div id="${card.id}" class="hand-cards">
+					<img src="/assets/images/cards/+4.png" alt="">
+				</div>
+
+				<div id="${card.id}" class="hand-cards">
+					<img src="/assets/images/cards/+4.png" alt="">
+				</div> -->
+			</div>
+
+			<div id="other-hand-container-2" class="side-card-container">
+				<!-- <div id="${card.id}" class="hand-cards">
+					<img src="/assets/images/cards/+4.png" alt="">
+				</div>
+
+				<div id="${card.id}" class="hand-cards">
+					<img src="/assets/images/cards/+4.png" alt="">
+				</div> -->
+			</div>
+
+			<div id="other-hand-container-3" class="side-card-container">
+				<!-- <div id="${card.id}" class="hand-cards">
+					<img src="/assets/images/cards/+4.png" alt="">
+				</div>
+
+				<div id="${card.id}" class="hand-cards">
+					<img src="/assets/images/cards/+4.png" alt="">
+				</div> -->
+			</div>
+
+
+			<div id="other-hand-container-4" class="side-card-container">
+				<!-- <div id="${card.id}" class="hand-cards"> -->
+					<!-- <img src="/assets/images/cards/+4.png" alt="">
+				</div>
+
+				<div id="${card.id}" class="hand-cards">
+					<img src="/assets/images/cards/+4.png" alt="">
+				</div> -->
+			</div>
+
+			<!-- hand container -->			
+			<div id="hand-container" class="card-container">
+			</div>
 		</div>
+
+
 		<div id="in-aftergame-tab" class="game-tabcontents">
 			<p>after game</p>
 		</div>
@@ -203,8 +186,10 @@
 
 	<!-- client game script -->
 	<script type="text/javascript">
-		const socket = io();
+		// openTab("in-game")
 
+		const socket = io();
+		var game_state = null;
 		var rooms = [];
 		var players_in_lobby = [];
 		//TODO GAME STATE CLASS
@@ -220,7 +205,6 @@
 			//add functions
 		}
 		
-		let game_state = null;
 		//TODO: GAME ELEMENT UPDATES FUNCTIONS AND ANIMATIONS for UI
 		//this is where we call class
 
@@ -306,6 +290,12 @@
 			if(pinfo.in_game == true){
 				socket.emit('player_leave_game', {game_id: pinfo.in_game_id, player_id: pinfo.id})
 			}
+		})
+
+		socket.on('get_client_game_state_return', (cGS)=>{
+			game_state = cGS
+			update_game_ui();
+			console.log(game_state);
 		})
 		/*====================
 			FUNCTIONS
@@ -410,7 +400,52 @@
 
 		function fetch_game_state(){
 			console.log("fetch game state...");
+			socket.emit('get_client_game_state', ({
+				game_id: getPlayerInfo().in_game_id, 
+				player_id: getPlayerInfo().id
+			}))
 		};
+
+		function update_game_ui(){
+			//display hand cards
+			let handCardsEl = document.getElementById('hand-container');
+
+
+			handCardsEl.innerHTML = ''
+
+			game_state.hand_state.forEach((card)=>{
+				let cardEl = `
+					<div id="${card.id}" class="hand-cards">
+						<img src="/assets/images/cards/${card.image}" alt="">
+					</div>
+				`
+				handCardsEl.innerHTML += cardEl;
+			})
+
+			//display other card hands
+			let otherPlayerCounter = 1;
+			game_state.players.forEach((player)=>{
+				if(player.id != getPlayerInfo().id){
+					let otherHandContainerEl = document.getElementById("other-hand-container-" + otherPlayerCounter);
+					otherHandContainerEl.innerHTML = ''
+					player.hand.forEach((card)=>{
+						let cardEl = `
+							<div class="hand-cards">
+								<img src="/assets/images/cards/backface.png" alt="">
+							</div>
+						`
+						otherHandContainerEl.innerHTML += cardEl;
+					})
+					otherPlayerCounter++;
+				}else{
+					console.log("The player, dont add to others id:" + player.id);
+					
+				}
+			})
+
+			//pile_state
+			
+		}
 	</script>
 	<!-- client game script initializations -->
 	<script>
