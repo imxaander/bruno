@@ -218,7 +218,11 @@
 			}
 			update_room_list_ui();
 		});
-
+		socket.on('game_log', (log_info)=>{
+			if (log_info.game_id == getPlayerInfo().in_game_id) {
+				console.log(log_info.message);
+			}
+		})
 		socket.on('player_join_return', (result) => {
 			if(result.failed){
 				alert("error in joining the game...");
@@ -296,6 +300,12 @@
 			game_state = cGS
 			update_game_ui();
 			console.log(game_state);
+		})
+
+		socket.on('game_force_update_game_state', (game_id) => {
+			if(game_id == getPlayerInfo().in_game_id){
+				fetch_game_state();
+			}
 		})
 		/*====================
 			FUNCTIONS
@@ -406,6 +416,7 @@
 			}))
 		};
 
+		// no socket requests here
 		function update_game_ui(){
 			//display hand cards
 			let handCardsEl = document.getElementById('hand-container');
@@ -446,6 +457,12 @@
 			//pile_state
 			
 		}
+
+		function game_log(log){
+			console.log(log);
+		}
+
+		
 	</script>
 	<!-- client game script initializations -->
 	<script>

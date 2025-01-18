@@ -179,12 +179,16 @@ class Pile{
 //game contains all mechanics of the game, and changes player's shit
 class Game{
 	constructor(host_id, name){
-		console.log("constr: " + host_id + "-------");
+		// console.log("constr: " + host_id + "-------");
 		
 		//basic information
 		this.host_id = host_id; //player_id
 		this.name = name; //name of game/room
 		this.id = Math.floor((Math.random() * 999) + 1); 
+
+		//socket
+		this.socket = null;
+		this.io = null;
 
 		//flags (status, etc.)
 		this.is_prepping = true;
@@ -196,10 +200,17 @@ class Game{
 		this.pile = null;
 		this.deck = null;
 
+		//turn info
 		this.turnCounter = 0;
-		this.currentPlayer; //index of the current player
-		this.currentPlayerId; //id of the current player
 
+		//currentPlayerInfo
+		this.currentPlayerId; //id of the current player
+		this.currentPlayerIndex; //index of the current player
+		this.currentPlayerEndedTurn = false;
+		this.currentPlayerTimer = 0; //in seconds
+		this.currentPlayerTimeFunc = null;
+
+		this.turnDuration = 5;
 		this.actions = {
 			TurnNumberCard : (player_id) => {
 			// args
@@ -207,10 +218,13 @@ class Game{
 		}
 	}
 	
-	start(){
+	start(socket, io){
 		if(this.is_ongoing){
 			return true;
 		}
+		//socket
+		this.socket = socket
+		this.io = io
 		//update flags, no use yet :p maybe for rooms :D
 		this.is_ongoing = true;
 		this.is_prepping = false;
@@ -221,30 +235,90 @@ class Game{
 		this.populateDeck();
 		
 		this.deck.Shuffle()
-		console.log("total cards: " + this.deck.cards.length);
+		// console.log("total cards: " + this.deck.cards.length);
 	
 		//initiate pile
 		this.pile = new Pile();
 
 		//pick first turn player
-		this.currentPlayer = Math.floor(Math.random() * this.players.length);
-		this.currentPlayerId = this.players[this.currentPlayer].id;
-
+		this.currentPlayerIndex = Math.floor(Math.random() * this.players.length);
+		this.currentPlayerId = this.players[this.currentPlayerIndex].id;
 
 		//give cards to players, 8 caards
 		this.distributeCards(8);
+
+		// setInterval(()=>{
+		// 	this.loop()
+		// }, 1000);
+		//cycle to next Turn
+		//this prompts the current player for turn
+		//manages the cycle... not yet good
+		this.cycle();
+		
+		//
+		this.initSocketListen();
+
+		this.triggerTurn();
 		//test to give a card to first player
 		return true;
 	};
 
-	loop(){
+	initSocketListen(){
 
+	}
+
+	cycle(){
+	
 	}
 
 	stop(){
 
 	};
 
+	triggerTurn(){
+		this.countCurrentTurn();
+		// console.log("counting current turn...");
+	}
+
+	endTurn(){
+		this.stopCountCurrentTurn();
+		if(this.currentPlayerEndedTurn == false){
+			//draw card first if he didnt ended his turn
+			this.drawCard(this.currentPlayerId, 1);
+			this.socket.emit('game_log', {game_id: this.id, message: `end turn because didnt move id: ${this.currentPlayerId}`});
+		}
+		
+		if(this.currentPlayerIndex+1 == this.players.length){
+			this.currentPlayerIndex = 0;
+		}
+		this.currentPlayerIndex++;
+		this.currentPlayerId = this.players[this.currentPlayerIndex].id
+		this.currentPlayerTimer = 0;
+		this.currentPlayerEndedTurn = false;
+		
+		this.triggerTurn();
+		this.forceUpdateClientGameState()
+		return;
+	}
+	countCurrentTurn(){
+		this.currentPlayerTimer = 0;
+		this.currentPlayerTimeFunc = setInterval(() => {
+			g_log('INFO', 'GAME_TIMER', `CurT: ` + this.currentPlayerTimer);
+
+			if(this.currentPlayerTimer == 5){
+				g_log('INFO', 'GAME_TIMER', 'Abot na ng duration par, next player na');
+				this.endTurn();
+				return;
+			}
+			this.currentPlayerTimer++; // 1 second inc
+		}, 1000);; //1 second increments, checks are located in socket listenres
+	}
+	
+	stopCountCurrentTurn(){
+		clearInterval(this.currentPlayerTimeFunc);
+		this.currentPlayerTimer = 0;
+		return;
+	}
 	initClientGameState(){
 		this.game_state = new ClientGameState();
 	}
@@ -314,8 +388,8 @@ class Game{
 
 	addPlayer(player_info){
 		g_log('INFO', 'GAME', `Adding a player to game ${this.id}`);
-		console.log("add players");
-		console.log(player_info);
+		// console.log("add players");
+		// console.log(player_info);
 		let playerToAdd = new Player(player_info.id, player_info.name);
 
 		if(player_info.id == this.host_id){
@@ -338,8 +412,6 @@ class Game{
 	getPlayerCount(){
 		return this.players.length;
 	}
-
-	nextTurn(player_index){};
 
 	getPlayers(){
 		return this.players;
@@ -372,11 +444,16 @@ class Game{
 	}
 
 	drawCard(player_id, amount){
+		g_log('INFO', 'GAME_DRAW_CARD', `Player ${player_id} Draws ${amount} of card`);
 		let player_index = this.getPlayerIndexWithId(player_id);
 		
 		for(let i = 0; i < amount; i++){
 			this.players[player_index].hand.push(this.deck.Draw());
 		}
+	}
+
+	forceUpdateClientGameState(){
+      	this.io.sockets.emit('game_force_update_game_state', this.id);
 	}
 }
 
@@ -473,10 +550,10 @@ class BrunoSystem{
 		return this.games[gameIndex].getPlayers();
 	}
 	
-	startGame(game_id){
+	startGame(game_id, socket, io){
 		let gameIndex = this.getGameIndexWithId(game_id);
 		g_log('INFO', 'BRUNO_SYSTEM', `Trying to start game ${game_id}...`);
-		if(this.games[gameIndex].start()){
+		if(this.games[gameIndex].start(socket, io)){
 			g_log('SUCCESS', 'BRUNO_SYSTEM', `Game ${game_id} has Started!`);
 			return true;
 		};

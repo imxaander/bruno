@@ -78,7 +78,7 @@ io.on('connection', (socket) => {
 
   //game_start
   socket.on('player_game_start', (game_id)=>{
-    if(System.startGame(game_id)){
+    if(System.startGame(game_id, socket, io)){
       io.sockets.emit('player_game_start_return', {failed: false, game_id: game_id});
       return;
     }
@@ -108,14 +108,16 @@ io.on('connection', (socket) => {
     
     let cGS = System.getClientGameState(info.game_id, info.player_id);
 
-    g_log('DEBUG', 'BRUNO_SYSTEM', `This is the game state for ${info.player_id}`);
-    console.log(cGS);
+    //g_log('DEBUG', 'BRUNO_SYSTEM', `This is the game state for ${info.player_id}`);
+    // console.log(cGS);
     
     if(cGS != false){
       socket.emit('get_client_game_state_return', cGS);
       return;
     }
   })
+
+
   socket.on('game_input_action', (action)=>{
     //this is where an object is passed, that contains everything,
     let testaction = {
