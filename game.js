@@ -288,10 +288,12 @@ class Game{
 			this.socket.emit('game_log', {game_id: this.id, message: `end turn because didnt move id: ${this.currentPlayerId}`});
 		}
 		
-		if(this.currentPlayerIndex+1 == this.players.length){
+		if(this.currentPlayerIndex + 1 == this.players.length){
 			this.currentPlayerIndex = 0;
+		}else{
+			this.currentPlayerIndex++;
 		}
-		this.currentPlayerIndex++;
+		
 		this.currentPlayerId = this.players[this.currentPlayerIndex].id
 		this.currentPlayerTimer = 0;
 		this.currentPlayerEndedTurn = false;
