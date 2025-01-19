@@ -94,7 +94,7 @@ html, body{
 }
 
 #other-hand-container-1{
-    left: 20px;
+    left: 10px;
     bottom: 120px;
 }
 .side-card-container{
@@ -117,7 +117,7 @@ html, body{
 
 
 #other-hand-container-2{
-    left: 20px;
+    left: 10px;
     top: 180px;
 }
 
@@ -135,11 +135,12 @@ html, body{
 
 #other-hand-container-3{
     right: 10px;
-    bottom: 120px;
+    top: 180px;
+
 }
 
 #other-hand-container-3 .hand-cards{
-    height: 20px;
+    height: 10px;
     width: 70px;
 }
 
@@ -152,11 +153,12 @@ html, body{
 
 #other-hand-container-4{
     right: 10px;
-    top: 180px;
+    bottom: 120px;
+
 }
 
 #other-hand-container-4 .hand-cards{
-    height: 20px;
+    height: 10px;
     width: 70px;
 }
 
@@ -164,4 +166,116 @@ html, body{
     transform-origin: 0% 0%;
     transform: rotate(-90deg) translateX(-50px);
     ;
+}
+
+#game-logs-container{
+    height: 100px;
+    width: 200px;
+    border: 1px black solid;
+    left: 50%;
+    top: 50px;
+    transform: translate(-50%, 0);
+    position: fixed;
+    display: flex;
+    flex-direction: column-reverse;
+    overflow-y: scroll;
+    transition: 0.4s;
+}
+
+.game-logs{
+        
+}
+
+.game-logs p{
+    text-align: center;
+    margin: 0px;
+}
+
+#deck-container{
+    position: fixed;
+    left: 100px;
+    top: 300px;
+}
+.deck-cards{
+    width: 5px;
+    height: 70px;
+    transition-duration: 0.2s;
+}
+.deck-cards img{
+    width: 50px;
+    height: 70px;
+}
+
+#pile-container{
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border: 1px black solid;
+    height: 105px;
+    width: 75px;
+    position: fixed;
+}
+
+.pile-cards{
+    width: 5px;
+    height: 70px;
+    transition-duration: 0.2s;
+}
+
+.pile-cards{
+    width: 5px;
+    height: 70px;
+    transition-duration: 0.2s;
+}
+
+.pile-cards img{
+    height: 105px;
+    width: 75px;
+}
+
+.other-profiles{
+    width: 50px;
+    height: 60px;
+    border: 1px black solid;
+}
+
+.other-profiles p{
+    font-size: 15px;
+    text-align: center;
+}
+
+#other-profile-1{
+    left: 100px;
+    bottom: 170px;
+    position: fixed;
+}
+
+#other-profile-2{
+    left: 100px;
+    top: 200px;
+    position: fixed;
+}
+
+#other-profile-3{
+    right: 100px;
+    top: 200px;
+    position: fixed;
+}
+
+#other-profile-4{
+    right: 100px;
+    bottom: 170px;
+    position: fixed;
+}
+
+.other-profiles.active{
+    background-color: green;
+}
+
+#client-turn-label{
+    position: fixed;
+    left: 50%;
+    transform: translate(-50%, 0);
+    bottom: 130px;
+    font-weight: bold;
 }

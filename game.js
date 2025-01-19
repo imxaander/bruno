@@ -216,6 +216,14 @@ class Game{
 			// args
 			}, 
 		}
+
+		//add test players
+		//give test players
+		// this.addPlayer({id: "tplayerid1", name: "Player 1"})
+		// this.addPlayer({id: "tplayerid2", name: "Player 2"})
+		// this.addPlayer({id: "tplayerid3", name: "Player 3"})
+		// this.addPlayer({id: "tplayerid4", name: "Player 4"})
+		
 	}
 	
 	start(socket, io){
@@ -243,6 +251,7 @@ class Game{
 		//pick first turn player
 		this.currentPlayerIndex = Math.floor(Math.random() * this.players.length);
 		this.currentPlayerId = this.players[this.currentPlayerIndex].id;
+		this.currentPlayerName = this.players[this.currentPlayerIndex].name
 
 		//give cards to players, 8 caards
 		this.distributeCards(8);
@@ -259,6 +268,7 @@ class Game{
 		this.initSocketListen();
 
 		this.triggerTurn();
+
 		//test to give a card to first player
 		return true;
 	};
@@ -276,6 +286,9 @@ class Game{
 	};
 
 	triggerTurn(){
+		this.updateGameLog(`It's ${this.currentPlayerName}'s turn now...`);
+
+		this.updateGameTurn();
 		this.countCurrentTurn();
 		// console.log("counting current turn...");
 	}
@@ -284,8 +297,8 @@ class Game{
 		this.stopCountCurrentTurn();
 		if(this.currentPlayerEndedTurn == false){
 			//draw card first if he didnt ended his turn
+			this.updateGameLog(`${this.currentPlayerName} did not move.`)
 			this.drawCard(this.currentPlayerId, 1);
-			this.socket.emit('game_log', {game_id: this.id, message: `end turn because didnt move id: ${this.currentPlayerId}`});
 		}
 		
 		if(this.currentPlayerIndex + 1 == this.players.length){
@@ -293,8 +306,9 @@ class Game{
 		}else{
 			this.currentPlayerIndex++;
 		}
-		
+
 		this.currentPlayerId = this.players[this.currentPlayerIndex].id
+		this.currentPlayerName = this.players[this.currentPlayerIndex].name
 		this.currentPlayerTimer = 0;
 		this.currentPlayerEndedTurn = false;
 		
@@ -334,6 +348,8 @@ class Game{
 		cGS.pile_state = this.pile.cards;
 		cGS.hand_state = this.players[this.getPlayerIndexWithId(player_id)].hand;
 		cGS.deckCount = this.deck.cards.length;
+		cGS.player_index = this.getPlayerIndexWithId(player_id);
+		cGS.playerInTurnIndex = this.currentPlayerIndex;
 		return cGS;
 	}
 
@@ -387,7 +403,7 @@ class Game{
 		// g_log('DEBUG', 'GAME_DECK', `This is the deck for game_id:${this.id}`);
 		// console.log(this.deck);
 	};
-
+	//player_info: {id, name}
 	addPlayer(player_info){
 		g_log('INFO', 'GAME', `Adding a player to game ${this.id}`);
 		// console.log("add players");
@@ -449,6 +465,7 @@ class Game{
 		g_log('INFO', 'GAME_DRAW_CARD', `Player ${player_id} Draws ${amount} of card`);
 		let player_index = this.getPlayerIndexWithId(player_id);
 		
+		this.updateGameLog(`${this.currentPlayerName} draw ${amount} cards.`);
 		for(let i = 0; i < amount; i++){
 			this.players[player_index].hand.push(this.deck.Draw());
 		}
@@ -456,6 +473,14 @@ class Game{
 
 	forceUpdateClientGameState(){
       	this.io.sockets.emit('game_force_update_game_state', this.id);
+	}
+
+	//broadcasts log to all in the same game
+	updateGameLog(message){
+		this.socket.emit('game_log', {game_id: this.id, message: message});
+	}
+	updateGameTurn(){
+		this.socket.emit('game_turn', {game_id: this.id, player_index: this.currentPlayerIndex});
 	}
 }
 

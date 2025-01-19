@@ -128,8 +128,23 @@
 		</div>
 
 		<div id="in-game-tab" class="game-tabcontents">
+			<div id="game-logs-container">
 
+			</div>
 
+			<div id="deck-container">
+				<div class="deck-cards">
+					<img src="/assets/images/cards/backface.png" alt="">
+				</div>
+				
+			</div>
+
+			<div id="pile-container">
+				<div class="pile-cards">
+					<img src="/assets/images/cards/+4.png" alt="">
+				</div>
+				
+			</div>
 			<div id="other-hand-container-1" class="side-card-container">
 				<!-- <div id="${card.id}" class="hand-cards">
 					<img src="/assets/images/cards/+4.png" alt="">
@@ -160,7 +175,6 @@
 				</div> -->
 			</div>
 
-
 			<div id="other-hand-container-4" class="side-card-container">
 				<!-- <div id="${card.id}" class="hand-cards"> -->
 					<!-- <img src="/assets/images/cards/+4.png" alt="">
@@ -171,7 +185,27 @@
 				</div> -->
 			</div>
 
+			<!-- other-players profile -->
+			<div id="other-profile-1" class="other-profiles">
+				<!-- <img src="" alt=""> -->
+				<p id="name">No player :(</p>
+			</div>
+
+			<!-- other-players profile -->
+			<div id="other-profile-2" class="other-profiles">
+				<p id="name">No player :(</p>
+			</div>
+			
+			<div id="other-profile-3" class="other-profiles">
+				<p id="name">No player :(</p>
+			</div>
+
+			<div id="other-profile-4" class="other-profiles">
+				<p id="name">No player :(</p>
+			</div>
+
 			<!-- hand container -->			
+			<p id="client-turn-label">IT'S YOUR TURN!</p>
 			<div id="hand-container" class="card-container">
 			</div>
 		</div>
@@ -192,6 +226,8 @@
 		var game_state = null;
 		var rooms = [];
 		var players_in_lobby = [];
+		let lastPlayerIndex = 0;
+
 		//TODO GAME STATE CLASS
 		class ClientGameState{
 			constructor(players){
@@ -220,7 +256,7 @@
 		});
 		socket.on('game_log', (log_info)=>{
 			if (log_info.game_id == getPlayerInfo().in_game_id) {
-				console.log(log_info.message);
+				game_log(log_info);
 			}
 		})
 		socket.on('player_join_return', (result) => {
@@ -299,12 +335,19 @@
 		socket.on('get_client_game_state_return', (cGS)=>{
 			game_state = cGS
 			update_game_ui();
+			update_game_turn_ui(cGS.playerInTurnIndex);
 			console.log(game_state);
 		})
 
 		socket.on('game_force_update_game_state', (game_id) => {
 			if(game_id == getPlayerInfo().in_game_id){
 				fetch_game_state();
+			}
+		})
+
+		socket.on('game_turn', (info)=>{
+			if(info.game_id == getPlayerInfo().in_game_id){
+				update_game_turn_ui(info.player_index);
 			}
 		})
 		/*====================
@@ -434,6 +477,7 @@
 			})
 
 			//display other card hands
+		
 			let otherPlayerCounter = 1;
 			game_state.players.forEach((player)=>{
 				if(player.id != getPlayerInfo().id){
@@ -447,6 +491,10 @@
 						`
 						otherHandContainerEl.innerHTML += cardEl;
 					})
+
+					let otherProfileEl = document.getElementById(`other-profile-${otherPlayerCounter}`)
+					otherProfileEl.querySelector('p').innerHTML = player.name;
+
 					otherPlayerCounter++;
 				}else{
 					console.log("The player, dont add to others id:" + player.id);
@@ -457,11 +505,57 @@
 			//pile_state
 			
 		}
-
+		let gameLogContainerEl = document.getElementById("game-logs-container")
 		function game_log(log){
-			console.log(log);
+			let lel = `
+				<div class="game-logs">
+					<p>${log.message}</p>
+				</div>
+			`
+			gameLogContainerEl.insertAdjacentHTML("afterbegin", lel);
 		}
+		
+		
+		function update_game_turn_ui(player_index) {
+			if(player_index == game_state.player_index){
+				//update it's my turn
+				console.log("it's you now..");
+				document.getElementById(`other-profile-${lastPlayerIndex}`).classList.remove("active")
+				document.getElementById('client-turn-label').style.display = 'block'
+				lastPlayerIndex = 0;
+			}else{
+				document.getElementById('client-turn-label').style.display = 'none'
 
+				let opIndex = player_index; //actual index of the other player in terms of ui
+				if(player_index > game_state.player_index){
+					//for us to know correct "other-player-N"
+					// are we going to update
+					
+					//decrease because its going to be placed without leaving other indexes
+					//this will be solved by just naming theother player places with 
+					//dynamic indexes
+					opIndex--;
+				}
+				//add one to add offset, the ids of elements has offsets
+				opIndex++;
+
+				//remove last other player's index
+				console.log("last player index: " + lastPlayerIndex);
+				console.log("new  player index: " + opIndex);
+
+				
+				if(lastPlayerIndex != 0){
+					document.getElementById(`other-profile-${lastPlayerIndex}`).classList.remove("active")
+				}
+
+				let otherProfileEl = document.getElementById(`other-profile-${opIndex}`);
+				otherProfileEl.classList.add("active");	
+
+				//last actualIndex of other player
+				lastPlayerIndex = opIndex;
+
+			}
+		}
 		
 	</script>
 	<!-- client game script initializations -->
