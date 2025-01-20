@@ -54,6 +54,13 @@ class Cards{
 	}
 }
 
+class SpecialCards extends Cards{
+	constructor(display_name, effectDescription){
+		super(display_name);
+		this.effectDescription = effectDescription;
+	}
+}
+
 class NumberCards extends Cards{
 	constructor(number, color){
 		super(number, `${color.name}_${number}.png`.toLowerCase());
@@ -63,26 +70,22 @@ class NumberCards extends Cards{
 	}
 }
 
-class ReverseCards extends Cards{
+class ReverseCards extends SpecialCards{
 	constructor(display_name, color){
-		super(display_name, "testcard_r.png")
+		super(display_name, "Reverses the direction of the game")
+		this.image = `${color.name}_reverse.png`.toLowerCase();
 		this.color = color; //color
 	}
 }
 
 class SkipCards extends Cards{
 	constructor(display_name, color){
-		super(display_name, "testcard_s.png")
+		super(display_name, "Skips a player")
+		this.image = `${color.name}_skip.png`.toLowerCase();
 		this.color = color; //color
 	}
 }
 
-class SpecialCards extends Cards{
-	constructor(display_name, effectDescription){
-		super(display_name);
-		this.effectDescription = effectDescription;
-	}
-}
 
 //draw cards are cards that will change the following state of the game:
 // 	drawState = true
@@ -202,6 +205,7 @@ class Game{
 		this.is_prepping = true;
 		this.is_ongoing = false;
 		this.is_concluding = false;
+		this.drawCardStatus = false;
 
 		//game state information
 		this.players = []; //player array
@@ -245,6 +249,8 @@ class Game{
 		this.is_ongoing = true;
 		this.is_prepping = false;
 
+		//update game direction, = 1 <-- left to right of array
+		this.currentPlayerDirection = 1;
 		//initiate deck
 		this.deck = new Deck();
 		//populates deck with current DeckCardSet format
@@ -319,6 +325,8 @@ class Game{
 
 		let cT = cardToPlay.constructor.name;
 		let topCardOnPile = this.pile.getTop();
+
+		let drawCardActive = this.drawCardStatus;
 		switch(true){
 			case cardToPlay instanceof NumberCards:
 				g_log('DEBUG', 'GAME_PLAY_CARD', `Played card is number card`);
@@ -327,7 +335,8 @@ class Game{
 				if(
 					topCardOnPile.color != cardToPlay.color &&
 					topCardOnPile.number != cardToPlay.number &&
-					topCardOnPile instanceof NumberCards
+					topCardOnPile instanceof NumberCards &&
+					drawCardActive
 				){
 					//not valid, return false
 					return false
@@ -352,6 +361,22 @@ class Game{
 				break;
 			case cardToPlay instanceof ReverseCards:
 				g_log('DEBUG', 'GAME_PLAY_CARD', `Played card is reverse card`);
+				if(
+					(topCardOnPile instanceof NumberCards)
+				){
+
+				}
+				this.currentPlayerDirection = !this.currentPlayerDirection;
+
+				//set ended turn to true
+				this.currentPlayerEndedTurn = true;
+
+				//endturn
+				this.endTurn();
+
+				//force game state update
+				this.forceUpdateClientGameState();
+
 				//reverse the flow of cards
 				break;
 			default:
@@ -374,10 +399,23 @@ class Game{
 			this.drawCard(this.currentPlayerId, 1);
 		}
 		
-		if(this.currentPlayerIndex + 1 == this.players.length){
-			this.currentPlayerIndex = 0;
+		//getting the next player index
+		//if this.currentPlayerDirection = 1
+		//		left to right of the array, ++
+		//else
+		// 		right to left of the array, --
+		if(this.currentPlayerDirection == 1){
+			if(this.currentPlayerIndex + 1 == this.players.length){
+				this.currentPlayerIndex = 0;
+			}else{
+				this.currentPlayerIndex++;
+			}
 		}else{
-			this.currentPlayerIndex++;
+			if(this.currentPlayerIndex - 1 == -1){
+				this.currentPlayerIndex = this.players.length - 1;
+			}else{
+				this.currentPlayerIndex--;
+			}
 		}
 
 		this.currentPlayerId = this.players[this.currentPlayerIndex].id
