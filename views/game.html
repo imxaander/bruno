@@ -467,9 +467,9 @@
 
 			handCardsEl.innerHTML = ''
 
-			game_state.hand_state.forEach((card)=>{
+			game_state.hand_state.forEach((card, cardIndex)=>{
 				let cardEl = `
-					<div id="${card.id}" class="hand-cards">
+					<div id="${card.id}" onclick="playCard(${cardIndex})" class="hand-cards">
 						<img src="/assets/images/cards/${card.image}" alt="">
 					</div>
 				`
@@ -503,7 +503,8 @@
 			})
 
 			//pile_state
-			
+			let topPileCard = document.querySelectorAll('.pile-cards')[0]
+			topPileCard.querySelector('img').src = `/assets/images/cards/${game_state.pile_state.pop().image}`;	
 		}
 		let gameLogContainerEl = document.getElementById("game-logs-container")
 		function game_log(log){
@@ -514,7 +515,7 @@
 			`
 			gameLogContainerEl.insertAdjacentHTML("afterbegin", lel);
 		}
-		
+
 		
 		function update_game_turn_ui(player_index) {
 			if(player_index == game_state.player_index){
@@ -557,6 +558,26 @@
 			}
 		}
 		
+		function playCard(cardIndex){
+			let action = {
+				game_id: getPlayerInfo().in_game_id,
+				//type of action
+				//  1. play card
+				//  2. draw card
+				type: "play", // play or draw
+				
+				//player_id of the doer of the action, 
+				//  can also be the index of the player for faster search
+				player_index: game_state.player_index, //player index would be good, but we have a function to validate this, so... it's okay if there is none
+				player_id: getPlayerInfo().id, //to lessen the packet we give, its better to not include the id, 
+				card_index: cardIndex, //card index, it's better security for card id 
+			}
+			socket.emit('game_input_action', action);
+		}
+
+		function drawCard(){
+			
+		}
 	</script>
 	<!-- client game script initializations -->
 	<script>

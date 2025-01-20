@@ -133,6 +133,10 @@ class Player{
 		this.isTurn = false; //bool
 		this.isHost = false;
 	}
+
+	popCard(card_index){
+		return this.hand.splice(card_index, 1)[0];
+	}
 }
 
 class Deck{
@@ -174,6 +178,10 @@ class Pile{
     Insert(card){
     	this.cards.push(card);
     }
+
+	getTop(){
+		return this.cards[this.cards.length - 1];
+	}
 }
 
 //game contains all mechanics of the game, and changes player's shit
@@ -255,14 +263,13 @@ class Game{
 
 		//give cards to players, 8 caards
 		this.distributeCards(8);
-
+		this.pile.Insert(this.deck.Draw());
 		// setInterval(()=>{
 		// 	this.loop()
 		// }, 1000);
 		//cycle to next Turn
 		//this prompts the current player for turn
 		//manages the cycle... not yet good
-		this.cycle();
 		
 		//
 		this.initSocketListen();
@@ -277,14 +284,80 @@ class Game{
 
 	}
 
-	cycle(){
-	
-	}
-
 	stop(){
 
 	};
 
+	//player actions handler
+	playerAction(action){
+		switch(action.type){
+			case "play":
+				//validate here if it's the player's turn
+				let isValidPlayer = action.player_id == this.currentPlayerId;
+
+				if(!isValidPlayer){
+					//not valid action, return false
+					g_log('ERROR', 'GAME_ACTION', `Not valid player, sending signals id: ${action.player_id}`)
+					return false;
+				}else{
+					//valid player, play card
+					this.playCard(action.player_index, action.card_index)
+				}
+				break;
+			case "draw":
+				break;
+
+			default:
+				return false;
+		}
+		return true;
+	}
+
+	playCard(player_index, card_index){
+		let playerToPlay = this.players[player_index]
+		let cardToPlay = playerToPlay.hand[card_index];
+
+		let cT = cardToPlay.constructor.name;
+		let topCardOnPile = this.pile.getTop();
+		switch(true){
+			case cardToPlay instanceof NumberCards:
+				g_log('DEBUG', 'GAME_PLAY_CARD', `Played card is number card`);
+
+				//check for color then it is valid
+				if(
+					topCardOnPile.color != cardToPlay.color &&
+					topCardOnPile.number != cardToPlay.number &&
+					topCardOnPile instanceof NumberCards
+				){
+					//not valid, return false
+					return false
+				}
+
+				//it is valid, put that on top of the pile
+				this.pile.Insert(this.players[player_index].popCard(card_index))
+				
+				// log it to game clients
+				this.updateGameLog(`${this.currentPlayerName} played ${cardToPlay.display_name}`)
+
+				//set ended turn to true
+				this.currentPlayerEndedTurn = true;
+				
+				//endturn
+				this.endTurn();
+				//force game state update
+
+				this.forceUpdateClientGameState();
+
+				return true;
+				break;
+			case cardToPlay instanceof ReverseCards:
+				g_log('DEBUG', 'GAME_PLAY_CARD', `Played card is reverse card`);
+				//reverse the flow of cards
+				break;
+			default:
+				break;
+		}
+	}
 	triggerTurn(){
 		this.updateGameLog(`It's ${this.currentPlayerName}'s turn now...`);
 
@@ -592,6 +665,11 @@ class BrunoSystem{
 		return this.games[gameIndex].getPlayerGameState(player_id);
 	}
 
+	gameActionHandle(action){
+		let gameIndex = this.getGameIndexWithId(action.game_id);
+		let result = this.games[gameIndex].playerAction(action);
+		return result;
+	}
 	processEmits(){
 
 	}

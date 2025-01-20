@@ -126,18 +126,20 @@ io.on('connection', (socket) => {
       //type of action
       //  1. play card
       //  2. draw card
-      type: "", //,
-
+      type: "", // play or draw
+      
       //player_id of the doer of the action, 
       //  can also be the index of the player for faster search
-      player_id: "",
-      player_index: 0,
+      player_index: 0, //player index would be good, but we have a function to validate this, so... it's okay if there is none
+      player_id: "", //to lessen the packet we give, its better to not include the id, 
+      card_index: 0, //card index, it's better security for card id 
     }
+
+    let actionResult =  System.gameActionHandle(action);
 
     //if the action is valid, we give the action to everyone in the game,
 
     //if the action is not valid, we give it to the sender of the action
-
 
   });
   //disconnect
