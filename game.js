@@ -28,15 +28,16 @@ class CardColors{
 const DeckCardColors = [CardColors.Red, CardColors.Blue, CardColors.Yellow, CardColors.Green];
 const DeckCardSet = {
 	NumberCards: [
-		1, 2, 2, 2, 2, 2, 2, 2, 2, 2
-	//	0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+	//1, 2, 2, 2, 2, 2, 2, 2, 2, 2
+	//0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 	], //each color
 
-	ReverseCards: 2, //each color
-	SkipCards: 2, //each color
+	ReverseCards: 5, //each color
+	SkipCards: 5, //each color
 	Draw2Cards: 2, //each color
 	Draw4Cards: 4, 
-	SwitchColor: 4,
+	SwitchColor: 20,
 	Shuffle: 1,
 }
 
@@ -78,7 +79,7 @@ class ReverseCards extends SpecialCards{
 	}
 }
 
-class SkipCards extends Cards{
+class SkipCards extends SpecialCards{
 	constructor(display_name, color){
 		super(display_name, "Skips a player")
 		this.image = `${color.name}_skip.png`.toLowerCase();
@@ -115,6 +116,7 @@ class Draw2Cards extends DrawCards{
 class SwitchColorCards extends SpecialCards{
 	constructor(display_name){
 		super(display_name, "test effect desc for switch color");
+		this.image = 'switch_color.png'
 	}
 }
 
@@ -266,6 +268,7 @@ class Game{
 		this.currentPlayerIndex = Math.floor(Math.random() * this.players.length);
 		this.currentPlayerId = this.players[this.currentPlayerIndex].id;
 		this.currentPlayerName = this.players[this.currentPlayerIndex].name
+		this.curentSkipStatus = false;
 
 		//give cards to players, 8 caards
 		this.distributeCards(8);
@@ -277,11 +280,12 @@ class Game{
 		//this prompts the current player for turn
 		//manages the cycle... not yet good
 		
-		//
+		//////
 		this.initSocketListen();
 
 		this.triggerTurn();
-
+		
+		// this.players[this.players.length-1].hand.push(new SkipCards("Skip", new CardColor("Yellow")));
 		//test to give a card to first player
 		return true;
 	};
@@ -333,9 +337,9 @@ class Game{
 
 				//check for color then it is valid
 				if(
-					topCardOnPile.color != cardToPlay.color &&
-					topCardOnPile.number != cardToPlay.number &&
-					topCardOnPile instanceof NumberCards &&
+					(topCardOnPile.color != cardToPlay.color &&
+					topCardOnPile.number != cardToPlay.number) ||
+					(!topCardOnPile instanceof NumberCards) ||
 					drawCardActive
 				){
 					//not valid, return false
@@ -361,12 +365,20 @@ class Game{
 				break;
 			case cardToPlay instanceof ReverseCards:
 				g_log('DEBUG', 'GAME_PLAY_CARD', `Played card is reverse card`);
-				if(
-					(topCardOnPile instanceof NumberCards)
-				){
+				if(!(topCardOnPile instanceof NumberCards && topCardOnPile.color == cardToPlay.color)){
+					if(!(topCardOnPile instanceof SpecialCards)){
+						console.log(`Reverse is instance of Special Cards: ` + topCardOnPile instanceof SpecialCards);
 
+						g_log('ERROR', 'GAME_PLAY_CARD', `Can't play reverse card`);
+						return false;
+					}
 				}
+
+				//reverse the flow of cards
 				this.currentPlayerDirection = !this.currentPlayerDirection;
+
+				//after reverse, put the card on the pile
+				this.pile.Insert(this.players[player_index].popCard(card_index))
 
 				//set ended turn to true
 				this.currentPlayerEndedTurn = true;
@@ -376,8 +388,38 @@ class Game{
 
 				//force game state update
 				this.forceUpdateClientGameState();
+				
+				
+				return true;
+				break;
 
-				//reverse the flow of cards
+			case cardToPlay instanceof SkipCards:
+				g_log('DEBUG', 'GAME_PLAY_CARD', `Played card is skip card`);
+				if(!(topCardOnPile instanceof NumberCards && topCardOnPile.color == cardToPlay.color)){
+					if(!(topCardOnPile instanceof SpecialCards)){
+						console.log(`Skip is instance of Special Cards: ` + topCardOnPile instanceof SpecialCards);
+
+						g_log('ERROR', 'GAME_PLAY_CARD', `Can't play skip card`);
+						return false;
+					}
+				}
+
+				//update skip flag the flow of cards
+				this.curentSkipStatus = true;
+
+				//after skip status, put the card on the pile
+				this.pile.Insert(this.players[player_index].popCard(card_index))
+
+				//set ended turn to true
+				this.currentPlayerEndedTurn = true;
+
+				//endturn
+				this.endTurn();
+
+				//force game state update
+				this.forceUpdateClientGameState();
+				
+				return true;
 				break;
 			default:
 				break;
@@ -405,16 +447,36 @@ class Game{
 		//else
 		// 		right to left of the array, --
 		if(this.currentPlayerDirection == 1){
-			if(this.currentPlayerIndex + 1 == this.players.length){
-				this.currentPlayerIndex = 0;
+			
+			if(this.curentSkipStatus){
+				if(this.currentPlayerIndex + 2 >= this.players.length){
+					this.currentPlayerIndex = (this.currentPlayerIndex + 2) - this.players.length ;
+				}else{
+					this.currentPlayerIndex+=2;
+				}
+
+				this.curentSkipStatus = false
 			}else{
-				this.currentPlayerIndex++;
+				if(this.currentPlayerIndex + 1 == this.players.length){
+					this.currentPlayerIndex = 0;
+				}else{
+					this.currentPlayerIndex++;
+				}
 			}
 		}else{
-			if(this.currentPlayerIndex - 1 == -1){
-				this.currentPlayerIndex = this.players.length - 1;
+			if(this.curentSkipStatus){
+				if(this.currentPlayerIndex - 2 < 0){
+					this.currentPlayerIndex = (this.currentPlayerIndex - 2) + this.players.length;
+				}else{
+					this.currentPlayerIndex-=2;
+				}
+				this.curentSkipStatus = false
 			}else{
-				this.currentPlayerIndex--;
+				if(this.currentPlayerIndex - 1 == -1){
+					this.currentPlayerIndex = this.players.length - 1;
+				}else{
+					this.currentPlayerIndex--;
+				}
 			}
 		}
 
@@ -501,7 +563,7 @@ class Game{
 		}
 
 		for(let i = 0; i < DeckCardSet.SwitchColor; i++){
-			let card = new SwitchColorCards("Shuffle");
+			let card = new SwitchColorCards("Switch");
 			this.deck.Insert(card);
 		}
 
