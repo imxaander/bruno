@@ -35,10 +35,10 @@ const DeckCardSet = {
 
 	ReverseCards: 5, //each color
 	SkipCards: 5, //each color
-	Draw2Cards: 2, //each color
-	Draw4Cards: 4, 
-	SwitchColor: 20,
-	Shuffle: 1,
+	Draw2Cards: 5, //each color
+	Draw4Cards: 1, 
+	SwitchColor: 0,
+	Shuffle: 0,
 }
 
 class Cards{
@@ -107,7 +107,7 @@ class Draw4Cards extends DrawCards{
 
 class Draw2Cards extends DrawCards{
 	constructor(display_name, color){
-		super(display_name, "test effect desc for draw 2", 4);
+		super(display_name, "test effect desc for draw 2", 2);
 		this.image = `${color.name}_+2.png`.toLowerCase();
 		this.color = color;
 	}
@@ -208,7 +208,8 @@ class Game{
 		this.is_ongoing = false;
 		this.is_concluding = false;
 		this.drawCardStatus = false;
-
+		this.currentAdditionalCards = 0;
+		
 		//game state information
 		this.players = []; //player array
 		this.pile = null;
@@ -233,7 +234,7 @@ class Game{
 
 		//add test players
 		//give test players
-		// this.addPlayer({id: "tplayerid1", name: "Player 1"})
+		this.addPlayer({id: "tplayerid1", name: "Player 1"})
 		// this.addPlayer({id: "tplayerid2", name: "Player 2"})
 		// this.addPlayer({id: "tplayerid3", name: "Player 3"})
 		// this.addPlayer({id: "tplayerid4", name: "Player 4"})
@@ -374,8 +375,13 @@ class Game{
 					}
 				}
 
-				//reverse the flow of cards
-				this.currentPlayerDirection = !this.currentPlayerDirection;
+				//check if there's only two players
+				if(this.players.length == 2){
+					this.curentSkipStatus = true;
+				}else{
+					//reverse the flow of cards
+					this.currentPlayerDirection = !this.currentPlayerDirection;
+				}
 
 				//after reverse, put the card on the pile
 				this.pile.Insert(this.players[player_index].popCard(card_index))
@@ -421,6 +427,32 @@ class Game{
 				
 				return true;
 				break;
+
+			case cardToPlay instanceof Draw2Cards:
+				if(!this.drawCardStatus){
+					if(cardToPlay.color != topCardOnPile.color){
+						return false;
+					}	
+				}
+
+				this.drawCardStatus = true;
+
+				this.currentAdditionalCards += cardToPlay.additionalCards;
+
+				//after draw addition , put the card on the pile
+				this.pile.Insert(this.players[player_index].popCard(card_index))
+
+				//set ended turn to true
+				this.currentPlayerEndedTurn = true;
+
+				//endturn
+				this.endTurn();
+
+				//force game state update
+				this.forceUpdateClientGameState();
+				
+				return true;
+				break
 			default:
 				break;
 		}
@@ -438,7 +470,15 @@ class Game{
 		if(this.currentPlayerEndedTurn == false){
 			//draw card first if he didnt ended his turn
 			this.updateGameLog(`${this.currentPlayerName} did not move.`)
-			this.drawCard(this.currentPlayerId, 1);
+
+			if(this.drawCardStatus){
+				this.drawCard(this.currentPlayerId, this.currentAdditionalCards);
+
+				this.drawCardStatus = false;
+				this.currentAdditionalCards = 0;
+			}else{
+				this.drawCard(this.currentPlayerId, 1);
+			}
 		}
 		
 		//getting the next player index
