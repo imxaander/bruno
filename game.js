@@ -36,7 +36,7 @@ const DeckCardSet = {
 	ReverseCards: 5, //each color
 	SkipCards: 5, //each color
 	Draw2Cards: 5, //each color
-	Draw4Cards: 1, 
+	Draw4Cards: 10, 
 	SwitchColor: 0,
 	Shuffle: 0,
 }
@@ -452,7 +452,27 @@ class Game{
 				this.forceUpdateClientGameState();
 				
 				return true;
-				break
+				break;
+			
+			case cardToPlay instanceof Draw4Cards:
+				this.drawCardStatus = true;
+
+				this.currentAdditionalCards += cardToPlay.additionalCards;
+
+				//after draw addition , put the card on the pile
+				this.pile.Insert(this.players[player_index].popCard(card_index))
+
+				//set ended turn to true
+				this.currentPlayerEndedTurn = true;
+
+				//endturn
+				this.endTurn();
+
+				//force game state update
+				this.forceUpdateClientGameState();
+				
+				return true;
+				break;	
 			default:
 				break;
 		}

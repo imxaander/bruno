@@ -207,6 +207,12 @@
 			<p id="client-turn-label">IT'S YOUR TURN!</p>
 			<div id="hand-container" class="card-container">
 			</div>
+
+			<div id="color-picker-modal" class="modal">
+				<label for="new-game-name">Name: </label>
+				<input id="new-game-name-input" type="text" name="new-game-name">
+				<button onclick="createNewGame()">Create New Game!</button>
+			</div>
 		</div>
 
 
@@ -219,7 +225,7 @@
 
 	<!-- client game script -->
 	<script type="text/javascript">
-		// openTab("in-game")
+		openTab("in-game")
 
 		const socket = io();
 		var game_state = null;
@@ -227,7 +233,6 @@
 		var players_in_lobby = [];
 		let lastPlayerIndex = 0;
 
-		//TODO GAME STATE CLASS
 		class ClientGameState{
 			constructor(players){
 				this.playerCount = players.length;
@@ -240,7 +245,6 @@
 			//add functions
 		}
 		
-		//TODO: GAME ELEMENT UPDATES FUNCTIONS AND ANIMATIONS for UI
 		//this is where we call class
 
 
