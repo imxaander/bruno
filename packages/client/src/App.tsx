@@ -13,13 +13,15 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>("home");
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomName, setRoomName] = useState("");
+  const [maxPlayers, setMaxPlayers] = useState(8);
 
   const goRooms = useCallback(() => setScreen("rooms"), []);
   const goHome = useCallback(() => setScreen("home"), []);
   const backToLobby = useCallback(() => setScreen("lobby"), []);
-  const goLobby = useCallback((gameId: string, name: string) => {
+  const goLobby = useCallback((gameId: string, name: string, roomMaxPlayers = 8) => {
     setRoomId(gameId);
     setRoomName(name);
+    setMaxPlayers(roomMaxPlayers);
     setScreen("lobby");
   }, []);
   const goGame = useCallback((gameId: string) => {
@@ -50,6 +52,7 @@ export default function App() {
         identity={identity}
         roomId={roomId}
         roomName={roomName}
+        maxPlayers={maxPlayers}
         goRooms={goRooms}
         goGame={goGame}
       />

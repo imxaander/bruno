@@ -26,5 +26,7 @@ export interface PlayerView {
   deckCount: number;
   currentTurnIndex: number;
   currentDirection: 1 | -1;
+  activeColor: Color | null;
+  pendingDraw: number;
   status: GameStatus;
 }

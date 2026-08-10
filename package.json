@@ -16,7 +16,7 @@
     "dev:client": "npm run dev -w @bruno/client",
     "build": "npm run build -w @bruno/client",
     "typecheck": "npm run typecheck -w @bruno/shared && npm run typecheck -w @bruno/server && npm run typecheck -w @bruno/client",
-    "test": "npm run test -w @bruno/shared",
+    "test": "npm run test -w @bruno/shared && npm run test -w @bruno/server",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

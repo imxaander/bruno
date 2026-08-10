@@ -1,18 +1,30 @@
 import type { PlayerView } from "../game/state.js";
-import type { ErrorEnvelope, GameAction, LobbyPlayer, RoomSummary } from "./schemas.js";
+import type {
+  CreateRoomPayload,
+  ErrorEnvelope,
+  GameAction,
+  GetGameStatePayload,
+  JoinRoomPayload,
+  LeaveRoomPayload,
+  LobbyPlayer,
+  RoomCreateReturn,
+  RoomSummary,
+  StartGamePayload,
+} from "./schemas.js";
 
 export interface ClientToServerEvents {
   "rooms:list": () => void;
-  "rooms:create": (payload: { name: string; playerName: string }) => void;
-  "lobby:join": (payload: { gameId: string; playerName: string }) => void;
-  "lobby:leave": (payload: { gameId: string; playerId: string }) => void;
-  "game:start": (payload: { gameId: string }) => void;
+  "rooms:create": (payload: CreateRoomPayload) => void;
+  "lobby:join": (payload: JoinRoomPayload) => void;
+  "lobby:leave": (payload: LeaveRoomPayload) => void;
+  "game:start": (payload: StartGamePayload) => void;
   "game:action": (payload: GameAction) => void;
-  "game:state:get": (payload: { gameId: string; playerId: string }) => void;
+  "game:state:get": (payload: GetGameStatePayload) => void;
 }
 
 export interface ServerToClientEvents {
   "rooms:list:return": (rooms: RoomSummary[]) => void;
+  "rooms:create:return": (payload: RoomCreateReturn) => void;
   "lobby:update": (players: LobbyPlayer[]) => void;
   "game:start:return": (payload: { ok: boolean; gameId?: string }) => void;
   "game:state": (state: PlayerView) => void;

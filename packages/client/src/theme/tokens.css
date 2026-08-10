@@ -1,29 +1,47 @@
 :root {
-  /* palette — mirrors docs/figma-make-prompt-guide.md §4.1 */
-  --bruno-bg-base: #0b0b12;
-  --bruno-bg-panel: #14141e;
-  --bruno-bg-panel-2: #1c1c2a;
-  --bruno-line: #2a2a3e;
-  --bruno-text-hi: #f2f3ff;
-  --bruno-text-lo: #8b8ba0;
-  --bruno-accent-cyan: #22e5ff;
-  --bruno-accent-magenta: #ff3df0;
-  --bruno-accent-lime: #b7ff3d;
-  --bruno-card-red: #e53935;
-  --bruno-card-blue: #1e88e5;
-  --bruno-card-green: #43a047;
-  --bruno-card-yellow: #fdd835;
-  --bruno-tier-silver: #c0c7d1;
-  --bruno-tier-gold: #e9b54a;
-  --bruno-tier-diamond: #f2f4ff;
+  /* neon accents — mirror of bruno-figma @theme */
+  --bruno-accent-cyan: #00eeff;
+  --bruno-accent-magenta: #ff00cc;
+  --bruno-accent-lime: #aaff00;
+  --bruno-accent-amber: #ffaa00;
+  --bruno-accent-gold: #ffcc00;
+
+  /* card suite colors */
+  --bruno-card-red: #e0001e;
+  --bruno-card-blue: #0044dd;
+  --bruno-card-green: #00bb44;
+  --bruno-card-yellow: #ffcc00;
+
+  /* vault tiers */
+  --bruno-tier-silver: #c8dce8;
+  --bruno-tier-gold: #ffd040;
+  --bruno-tier-diamond: #d8f0ff;
+
+  /* surfaces */
+  --bruno-bg-base: #080810;
+  --bruno-bg-panel: #0b0b12;
+  --bruno-bg-panel-2: #0e0e1a;
+  --bruno-bg-overlay: rgba(5, 5, 9, 0.72);
+  --bruno-line: rgba(0, 238, 255, 0.12);
+
+  /* text */
+  --bruno-text-hi: #c8d8f0;
+  --bruno-text-lo: rgba(200, 216, 240, 0.45);
+  --bruno-text-micro: rgba(200, 216, 240, 0.3);
 
   /* typography */
-  --bruno-font-display: "Rajdhani", "Arial Narrow", sans-serif;
-  --bruno-font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --bruno-text-display-xl: 4rem;
-  --bruno-text-display-m: 2rem;
-  --bruno-text-body-m: 1rem;
-  --bruno-text-caption-s: 0.75rem;
+  --bruno-font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --bruno-font-ui: "Rajdhani", "Arial Narrow", "Segoe UI", sans-serif;
+
+  /* type scale */
+  --bruno-text-hero: clamp(88px, 11vw, 152px);
+  --bruno-text-display-xl: 84px;
+  --bruno-text-display-m: 28px;
+  --bruno-text-h3: 22px;
+  --bruno-text-body-m: 14px;
+  --bruno-text-label: 12px;
+  --bruno-text-caption-s: 10px;
+  --bruno-text-nano: 9px;
 
   /* spacing */
   --bruno-space-1: 4px;
@@ -35,14 +53,16 @@
   --bruno-space-7: 48px;
 
   /* radius */
-  --bruno-radius-s: 4px;
-  --bruno-radius-m: 8px;
-  --bruno-radius-l: 16px;
+  --bruno-radius-card: 14px;
+  --bruno-radius-panel: 10px;
+  --bruno-radius-button: 8px;
+  --bruno-radius-badge: 4px;
 
   /* glow */
-  --bruno-glow-cyan: 0 0 12px rgba(34, 229, 255, 0.5);
-  --bruno-glow-magenta: 0 0 12px rgba(255, 61, 240, 0.5);
-  --bruno-glow-lime: 0 0 12px rgba(183, 255, 61, 0.5);
+  --bruno-glow-cyan: 0 0 12px rgba(0, 238, 255, 0.5);
+  --bruno-glow-magenta: 0 0 12px rgba(255, 0, 204, 0.5);
+  --bruno-glow-lime: 0 0 12px rgba(170, 255, 0, 0.5);
+  --bruno-glow-amber: 0 0 12px rgba(255, 170, 0, 0.5);
 
   /* motion */
   --bruno-duration: 150ms;
