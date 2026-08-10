@@ -1,0 +1,50 @@
+:root {
+  /* palette — mirrors docs/figma-make-prompt-guide.md §4.1 */
+  --bruno-bg-base: #0b0b12;
+  --bruno-bg-panel: #14141e;
+  --bruno-bg-panel-2: #1c1c2a;
+  --bruno-line: #2a2a3e;
+  --bruno-text-hi: #f2f3ff;
+  --bruno-text-lo: #8b8ba0;
+  --bruno-accent-cyan: #22e5ff;
+  --bruno-accent-magenta: #ff3df0;
+  --bruno-accent-lime: #b7ff3d;
+  --bruno-card-red: #e53935;
+  --bruno-card-blue: #1e88e5;
+  --bruno-card-green: #43a047;
+  --bruno-card-yellow: #fdd835;
+  --bruno-tier-silver: #c0c7d1;
+  --bruno-tier-gold: #e9b54a;
+  --bruno-tier-diamond: #f2f4ff;
+
+  /* typography */
+  --bruno-font-display: "Rajdhani", "Arial Narrow", sans-serif;
+  --bruno-font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bruno-text-display-xl: 4rem;
+  --bruno-text-display-m: 2rem;
+  --bruno-text-body-m: 1rem;
+  --bruno-text-caption-s: 0.75rem;
+
+  /* spacing */
+  --bruno-space-1: 4px;
+  --bruno-space-2: 8px;
+  --bruno-space-3: 12px;
+  --bruno-space-4: 16px;
+  --bruno-space-5: 24px;
+  --bruno-space-6: 32px;
+  --bruno-space-7: 48px;
+
+  /* radius */
+  --bruno-radius-s: 4px;
+  --bruno-radius-m: 8px;
+  --bruno-radius-l: 16px;
+
+  /* glow */
+  --bruno-glow-cyan: 0 0 12px rgba(34, 229, 255, 0.5);
+  --bruno-glow-magenta: 0 0 12px rgba(255, 61, 240, 0.5);
+  --bruno-glow-lime: 0 0 12px rgba(183, 255, 61, 0.5);
+
+  /* motion */
+  --bruno-duration: 150ms;
+  --bruno-ease: ease-out;
+}

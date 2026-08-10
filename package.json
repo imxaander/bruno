@@ -1,10 +1,28 @@
 {
-    "name": "bruno",
-    "version": "0.0.1",
-    "description": "xjvs bruno game",
-    "type": "commonjs",
-    "dependencies": {
-        "express": "^4.21.2",
-        "socket.io": "^4.8.1"
-    }
+  "name": "bruno",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BRUNO - a realtime multiplayer card game (UNO with superpowers)",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev -w @bruno/server",
+    "dev:client": "npm run dev -w @bruno/client",
+    "build": "npm run build -w @bruno/client",
+    "typecheck": "npm run typecheck -w @bruno/shared && npm run typecheck -w @bruno/server && npm run typecheck -w @bruno/client",
+    "test": "npm run test -w @bruno/shared",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
 }
