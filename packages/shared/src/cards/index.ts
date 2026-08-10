@@ -1,6 +1,7 @@
 export * from "./types.js";
 export * from "./cards.js";
 export * from "./deck.js";
+export * from "./mayhem.js";
 
 import { CARDS } from "./cards.js";
 import type { Card, CardType } from "./types.js";

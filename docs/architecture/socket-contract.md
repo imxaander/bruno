@@ -67,12 +67,17 @@ and `legacy/views/game.html` (client side).
 
 All payloads defined in `@bruno/shared` with Zod schemas. Events grouped and namespaced:
 
-| Area  | Proposed events                                                                                                 |
-| ----- | --------------------------------------------------------------------------------------------------------------- |
-| Rooms | `rooms:list`, `rooms:list:return`, `rooms:create`, `rooms:create:return`                                        |
-| Lobby | `lobby:join`, `lobby:join:return`, `lobby:leave`, `lobby:update`, `game:start`, `game:start:return`             |
-| Game  | `game:action` (play/draw/chooseColor), `game:state` (typed `PlayerView`), `game:log`, `game:turn`, `game:ended` |
-| Meta  | `error` (typed error envelope)                                                                                  |
+| Area  | Proposed events                                                                                                                                                                                      |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rooms | `rooms:list`, `rooms:list:return`, `rooms:create`, `rooms:create:return`                                                                                                                             |
+| Lobby | `lobby:join`, `lobby:join:return`, `lobby:leave`, `lobby:update`, `game:start`, `game:start:return`                                                                                                  |
+| Game  | `game:action` (play/draw/choose-color/vault-choice/choose-targets), `game:prompt` (choose-color/vault-choice/pick-players), `game:state` (typed `PlayerView`), `game:log`, `game:turn`, `game:ended` |
+| Meta  | `error` (typed error envelope)                                                                                                                                                                       |
 
 Every server handler validates its payload with Zod before touching engine state; every
 client handler gets a typed payload. See `target.md` and `card-data-schema.md`.
+
+`game:action` `choose-targets` resolves a pending target-pick prompt: payload includes
+`targetIds: string[]` (Zod-validated count, distinct, seated, actor excluded unless the
+resolver declared `allowSelf`). Emitted with the `pick-players` `game:prompt` kind whenever a
+chosen vault offer declares a `targets` input spec. See `../game/vault-mechanism.md` §3.

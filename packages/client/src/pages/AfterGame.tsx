@@ -1,8 +1,12 @@
+import type { GameEndedPlayer } from "@bruno/shared";
 import { Button } from "../components/Button.js";
 import GameCard from "../components/GameCard.js";
 import { PageHeader } from "../components/PageHeader.js";
 
 interface AfterGameProps {
+  winner: { id: string; name: string } | null;
+  players: GameEndedPlayer[];
+  reason: "hand_emptied";
   goHome: () => void;
   goRooms: () => void;
 }
@@ -63,7 +67,9 @@ function StarField() {
   );
 }
 
-export function AfterGame({ goHome, goRooms }: AfterGameProps) {
+export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGameProps) {
+  const sorted = [...players].sort((a, b) => a.handCount - b.handCount);
+  const champion = winner?.name ?? "Draw";
   return (
     <div
       style={{
@@ -238,7 +244,7 @@ export function AfterGame({ goHome, goRooms }: AfterGameProps) {
                   textShadow: "0 0 12px rgba(255,200,0,0.4)",
                 }}
               >
-                —
+                {champion}
               </p>
               <p
                 style={{
@@ -249,7 +255,7 @@ export function AfterGame({ goHome, goRooms }: AfterGameProps) {
                   letterSpacing: "0.12em",
                 }}
               >
-                First to empty hand
+                {reason === "hand_emptied" ? "First to empty hand" : "Round complete"}
               </p>
             </div>
             <GameCard color="red" value="0" size="md" lifted />
@@ -308,6 +314,67 @@ export function AfterGame({ goHome, goRooms }: AfterGameProps) {
             ))}
           </div>
         </div>
+
+        {sorted.length > 0 ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              padding: "14px 20px",
+              background: "rgba(11,11,18,0.9)",
+              border: "1px solid rgba(0,238,255,0.08)",
+              borderRadius: 9,
+              minWidth: 380,
+            }}
+          >
+            <p
+              style={{
+                margin: "0 0 4px",
+                fontSize: 10,
+                fontWeight: 700,
+                color: "rgba(0,238,255,0.4)",
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+              }}
+            >
+              Final Hands
+            </p>
+            {sorted.map((player, rank) => (
+              <div
+                key={player.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                  background:
+                    rank === 0 && winner?.id === player.id ? "rgba(255,200,0,0.07)" : "transparent",
+                }}
+              >
+                <span style={{ fontSize: 12, color: "rgba(200,216,240,0.4)", width: 18 }}>
+                  {rank + 1}
+                </span>
+                <span
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: winner?.id === player.id ? "#ffcc00" : "#c8d8f0",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {player.name}
+                  {winner?.id === player.id ? " · WIN" : ""}
+                </span>
+                <span style={{ fontSize: 12, color: "rgba(200,216,240,0.5)", fontWeight: 700 }}>
+                  {player.handCount}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         <div style={{ display: "flex", gap: 14, marginTop: 4 }}>
           <Button variant="cta" size="lg" onClick={goRooms}>

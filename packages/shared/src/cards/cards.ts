@@ -1,9 +1,11 @@
 import type { Card } from "./types.js";
 
 /**
- * Vault card catalog transcribed from `docs/game/cards-tier3-silver.md`,
- * `docs/game/cards-tier2-gold.md` and `docs/game/cards-tier1-diamond.md`
- * (sourced from "1.4 BRUNO.pdf"). Keep this file in sync with those docs.
+ * Card catalog transcribed from `docs/game/cards-tier3-silver.md`,
+ * `docs/game/cards-tier2-gold.md`, `docs/game/cards-tier1-diamond.md`,
+ * `docs/game/locations.md`, `docs/game/origins.md` and
+ * `docs/game/special-systems.md` (sourced from "1.4 BRUNO.pdf"). Keep this
+ * file in sync with those docs.
  */
 export const CARDS: Card[] = [
   // ---- Tier III / Silver Vault (p.1-2) ----
@@ -32,7 +34,7 @@ export const CARDS: Card[] = [
     tags: [],
     effect: "Pick a player, +1 them and discard 1 card without seeing their cards.",
     source: "1.4 BRUNO.pdf p.1",
-    status: "draft",
+    status: "stable",
   },
   {
     id: "t3-trade-sector",
@@ -283,7 +285,7 @@ export const CARDS: Card[] = [
     tags: [],
     effect: "Pick a player, +3 them and discard 3 cards without seeing their cards.",
     source: "1.4 BRUNO.pdf p.3",
-    status: "draft",
+    status: "stable",
   },
   {
     id: "t2-force-of-will",
@@ -339,7 +341,7 @@ export const CARDS: Card[] = [
     effect:
       "All players shuffle their cards with each other and return with the same amount of cards.",
     source: "1.4 BRUNO.pdf p.3",
-    status: "draft",
+    status: "stable",
   },
   {
     id: "t2-spell-counter",
@@ -405,7 +407,7 @@ export const CARDS: Card[] = [
     tags: [],
     effect: "Pick 3 players and steal 2 random vaults from them.",
     source: "1.4 BRUNO.pdf p.4",
-    status: "draft",
+    status: "stable",
   },
   {
     id: "t2-rummage",
@@ -527,7 +529,7 @@ export const CARDS: Card[] = [
     tags: [],
     effect: "Switch hands with anyone.",
     source: "1.4 BRUNO.pdf p.5",
-    status: "draft",
+    status: "stable",
   },
   {
     id: "t1-rewind",
@@ -852,6 +854,98 @@ export const CARDS: Card[] = [
     tags: [],
     effect: "Kill all enemy players with less than 5 BLUE or RED cards.",
     source: "1.4 BRUNO.pdf p.8",
+    status: "draft",
+  },
+
+  // ---- Locations (p.8) ----
+  {
+    id: "loc-fields",
+    name: "Fields",
+    type: "location",
+    tags: [],
+    effect: "All players draw 1 card at the beginning of the game.",
+    source: "1.4 BRUNO.pdf p.8",
+    status: "draft",
+  },
+  {
+    id: "loc-scorched-earth",
+    name: "Scorched Earth",
+    type: "location",
+    tags: [],
+    effect:
+      "If the player has only 1 card left, the player with the most cards gives them 3 cards and skip them.",
+    source: "1.4 BRUNO.pdf p.8",
+    status: "draft",
+  },
+
+  // ---- Origin Vaults (p.9) ----
+  {
+    id: "origin-vault-keeper",
+    name: "Vault Keeper",
+    type: "origin",
+    tags: [],
+    effect: "Greed is good. Get a Gold Vault at the start of the game.",
+    source: "1.4 BRUNO.pdf p.9",
+    status: "draft",
+  },
+  {
+    id: "origin-technomancer",
+    name: "Technomancer",
+    type: "origin",
+    tags: [],
+    effect:
+      "Technology at its finest. Your vaults have a chance to get another vault of the same type. 43% Silver, 20% Gold, 10% Diamond.",
+    source: "1.4 BRUNO.pdf p.9",
+    status: "draft",
+  },
+  {
+    id: "origin-grand-architect",
+    name: "Grand Architect",
+    type: "origin",
+    tags: [],
+    effect:
+      "Your Reality. Construct Pandora's Box. This can only be used once you use a vault. You can upgrade your Pandora's Box by using better vaults.",
+    source: "1.4 BRUNO.pdf p.9",
+    status: "draft",
+  },
+  {
+    id: "origin-masterchef",
+    name: "Masterchef",
+    type: "origin",
+    tags: [],
+    effect:
+      "Let him Cook. You're cooking a food and can keep perfecting it. Red cards will speed up your cooking by 1 round. Serving your dish early will end your Masterpiece.",
+    source: "1.4 BRUNO.pdf p.9",
+    status: "draft",
+  },
+  {
+    id: "origin-fateweaver",
+    name: "Fateweaver",
+    type: "origin",
+    tags: [],
+    effect:
+      "Winners mindset. Have a slot machine, you can spin it as many times depending on your card.",
+    source: "1.4 BRUNO.pdf p.9",
+    status: "draft",
+  },
+
+  // ---- Artifacts (p.3-4) ----
+  {
+    id: "artifact-boot",
+    name: "Boot",
+    type: "artifact",
+    tags: [],
+    effect: "Powerful magic withers from it…",
+    source: "1.4 BRUNO.pdf p.3",
+    status: "draft",
+  },
+  {
+    id: "artifact-leg",
+    name: "Leg",
+    type: "artifact",
+    tags: [],
+    effect: "(mirror/upside-down flavor text on p.4, inverse of Boot's)",
+    source: "1.4 BRUNO.pdf p.4",
     status: "draft",
   },
 ];

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { Card, Color, GameStatus } from "@bruno/shared";
+import type { Card, Color, GameStatus, VaultCardType } from "@bruno/shared";
 
 export interface Player {
   id: string;
@@ -9,6 +9,16 @@ export interface Player {
 }
 
 export const HAND_SIZE = 8;
+
+export interface PendingVault {
+  cardIndex: number;
+  playerId: string;
+  tier: VaultCardType;
+  offers: Card[];
+  chosenCardId?: string;
+  targetSpec?: { min: number; max: number; allowSelf?: boolean };
+  targetIds?: string[];
+}
 
 export class Room {
   readonly id: string;
@@ -23,6 +33,8 @@ export class Room {
   currentDirection: 1 | -1 = 1;
   activeColor: Color | null = null;
   pendingDraw = 0;
+  pendingWild?: { cardIndex: number; playerId: string };
+  pendingVault?: PendingVault;
   winnerId?: string;
   winnerName?: string;
 

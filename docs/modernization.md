@@ -86,6 +86,29 @@ verifiable. Work phases in order; never start a later phase with an earlier one 
 - [ ] Verify: engine unit tests for representative effects; data test asserts all cards with
       `status: stable` have a resolver.
 
+### Phase 5c — Vault cards as effects (Track A)
+
+Track A: the non-stateful, pick-player-only resolvers for the vault catalog. Each implemented
+card flips `draft → stable` in `shared/src/cards/cards.ts` and its tier doc; unregistered
+cards stay out of the offer pool. See `game/vault-mechanism.md` and `card-data-schema.md` §4.
+
+- [x] Resolver registry with declared input specs (`effects/registry.ts`: `registerResolver`
+      third argument, `getResolverInputs`, `ResolverInputs`/`ResolverTargetInput`).
+- [x] `pick-players` prompt + `choose-targets` action (shared Zod schemas, room-manager
+      `applyChooseTargets`, engine passes `targets` into resolver context, typed socket
+      payloads).
+- [x] `TargetPicker` client modal wired for `pick-players` (with `allowSelf` option).
+- [x] Resolvers: `t3-scrap-shot`, `t2-scrap-shot` (target +N + blind discard),
+      `t2-card-a-palooza` (shuffle all hands), `t2-vault-hunter` (steal vaults),
+      `t1-g-switch` (switch hands).
+- [x] `grantVaultTokens` helper for "gain a vault" effects (minted tokens land in hand).
+- [x] Verify: 114 tests green (13 shared, 101 server); typecheck + client build clean.
+
+Track B backlog (deferred): passives `[P]`/`[sP]`, reveal/steal/switch variants, timed or
+burst draws, skip-for-N rounds, "to play" conditions, allies, win/kill, `[Tentative]`, and
+unreadable text. Full per-card inventory with reasons in each tier doc's Implementation
+status.
+
 ## Phase 6 — Quality tooling
 
 - [ ] ESLint + Prettier config at the workspace root; format the whole repo.

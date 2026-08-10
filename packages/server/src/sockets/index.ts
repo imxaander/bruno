@@ -8,8 +8,16 @@ import {
   StartGameSchema,
   type ClientToServerEvents,
   type ServerToClientEvents,
+  type VaultOffer,
 } from "@bruno/shared";
-import { RoomManager, type EngineError, type RoomError } from "../game/room-manager.js";
+import type { Rng } from "../game/deck.js";
+import {
+  RoomManager,
+  type EngineError,
+  type RoomError,
+  type RoomEvent,
+} from "../game/room-manager.js";
+import type { TurnManager } from "../game/turn-manager.js";
 
 export type BrunoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -18,6 +26,11 @@ type BrunoSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 interface SocketData {
   playerId?: string;
   roomId?: string;
+}
+
+export interface RegisterSocketsOptions {
+  turnManager?: TurnManager;
+  rng?: Rng;
 }
 
 const ERROR_MESSAGES: Record<RoomError, string> = {
@@ -37,7 +50,7 @@ const ENGINE_ERROR_MESSAGES: Record<EngineError, string> = {
   CARD_NOT_PLAYABLE: "That card cannot be played.",
   CHOOSE_COLOR_REQUIRED: "Choose a color to play that card.",
   GAME_NOT_ACTIVE: "The game is not in progress.",
-  DRAW_NOT_ALLOWED: "Drawing is only automatic on turn timeout.",
+  DRAW_NOT_ALLOWED: "You cannot draw right now — play a card (or choose a color) first.",
   INVALID_ACTION: "That action is not valid.",
 };
 
@@ -53,8 +66,128 @@ function emitFailure(socket: BrunoSocket, code: RoomError | EngineError): void {
   emitError(socket, code, messages[code] ?? code);
 }
 
-export function registerSockets(io: BrunoServer): void {
-  const rooms = new RoomManager();
+export function registerSockets(
+  io: BrunoServer,
+  options: RegisterSocketsOptions = {},
+): RoomManager {
+  const roomSockets = new Map<string, Set<BrunoSocket>>();
+  let rooms: RoomManager;
+
+  const pushGameState = (gameId: string): void => {
+    const sockets = roomSockets.get(gameId);
+    if (!sockets) {
+      return;
+    }
+    for (const socket of sockets) {
+      const playerId = socket.data.playerId;
+      if (!playerId) {
+        continue;
+      }
+      const view = rooms.getPlayerView(gameId, playerId);
+      if (view.ok) {
+        socket.emit("game:state", view.value);
+      }
+    }
+  };
+
+  const emitPrompt = (event: Extract<RoomEvent, { type: "prompt" }>): void => {
+    const sockets = roomSockets.get(event.gameId);
+    if (!sockets) {
+      return;
+    }
+    for (const socket of sockets) {
+      if (socket.data.playerId === event.playerId) {
+        if (event.kind === "vault-choice") {
+          socket.emit("game:prompt", {
+            gameId: event.gameId,
+            kind: "vault-choice",
+            offers: event.offers.map((card): VaultOffer => ({
+              id: card.id,
+              name: card.name,
+              type: card.type as VaultOffer["type"],
+              effect: card.effect,
+            })),
+          });
+        } else if (event.kind === "pick-players") {
+          socket.emit("game:prompt", {
+            gameId: event.gameId,
+            kind: "pick-players",
+            min: event.min,
+            max: event.max,
+            allowSelf: event.allowSelf,
+          });
+        } else {
+          socket.emit("game:prompt", { gameId: event.gameId, kind: "choose-color" });
+        }
+        return;
+      }
+    }
+  };
+
+  const emitGameEnded = (event: Extract<RoomEvent, { type: "ended" }>): void => {
+    const room = rooms.getRoom(event.gameId);
+    const players = room
+      ? room.players.map((player) => ({
+          id: player.id,
+          name: player.name,
+          handCount: player.hand.length,
+        }))
+      : [];
+    io.to(event.gameId).emit("game:ended", {
+      gameId: event.gameId,
+      winner: event.winnerId ? { id: event.winnerId, name: event.winnerName } : null,
+      players,
+      reason: "hand_emptied",
+    });
+    pushGameState(event.gameId);
+  };
+
+  const handleEvent = (event: RoomEvent): void => {
+    switch (event.type) {
+      case "log":
+        io.to(event.gameId).emit("game:log", { gameId: event.gameId, message: event.message });
+        break;
+      case "turn":
+        io.to(event.gameId).emit("game:turn", {
+          gameId: event.gameId,
+          playerIndex: event.playerIndex,
+        });
+        pushGameState(event.gameId);
+        break;
+      case "ended":
+        emitGameEnded(event);
+        break;
+      case "prompt":
+        emitPrompt(event);
+        break;
+    }
+  };
+
+  rooms = new RoomManager({
+    eventSink: handleEvent,
+    turnManager: options.turnManager,
+    rng: options.rng,
+  });
+
+  const addToRoom = (roomId: string, socket: BrunoSocket): void => {
+    let sockets = roomSockets.get(roomId);
+    if (!sockets) {
+      sockets = new Set();
+      roomSockets.set(roomId, sockets);
+    }
+    sockets.add(socket);
+  };
+
+  const removeFromRoom = (roomId: string, socket: BrunoSocket): void => {
+    const sockets = roomSockets.get(roomId);
+    if (!sockets) {
+      return;
+    }
+    sockets.delete(socket);
+    if (sockets.size === 0) {
+      roomSockets.delete(roomId);
+    }
+  };
 
   const refreshRooms = (): void => {
     io.emit("rooms:list:return", rooms.listRooms());
@@ -82,6 +215,7 @@ export function registerSockets(io: BrunoServer): void {
       data.playerId = parsed.data.playerId;
       data.roomId = result.value.id;
       socket.join(result.value.id);
+      addToRoom(result.value.id, socket);
       socket.emit("rooms:create:return", {
         ok: true,
         gameId: result.value.id,
@@ -110,6 +244,7 @@ export function registerSockets(io: BrunoServer): void {
       data.playerId = parsed.data.playerId;
       data.roomId = result.value.id;
       socket.join(result.value.id);
+      addToRoom(result.value.id, socket);
       io.to(result.value.id).emit("lobby:update", rooms.getLobbyPlayers(result.value.id) ?? []);
       refreshRooms();
     });
@@ -127,6 +262,7 @@ export function registerSockets(io: BrunoServer): void {
       }
       if (data.roomId === parsed.data.gameId) {
         socket.leave(parsed.data.gameId);
+        removeFromRoom(parsed.data.gameId, socket);
         data.roomId = undefined;
         data.playerId = undefined;
       }
@@ -150,16 +286,10 @@ export function registerSockets(io: BrunoServer): void {
         emitFailure(socket, result.error);
         return;
       }
-      const room = result.value;
-      const gameId = room.id;
-      const firstPlayer = room.players[room.currentTurnIndex];
-      io.to(gameId).emit("game:start:return", { ok: true, gameId });
-      io.to(gameId).emit("game:log", { gameId, message: "The game has started." });
-      io.to(gameId).emit("game:log", {
-        gameId,
-        message: `It's ${firstPlayer?.name ?? "someone"}'s turn...`,
+      io.to(parsed.data.gameId).emit("game:start:return", {
+        ok: true,
+        gameId: parsed.data.gameId,
       });
-      io.to(gameId).emit("game:turn", { gameId, playerIndex: room.currentTurnIndex });
     });
 
     socket.on("game:state:get", (payload) => {
@@ -182,11 +312,10 @@ export function registerSockets(io: BrunoServer): void {
         emitError(socket, "INVALID_ACTION", "Action payload failed validation.");
         return;
       }
-      emitError(
-        socket,
-        "NOT_IMPLEMENTED",
-        `Game actions are not implemented yet (${parsed.data.type}).`,
-      );
+      const result = rooms.performAction(parsed.data.gameId, parsed.data.playerId, parsed.data);
+      if (!result.ok) {
+        emitFailure(socket, result.error);
+      }
     });
 
     socket.on("disconnect", () => {
@@ -198,8 +327,11 @@ export function registerSockets(io: BrunoServer): void {
         if (result.ok && result.value) {
           io.to(roomId).emit("lobby:update", rooms.getLobbyPlayers(roomId) ?? []);
         }
+        removeFromRoom(roomId, socket);
         refreshRooms();
       }
     });
   });
+
+  return rooms;
 }

@@ -4,11 +4,12 @@ import GameCard from "../GameCard.js";
 
 interface PlayerHandProps {
   hand: CardView[];
+  playable: boolean[];
   myTurn: boolean;
   onPlay: (index: number) => void;
 }
 
-export function PlayerHand({ hand, myTurn, onPlay }: PlayerHandProps) {
+export function PlayerHand({ hand, playable, myTurn, onPlay }: PlayerHandProps) {
   const CARD_W = 76;
   const CARD_H = 108;
   const n = hand.length;
@@ -61,15 +62,16 @@ export function PlayerHand({ hand, myTurn, onPlay }: PlayerHandProps) {
         }}
       >
         {hand.map((card, i) => {
+          const canPlay = myTurn && playable[i] === true;
           const angle = ((i - centerIdx) / Math.max(centerIdx, 1)) * 20;
           const xOffset = (i - centerIdx) * 62;
-          const yLift = myTurn ? -14 : 0;
+          const yLift = canPlay ? -14 : 0;
           const zIndex =
             i === Math.round(centerIdx) ? 10 : 10 - Math.abs(i - Math.round(centerIdx));
           return (
             <button
               key={card.id}
-              disabled={!myTurn}
+              disabled={!canPlay}
               onClick={() => onPlay(i)}
               style={
                 {
@@ -80,7 +82,7 @@ export function PlayerHand({ hand, myTurn, onPlay }: PlayerHandProps) {
                   padding: 0,
                   background: "none",
                   border: "none",
-                  cursor: myTurn ? "pointer" : "default",
+                  cursor: canPlay ? "pointer" : "default",
                   transform: `translateX(${xOffset}px) translateY(${yLift}px) rotate(${angle}deg)`,
                   transformOrigin: `${CARD_W / 2}px ${CARD_H + 160}px`,
                   zIndex,
@@ -88,7 +90,7 @@ export function PlayerHand({ hand, myTurn, onPlay }: PlayerHandProps) {
                 } as CSSProperties
               }
             >
-              <GameCard card={card} size="md" lifted={myTurn} dimmed={!myTurn} />
+              <GameCard card={card} size="md" lifted={canPlay} dimmed={!canPlay} />
             </button>
           );
         })}

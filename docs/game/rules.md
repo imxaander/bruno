@@ -2,7 +2,7 @@
 title: Core Rules
 status: draft
 source: "1.4 BRUNO.pdf + current implementation (legacy/game.js)"
-updated: 2026-08-09
+updated: 2026-08-10
 tags: [game, rules]
 ---
 
@@ -23,7 +23,10 @@ both are recorded and the conflict is flagged.
 ## 2. Turn structure (impl)
 
 - A player has **5 seconds** to act (`Game.turnDuration = 5`).
-- A turn is ended by: playing a valid card, or by the timer expiring.
+- A turn is ended by: playing a valid card, voluntarily drawing, or the timer expiring.
+- A **voluntary draw** is only allowed when the current player has no playable card, or when a
+  draw-stack total is pending (see [draw stacking](#4-draw-stacking-24)). Drawing always ends the
+  turn.
 - On timer expiry the current player auto-draws 1 card (or the pending draw-stack total).
 - After the turn ends, play advances to the next player (respecting skip).
 
@@ -33,8 +36,8 @@ A card is playable if it matches the top card of the pile by:
 
 - **Color** (same color), or
 - **Symbol/number** (same number or same special symbol), or
-- It is a **wild** effect card that the rules allow (currently `+4`, and vault cards by
-  their own conditions).
+- It is a **wild** effect card that the rules allow (currently `+4`, and vault tokens, which
+  are always playable on your turn unless a draw stack is pending).
 
 ### Number card validation (impl)
 
@@ -47,9 +50,10 @@ is buggy (see Known bugs) — the intended rule is _color or number match_.
 - Playing a `+2` while **no draw effect is pending** is only legal if it matches the top
   card's color (design intent; current check requires color match).
 - Playing a `+2` or `+4` while a draw effect **is pending** is legal and **adds** its value
-  to the running total (`currentAdditionalCards`).
-- The next player who cannot (or does not) continue the stack must draw the **total** amount
-  in one go, then the stack resets to 0.
+  to the running total (`pendingDraw`).
+- The next player has a choice: **continue the stack** (play a `+2`/`+4`), or **eat the
+  stack** by drawing the **total** amount in one go. Drawing always ends the turn and resets
+  the stack to 0. While a stack is pending, no non-stack card can be played.
 
 > Reference link anchor: [draw stacking rule](#draw-stacking-24)
 
@@ -65,10 +69,25 @@ is buggy (see Known bugs) — the intended rule is _color or number match_.
 ## 7. Draw-4 wild (impl)
 
 - `+4` can always be played and sets the draw effect regardless of color match.
-- **Design note:** the PDF does not give `+4` a color-choice/wild rule. The current
-  implementation has no color-picker for wild cards (the modal in the HTML is a stub).
+- Playing a `+4` without a chosen color prompts the actor to **choose a color**; the card is
+  not committed to the pile until the color is chosen. The turn timer pauses while the choice
+  is pending.
+- **Design note:** the PDF does not give `+4` a color-choice/wild rule. Color-choice was
+  added in the current implementation so a `+4` can set `activeColor`.
 
-## 8. Win condition (design)
+## 8. Vaults (design + impl)
+
+- The deck holds **vault tokens** (5 silver / 3 gold / 1 diamond) rather than the catalog
+  cards. Playing a token is always legal on your turn (wild-like) unless a draw stack is
+  pending.
+- Playing a token offers the actor **5 random distinct effects** from that token's tier; the
+  actor picks exactly one (no decline, no re-roll). The token is placed on the pile and the
+  chosen effect resolves. The turn timer pauses while the choice is pending.
+- Vaults are **ignored** by the voluntary-draw gate: holding only vaults never blocks a
+  voluntary draw.
+- See [vault-mechanism.md](./vault-mechanism.md) for the full flow.
+
+## 9. Win condition (design)
 
 - Empty your hand to win.
 - Post-win behavior: Ticket to Paradise and Arise (see tier docs) modify winners/losers.
@@ -76,21 +95,25 @@ is buggy (see Known bugs) — the intended rule is _color or number match_.
   `Doomsday Button` (win in 60 rounds), `Cosmic Alignment` (collect blue 0–9), `Finality`
   (all 0s).
 
-## 9. Known gaps / open design questions
+## 10. Known gaps / open design questions
 
-| #   | Question                                                 | Status                                 |
-| --- | -------------------------------------------------------- | -------------------------------------- |
-| 1   | What happens when the deck runs out? Reshuffle the pile? | Open                                   |
-| 2   | Does drawing a card end your turn, or may you continue?  | Open (impl: auto-draw only on timeout) |
-| 3   | Does `+4` require a chosen color?                        | Open                                   |
-| 4   | Lobby minimum/maximum player enforcement                 | Open                                   |
+| #   | Question                                                 | Status                                             |
+| --- | -------------------------------------------------------- | -------------------------------------------------- |
+| 1   | What happens when the deck runs out? Reshuffle the pile? | Resolved: reshuffle the pile (minus the top card). |
+| 2   | Does drawing a card end your turn, or may you continue?  | Resolved: drawing ends your turn.                  |
+| 3   | Does `+4` require a chosen color?                        | Resolved: yes, via a color prompt.                 |
+| 4   | Lobby minimum/maximum player enforcement                 | Resolved: min 1 (solo preview), max 8.             |
 
-## 10. Implementation status
+## 11. Implementation status
 
 The rules in this document are **not** all implemented. `legacy/game.js` implements: number/skip/
 reverse/+2/+4 play validation, draw stacking, turn timer, turn advancing. It does NOT
 implement: deck exhaustion handling, vault cards, locations, mayhem, origins, color-choice
 for wilds, or win resolution.
+
+The modernized stack (`packages/server`) additionally implements: color-choice prompt for
+`+4`, vault token play flow with a `vault-choice` offer prompt, effect resolver wiring, and
+voluntary-draw gating (see `vault-mechanism.md`, `card-data-schema.md`).
 
 ### Known bugs in current engine
 

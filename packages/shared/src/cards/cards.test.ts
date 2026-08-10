@@ -1,26 +1,39 @@
 import { describe, expect, it } from "vitest";
 import { CARDS } from "./cards.js";
 import { DEFAULT_DECK_COMPOSITION, buildBaseDeck, totalCardCount } from "./deck.js";
-import { isNumberCard, isVaultCard } from "./types.js";
+import { getMayhemEvent, MAYHEM_EVENTS } from "./mayhem.js";
+import { isNumberCard, isVaultCard, isVaultTokenCard } from "./types.js";
 
-describe("vault card catalog", () => {
+describe("card catalog", () => {
   it("has unique ids", () => {
     const ids = CARDS.map((card) => card.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("contains exactly 90 vault cards across the three tiers", () => {
+  it("contains the documented families with the documented counts", () => {
     const silver = CARDS.filter((card) => card.type === "vault-silver");
     const gold = CARDS.filter((card) => card.type === "vault-gold");
     const diamond = CARDS.filter((card) => card.type === "vault-diamond");
+    const locations = CARDS.filter((card) => card.type === "location");
+    const origins = CARDS.filter((card) => card.type === "origin");
+    const artifacts = CARDS.filter((card) => card.type === "artifact");
     expect(silver.length).toBe(27);
     expect(gold.length).toBe(21);
     expect(diamond.length).toBe(42);
-    expect(silver.length + gold.length + diamond.length).toBe(90);
+    expect(locations.map((card) => card.id)).toEqual(["loc-fields", "loc-scorched-earth"]);
+    expect(origins.map((card) => card.id)).toEqual([
+      "origin-vault-keeper",
+      "origin-technomancer",
+      "origin-grand-architect",
+      "origin-masterchef",
+      "origin-fateweaver",
+    ]);
+    expect(artifacts.map((card) => card.id)).toEqual(["artifact-boot", "artifact-leg"]);
   });
 
-  it("only contains vault cards", () => {
-    expect(CARDS.every((card) => isVaultCard(card))).toBe(true);
+  it("contains no base-deck card types", () => {
+    const baseTypes = ["number", "skip", "reverse", "draw2", "draw4", "switch-color", "shuffle"];
+    expect(CARDS.every((card) => !baseTypes.includes(card.type))).toBe(true);
   });
 
   it("keeps the tentative tag in sync with the tentative status", () => {
@@ -47,21 +60,55 @@ describe("vault card catalog", () => {
   });
 });
 
-describe("deck composition", () => {
-  it("default composition yields the expected 110 cards", () => {
-    expect(totalCardCount(DEFAULT_DECK_COMPOSITION)).toBe(110);
+describe("mayhem data", () => {
+  it("contains the nine documented events with unique ids", () => {
+    expect(MAYHEM_EVENTS).toHaveLength(9);
+    const ids = MAYHEM_EVENTS.map((event) => event.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("buildBaseDeck creates 110 unique cards", () => {
+  it("looks up events by id", () => {
+    expect(getMayhemEvent("mayhem-1")).toMatchObject({ name: "Random +1" });
+    expect(getMayhemEvent("mayhem-9")).toMatchObject({ name: "Reduce All to One" });
+    expect(getMayhemEvent("mayhem-42")).toBeUndefined();
+  });
+});
+
+describe("deck composition", () => {
+  it("default composition yields the expected 119 cards (110 base + 9 vault tokens)", () => {
+    expect(totalCardCount(DEFAULT_DECK_COMPOSITION)).toBe(119);
+  });
+
+  it("buildBaseDeck creates 119 unique cards", () => {
     const deck = buildBaseDeck();
-    expect(deck.length).toBe(110);
+    expect(deck.length).toBe(119);
     const ids = deck.map((card) => card.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("never includes vault cards in the base deck", () => {
+  it("includes vault tokens (5 silver / 3 gold / 1 diamond), never catalog vault cards", () => {
     const deck = buildBaseDeck();
-    expect(deck.every((card) => !card.type.startsWith("vault-"))).toBe(true);
+    const tokens = deck.filter((card) => isVaultTokenCard(card));
+    expect(tokens).toHaveLength(9);
+    expect(tokens.filter((card) => card.type === "vault-silver")).toHaveLength(5);
+    expect(tokens.filter((card) => card.type === "vault-gold")).toHaveLength(3);
+    expect(tokens.filter((card) => card.type === "vault-diamond")).toHaveLength(1);
+    for (const token of tokens) {
+      expect(token.name).toMatch(/Vault$/);
+      expect(token.effect).toMatch(/choose one of 5 random/);
+    }
+    const catalogVaultIds = new Set(
+      CARDS.filter((card) => isVaultCard(card)).map((card) => card.id),
+    );
+    for (const card of deck) {
+      expect(catalogVaultIds.has(card.id)).toBe(false);
+    }
+  });
+
+  it("treats catalog vault cards as offer-pool effects, not deck cards", () => {
+    const catalogVaults = CARDS.filter((card) => isVaultCard(card));
+    expect(catalogVaults).toHaveLength(90);
+    expect(catalogVaults.every((card) => !isVaultTokenCard(card))).toBe(true);
   });
 
   it("produces the documented per-color counts", () => {

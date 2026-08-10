@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import type { GameEndedPayload } from "@bruno/shared";
 import { useSocket } from "./socket/useSocket.js";
 import { AfterGame } from "./pages/AfterGame.js";
 import { Game } from "./pages/Game.js";
@@ -14,9 +15,16 @@ export default function App() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomName, setRoomName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(8);
+  const [ended, setEnded] = useState<GameEndedPayload | null>(null);
 
-  const goRooms = useCallback(() => setScreen("rooms"), []);
-  const goHome = useCallback(() => setScreen("home"), []);
+  const goRooms = useCallback(() => {
+    setEnded(null);
+    setScreen("rooms");
+  }, []);
+  const goHome = useCallback(() => {
+    setEnded(null);
+    setScreen("home");
+  }, []);
   const backToLobby = useCallback(() => setScreen("lobby"), []);
   const goLobby = useCallback((gameId: string, name: string, roomMaxPlayers = 8) => {
     setRoomId(gameId);
@@ -27,6 +35,10 @@ export default function App() {
   const goGame = useCallback((gameId: string) => {
     setRoomId(gameId);
     setScreen("game");
+  }, []);
+  const handleEnded = useCallback((payload: GameEndedPayload) => {
+    setEnded(payload);
+    setScreen("aftergame");
   }, []);
 
   const handlePlay = useCallback(
@@ -59,7 +71,23 @@ export default function App() {
     );
   }
   if (screen === "game") {
-    return <Game socket={socket} identity={identity} roomId={roomId} goLobby={backToLobby} />;
+    return (
+      <Game
+        socket={socket}
+        identity={identity}
+        roomId={roomId}
+        goLobby={backToLobby}
+        onEnded={handleEnded}
+      />
+    );
   }
-  return <AfterGame goHome={goHome} goRooms={goRooms} />;
+  return (
+    <AfterGame
+      winner={ended?.winner ?? null}
+      players={ended?.players ?? []}
+      reason={ended?.reason ?? "hand_emptied"}
+      goHome={goHome}
+      goRooms={goRooms}
+    />
+  );
 }

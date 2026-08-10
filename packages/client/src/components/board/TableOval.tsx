@@ -5,9 +5,10 @@ interface TableOvalProps {
   deckCount: number;
   pileTop: CardView | null;
   direction: 1 | -1;
+  pendingDraw?: number;
 }
 
-export function TableOval({ deckCount, pileTop, direction }: TableOvalProps) {
+export function TableOval({ deckCount, pileTop, direction, pendingDraw = 0 }: TableOvalProps) {
   const arcPath = direction === 1 ? "M 20 6 A 14 14 0 0 1 34 20" : "M 20 6 A 14 14 0 0 0 6 20";
   const arrowPoints = direction === 1 ? "34,15 38,22 30,22" : "6,15 2,22 10,22";
 
@@ -25,8 +26,55 @@ export function TableOval({ deckCount, pileTop, direction }: TableOvalProps) {
         alignItems: "center",
         justifyContent: "center",
         gap: 52,
+        position: "relative",
       }}
     >
+      {pendingDraw > 0 ? (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 14,
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            padding: "8px 22px",
+            background: "rgba(255,120,0,0.1)",
+            border: "1px solid rgba(255,150,0,0.4)",
+            borderRadius: 999,
+            boxShadow: "0 0 24px rgba(255,140,0,0.25), 0 0 60px rgba(255,120,0,0.12)",
+            animation: "neon-pulse 1.4s ease-in-out infinite",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "'Barlow Condensed'",
+              fontWeight: 900,
+              fontSize: 20,
+              lineHeight: 1,
+              color: "#ffaa00",
+              textShadow: "0 0 10px rgba(255,170,0,0.8)",
+              letterSpacing: "0.04em",
+            }}
+          >
+            +{pendingDraw}
+          </span>
+          <span
+            style={{
+              fontSize: 8,
+              fontWeight: 700,
+              color: "rgba(255,190,80,0.7)",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+            }}
+          >
+            Pending — draw or stack
+          </span>
+        </div>
+      ) : null}
+
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
         <div style={{ position: "relative" }}>
           <GameCard

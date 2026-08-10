@@ -28,14 +28,14 @@ Extend the Phase 2a room model into the full rules engine for the **base deck on
 
 ## Module layout (`packages/server/src/game/`)
 
-| Module            | Owns                                                                 |
-| ----------------- | -------------------------------------------------------------------- |
+| Module            | Owns                                                                                                                               |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `deck.ts`         | Build (shared `buildBaseDeck`), shuffle (injectable RNG), draw (recycles pile on exhaustion), deal, `seedPile`/`reshuffleFromPile` |
-| `engine.ts`       | `isPlayable`, `playCard`, `applyTimeoutDraw`, `advanceTurn`/`nextIndex`, win check, `EngineError` codes |
-| `turn-manager.ts` | Per-room 5s timer (injectable `setTimer`), schedule/cancel, timeout auto-draw hook |
-| `room.ts`         | Room model (players, deck, pile, status, turn state, `activeColor`, `pendingDraw`, winner) |
-| `room-manager.ts` | Registry: create/join/leave/start + `performAction` (play), `onTurnTimeout`, `PlayerView` derivation, `RoomEventSink` |
-| `player-view.ts`  | `PlayerView`/`LobbyPlayer`/`RoomSummary` projections (no leaks)      |
+| `engine.ts`       | `isPlayable`, `playCard`, `applyTimeoutDraw`, `advanceTurn`/`nextIndex`, win check, `EngineError` codes                            |
+| `turn-manager.ts` | Per-room 5s timer (injectable `setTimer`), schedule/cancel, timeout auto-draw hook                                                 |
+| `room.ts`         | Room model (players, deck, pile, status, turn state, `activeColor`, `pendingDraw`, winner)                                         |
+| `room-manager.ts` | Registry: create/join/leave/start + `performAction` (play), `onTurnTimeout`, `PlayerView` derivation, `RoomEventSink`              |
+| `player-view.ts`  | `PlayerView`/`LobbyPlayer`/`RoomSummary` projections (no leaks)                                                                    |
 
 ## Tests (Vitest)
 

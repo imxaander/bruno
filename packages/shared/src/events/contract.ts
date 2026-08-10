@@ -3,6 +3,8 @@ import type {
   CreateRoomPayload,
   ErrorEnvelope,
   GameAction,
+  GameEndedPayload,
+  GamePrompt,
   GetGameStatePayload,
   JoinRoomPayload,
   LeaveRoomPayload,
@@ -30,5 +32,7 @@ export interface ServerToClientEvents {
   "game:state": (state: PlayerView) => void;
   "game:log": (payload: { gameId: string; message: string }) => void;
   "game:turn": (payload: { gameId: string; playerIndex: number }) => void;
+  "game:prompt": (payload: GamePrompt) => void;
+  "game:ended": (payload: GameEndedPayload) => void;
   error: (payload: ErrorEnvelope) => void;
 }

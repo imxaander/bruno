@@ -1,8 +1,10 @@
-import type { GameAction, LobbyPlayer, PlayerView, RoomSummary } from "@bruno/shared";
+import type { Card, Color, GameAction, LobbyPlayer, PlayerView, RoomSummary } from "@bruno/shared";
+import { isVaultTokenCard } from "@bruno/shared";
 import { buildDeck, dealHands, seedPile, type Rng } from "./deck.js";
-import { applyTimeoutDraw, nextIndex, playCard, type EngineError } from "./engine.js";
+import { applyDraw, hasPlayableCard, nextIndex, playCard, type EngineError } from "./engine.js";
+import { sampleVaultOffers, getResolverInputs } from "./effects/index.js";
 import { toLobbyPlayers, toPlayerView, toRoomSummary } from "./player-view.js";
-import { HAND_SIZE, Room } from "./room.js";
+import { HAND_SIZE, type Player, Room } from "./room.js";
 import { TurnManager } from "./turn-manager.js";
 export type { EngineError } from "./engine.js";
 
@@ -18,6 +20,8 @@ export type RoomError =
 
 export type RoomResult<T> = { ok: true; value: T } | { ok: false; error: RoomError | EngineError };
 
+const VAULT_OFFER_COUNT = 5;
+
 function fail<T>(error: RoomError | EngineError): RoomResult<T> {
   return { ok: false, error };
 }
@@ -25,7 +29,18 @@ function fail<T>(error: RoomError | EngineError): RoomResult<T> {
 export type RoomEvent =
   | { type: "log"; gameId: string; message: string }
   | { type: "turn"; gameId: string; playerIndex: number; playerId: string }
-  | { type: "ended"; gameId: string; winnerId: string; winnerName: string };
+  | { type: "ended"; gameId: string; winnerId: string; winnerName: string }
+  | { type: "prompt"; gameId: string; playerId: string; kind: "choose-color" }
+  | { type: "prompt"; gameId: string; playerId: string; kind: "vault-choice"; offers: Card[] }
+  | {
+      type: "prompt";
+      gameId: string;
+      playerId: string;
+      kind: "pick-players";
+      min: number;
+      max: number;
+      allowSelf?: boolean;
+    };
 
 export type RoomEventSink = (event: RoomEvent) => void;
 
@@ -79,7 +94,9 @@ export class RoomManager {
     if (!room || room.status !== "ongoing") {
       return;
     }
-    const result = applyTimeoutDraw(room, this.rng);
+    room.pendingWild = undefined;
+    room.pendingVault = undefined;
+    const result = applyDraw(room, this.rng);
     if (!result.ok) {
       return;
     }
@@ -211,12 +228,19 @@ export class RoomManager {
       player.hand = hands[index] ?? [];
     });
     let top = seedPile(room.deck, room.pile);
-    while (top?.type === "draw4") {
+    while (
+      top &&
+      (top.type === "draw4" ||
+        top.type === "vault-silver" ||
+        top.type === "vault-gold" ||
+        top.type === "vault-diamond")
+    ) {
       room.deck.unshift(room.pile.pop()!);
       top = seedPile(room.deck, room.pile);
     }
     room.activeColor = top?.color ?? null;
     room.pendingDraw = 0;
+    room.pendingWild = undefined;
     room.currentTurnIndex = Math.floor(rng() * room.players.length);
     room.currentDirection = 1;
     this.emit({ type: "log", gameId: room.id, message: "The game has started." });
@@ -233,7 +257,156 @@ export class RoomManager {
     if (!room.getPlayer(playerId)) {
       return fail("NOT_IN_ROOM");
     }
-    return { ok: true, value: toPlayerView(room, playerId) };
+    return {
+      ok: true,
+      value: toPlayerView(room, playerId, this.turnManager.durationMs / 1000),
+    };
+  }
+
+  private completePlay(
+    room: Room,
+    player: Player,
+    cardIndex: number,
+    chosenColor: Color | undefined,
+  ): RoomResult<ActionOutcome> {
+    const result = playCard(room, player, cardIndex, chosenColor, this.rng);
+    if (!result.ok) {
+      return fail(result.error);
+    }
+    this.turnManager.cancelTurn(room.id);
+    for (const message of result.value.log) {
+      this.emit({ type: "log", gameId: room.id, message });
+    }
+    if (result.value.won) {
+      this.emit({
+        type: "ended",
+        gameId: room.id,
+        winnerId: room.winnerId ?? player.id,
+        winnerName: room.winnerName ?? player.name,
+      });
+      return {
+        ok: true,
+        value: { log: result.value.log, won: true, nextPlayerId: null },
+      };
+    }
+    this.emitTurn(room);
+    this.scheduleTurn(room.id);
+    const nextPlayer = room.players[room.currentTurnIndex];
+    return {
+      ok: true,
+      value: { log: result.value.log, won: false, nextPlayerId: nextPlayer?.id ?? null },
+    };
+  }
+
+  private applyChooseColor(
+    room: Room,
+    player: Player,
+    chosenColor?: Color,
+  ): RoomResult<ActionOutcome> {
+    const pending = room.pendingWild;
+    if (!pending || pending.playerId !== player.id) {
+      return fail("INVALID_ACTION");
+    }
+    if (!chosenColor) {
+      return fail("CHOOSE_COLOR_REQUIRED");
+    }
+    room.pendingWild = undefined;
+    return this.completePlay(room, player, pending.cardIndex, chosenColor);
+  }
+
+  private applyPlay(room: Room, player: Player, action: GameAction): RoomResult<ActionOutcome> {
+    if (room.pendingWild || room.pendingVault) {
+      return fail("INVALID_ACTION");
+    }
+    if (action.cardIndex === undefined) {
+      return fail("INVALID_CARD");
+    }
+    const card = player.hand[action.cardIndex];
+    if (card?.type === "draw4" && !action.chosenColor) {
+      room.pendingWild = { cardIndex: action.cardIndex, playerId: player.id };
+      this.emit({ type: "prompt", gameId: room.id, playerId: player.id, kind: "choose-color" });
+      return { ok: true, value: { log: [], won: false, nextPlayerId: null } };
+    }
+    if (card && isVaultTokenCard(card)) {
+      const offers = sampleVaultOffers(card.type, VAULT_OFFER_COUNT, this.rng);
+      room.pendingVault = {
+        cardIndex: action.cardIndex,
+        playerId: player.id,
+        tier: card.type,
+        offers,
+      };
+      this.emit({
+        type: "prompt",
+        gameId: room.id,
+        playerId: player.id,
+        kind: "vault-choice",
+        offers,
+      });
+      return { ok: true, value: { log: [], won: false, nextPlayerId: null } };
+    }
+    return this.completePlay(room, player, action.cardIndex, action.chosenColor);
+  }
+
+  private applyVaultChoice(
+    room: Room,
+    player: Player,
+    chosenCardId: string | undefined,
+  ): RoomResult<ActionOutcome> {
+    const pending = room.pendingVault;
+    if (!pending || pending.playerId !== player.id) {
+      return fail("INVALID_ACTION");
+    }
+    const offer = pending.offers.find((card) => card.id === chosenCardId);
+    if (!offer) {
+      return fail("INVALID_ACTION");
+    }
+    pending.chosenCardId = offer.id;
+    const spec = getResolverInputs(offer.id)?.targets;
+    if (spec) {
+      pending.targetSpec = spec;
+      this.emit({
+        type: "prompt",
+        gameId: room.id,
+        playerId: player.id,
+        kind: "pick-players",
+        min: spec.min,
+        max: spec.max,
+        allowSelf: spec.allowSelf,
+      });
+      return { ok: true, value: { log: [], won: false, nextPlayerId: null } };
+    }
+    return this.completePlay(room, player, pending.cardIndex, undefined);
+  }
+
+  private applyChooseTargets(
+    room: Room,
+    player: Player,
+    targetIds: string[] | undefined,
+  ): RoomResult<ActionOutcome> {
+    const pending = room.pendingVault;
+    if (!pending || pending.playerId !== player.id) {
+      return fail("INVALID_ACTION");
+    }
+    const spec = pending.targetSpec;
+    if (!spec) {
+      return fail("INVALID_ACTION");
+    }
+    if (!targetIds || targetIds.length < spec.min || targetIds.length > spec.max) {
+      return fail("INVALID_ACTION");
+    }
+    if (new Set(targetIds).size !== targetIds.length) {
+      return fail("INVALID_ACTION");
+    }
+    for (const id of targetIds) {
+      if (!room.getPlayer(id)) {
+        return fail("INVALID_ACTION");
+      }
+    }
+    if (!spec.allowSelf && targetIds.includes(player.id)) {
+      return fail("INVALID_ACTION");
+    }
+    pending.targetIds = targetIds;
+    return this.completePlay(room, player, pending.cardIndex, undefined);
   }
 
   performAction(gameId: string, playerId: string, action: GameAction): RoomResult<ActionOutcome> {
@@ -249,44 +422,47 @@ export class RoomManager {
       return fail("NOT_IN_ROOM");
     }
     const playerIndex = room.getPlayerIndex(playerId);
-    if (action.type !== "play") {
-      if (action.type === "draw") {
-        return fail("DRAW_NOT_ALLOWED");
-      }
-      return fail("INVALID_ACTION");
-    }
     if (playerIndex !== room.currentTurnIndex) {
       return fail("NOT_YOUR_TURN");
     }
-    if (action.cardIndex === undefined) {
-      return fail("INVALID_CARD");
+    if (action.type === "play") {
+      return this.applyPlay(room, player, action);
     }
-    const result = playCard(room, player, action.cardIndex, action.chosenColor);
-    if (!result.ok) {
-      return fail(result.error);
+    if (action.type === "choose-color") {
+      if (room.pendingVault) {
+        return fail("INVALID_ACTION");
+      }
+      return this.applyChooseColor(room, player, action.chosenColor);
     }
-    this.turnManager.cancelTurn(gameId);
-    for (const message of result.value.log) {
-      this.emit({ type: "log", gameId, message });
+    if (action.type === "vault-choice") {
+      return this.applyVaultChoice(room, player, action.cardId);
     }
-    if (result.value.won) {
-      this.emit({
-        type: "ended",
-        gameId,
-        winnerId: room.winnerId ?? player.id,
-        winnerName: room.winnerName ?? player.name,
-      });
+    if (action.type === "choose-targets") {
+      return this.applyChooseTargets(room, player, action.targetIds);
+    }
+    if (action.type === "draw") {
+      if (room.pendingWild || room.pendingVault) {
+        return fail("DRAW_NOT_ALLOWED");
+      }
+      if (room.pendingDraw === 0 && hasPlayableCard(room, player, { countVaults: false })) {
+        return fail("DRAW_NOT_ALLOWED");
+      }
+      const result = applyDraw(room, this.rng);
+      if (!result.ok) {
+        return fail(result.error);
+      }
+      this.turnManager.cancelTurn(room.id);
+      for (const message of result.value.log) {
+        this.emit({ type: "log", gameId, message });
+      }
+      this.emitTurn(room);
+      this.scheduleTurn(room.id);
+      const nextPlayer = room.players[room.currentTurnIndex];
       return {
         ok: true,
-        value: { log: result.value.log, won: true, nextPlayerId: null },
+        value: { log: result.value.log, won: false, nextPlayerId: nextPlayer?.id ?? null },
       };
     }
-    this.emitTurn(room);
-    this.scheduleTurn(gameId);
-    const nextPlayer = room.players[room.currentTurnIndex];
-    return {
-      ok: true,
-      value: { log: result.value.log, won: false, nextPlayerId: nextPlayer?.id ?? null },
-    };
+    return fail("INVALID_ACTION");
   }
 }

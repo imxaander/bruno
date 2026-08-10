@@ -11,8 +11,8 @@ function seeded(seed: number): () => number {
 }
 
 describe("deck", () => {
-  it("builds the full 110-card base deck", () => {
-    expect(buildBaseDeck(DEFAULT_DECK_COMPOSITION)).toHaveLength(110);
+  it("builds the full 119-card deck (110 base + 9 vault tokens)", () => {
+    expect(buildBaseDeck(DEFAULT_DECK_COMPOSITION)).toHaveLength(119);
   });
 
   it("shuffles deterministically with a seeded rng", () => {
@@ -30,7 +30,7 @@ describe("deck", () => {
   it("preserves card identity through a shuffle", () => {
     const shuffled = shuffle(buildBaseDeck(DEFAULT_DECK_COMPOSITION), seeded(7));
     const ids = new Set(shuffled.map((card) => card.id));
-    expect(ids.size).toBe(110);
+    expect(ids.size).toBe(119);
   });
 
   it("deals 8 cards to each player and consumes only those cards", () => {
@@ -40,7 +40,7 @@ describe("deck", () => {
     for (const hand of hands) {
       expect(hand).toHaveLength(8);
     }
-    expect(deck).toHaveLength(110 - 32);
+    expect(deck).toHaveLength(119 - 32);
   });
 
   it("seeds the pile from the deck", () => {
@@ -50,7 +50,7 @@ describe("deck", () => {
     expect(top).toBeDefined();
     expect(pile).toHaveLength(1);
     expect(pile[0]).toBe(top);
-    expect(deck).toHaveLength(109);
+    expect(deck).toHaveLength(118);
   });
 
   it("draws cards from the end of the deck", () => {
@@ -58,23 +58,23 @@ describe("deck", () => {
     const pile: Card[] = [];
     const drawn = draw(deck, pile, 2);
     expect(drawn).toHaveLength(2);
-    expect(deck).toHaveLength(108);
+    expect(deck).toHaveLength(117);
   });
 
   it("reshuffles the pile (minus top) when the deck runs out", () => {
     const deck = buildDeck(seeded(6));
     const pile: Card[] = [];
     seedPile(deck, pile);
-    for (let i = 0; i < 109; i += 1) {
+    for (let i = 0; i < 118; i += 1) {
       pile.push(deck.pop()!);
     }
     expect(deck).toHaveLength(0);
-    expect(pile).toHaveLength(110);
+    expect(pile).toHaveLength(119);
     const pileTop = pile[pile.length - 1];
 
     const drawn = draw(deck, pile, 3, seeded(7));
     expect(drawn).toHaveLength(3);
-    expect(deck).toHaveLength(106);
+    expect(deck).toHaveLength(115);
     expect(pile).toHaveLength(1);
     expect(pile[0]).toBe(pileTop);
   });

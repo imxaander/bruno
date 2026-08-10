@@ -21,7 +21,7 @@ export interface PublicPlayer {
 export interface PlayerView {
   playerCount: number;
   players: PublicPlayer[];
-  you: { index: number; hand: CardView[] };
+  you: { index: number; hand: CardView[]; playable: boolean[] };
   pileTop: CardView | null;
   deckCount: number;
   currentTurnIndex: number;
@@ -29,4 +29,5 @@ export interface PlayerView {
   activeColor: Color | null;
   pendingDraw: number;
   status: GameStatus;
+  turnDuration: number;
 }

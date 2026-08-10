@@ -11,7 +11,7 @@ export class TurnManager {
   private readonly timers = new Map<string, { cancel: () => void }>();
 
   constructor(
-    private readonly durationMs: number = TURN_DURATION_MS,
+    readonly durationMs: number = TURN_DURATION_MS,
     private readonly setTimer: SetTimerFn = nodeSetTimer,
   ) {}
 

@@ -9,7 +9,9 @@ tags: [game, cards, tier1]
 # Tier I — Diamond Vault Cards
 
 Diamond Vault is the **highest** vault tier (Tier I). Effects are the most powerful and often
-win-altering. Vault cards are **not** part of the base 110-card deck.
+win-altering. Vault cards are **not** dealt from the deck — they form the **offer pool** for
+vault tokens (1 diamond token per game, each offering 5 random diamond effects). See
+[deck-composition.md](./deck-composition.md) and [vault-mechanism.md](./vault-mechanism.md).
 
 ## Notation reminder
 
@@ -78,5 +80,17 @@ specified in the PDF and is flagged as an open design question in
 
 ## Implementation status
 
-None of the Tier I vault cards are implemented in the current codebase.
+The 42 Tier I cards are transcribed into `packages/shared/src/cards/cards.ts` and used as
+the diamond offer pool (`sampleVaultOffers`).
+
+Implemented resolvers: `t1-g-switch` (stable — switch hands with a picked player), plus the
++N exemplars `t1-meiosis`, `t1-suicide`, `t1-damnation` (still `draft`). Cards without a
+registered resolver are excluded from the offer pool until resolved (see
+`effects/registry.ts`).
+
+Deferred resolver inventory (Phase 5c, Track A batch 1): passives, reveal/steal/switch,
+timed or burst draws, skip-for-N rounds, "to play" conditions, allies, win/kill,
+`[Tentative]`, or unreadable text. Examples: `t1-finality`/`t1-doomsday-button`/`t1-evening-star`/
+`t1-dawns-triumph` (kill mechanic — open design question, see `rules.md` §9).
+
 See `../modernization.md`.

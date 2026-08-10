@@ -1,5 +1,7 @@
 import type { Card, Color } from "@bruno/shared";
+import { isVaultCard, isVaultTokenCard } from "@bruno/shared";
 import { draw as drawCards, type Rng } from "./deck.js";
+import { getResolver } from "./effects/index.js";
 import type { Player, Room } from "./room.js";
 
 export type EngineError =
@@ -47,6 +49,9 @@ export function isPlayable(card: Card, room: Room): boolean {
   if (room.pendingDraw > 0) {
     return card.type === "draw2";
   }
+  if (isVaultCard(card)) {
+    return true;
+  }
   if (!room.activeColor) {
     return false;
   }
@@ -54,6 +59,20 @@ export function isPlayable(card: Card, room: Room): boolean {
     return true;
   }
   return isSymbolMatch(card, pileTop(room));
+}
+
+export function hasPlayableCard(
+  room: Room,
+  player: Player,
+  options: { countVaults?: boolean } = {},
+): boolean {
+  const countVaults = options.countVaults ?? true;
+  return player.hand.some((card) => {
+    if (!countVaults && isVaultCard(card)) {
+      return false;
+    }
+    return isPlayable(card, room);
+  });
 }
 
 export function nextIndex(room: Room, steps = 1): number {
@@ -74,6 +93,7 @@ export function playCard(
   player: Player,
   cardIndex: number,
   chosenColor?: Color,
+  rng: Rng = Math.random,
 ): EngineResult<PlayOutcome> {
   const card = player.hand[cardIndex];
   if (!card) {
@@ -119,11 +139,32 @@ export function playCard(
         advanceTurn(room);
       }
       break;
+    case "vault-silver":
+    case "vault-gold":
+    case "vault-diamond":
+      room.activeColor = null;
+      log.push(`${player.name} plays ${card.name}.`);
+      advanceTurn(room);
+      break;
     default:
       room.activeColor = card.color ?? null;
       log.push(`${player.name} plays ${card.color} ${card.name}.`);
       advanceTurn(room);
       break;
+  }
+
+  if (isVaultCard(card)) {
+    const isToken = isVaultTokenCard(card);
+    const chosenCardId = isToken ? room.pendingVault?.chosenCardId : undefined;
+    const targets = isToken ? room.pendingVault?.targetIds : undefined;
+    room.pendingVault = undefined;
+    const resolver = chosenCardId ? getResolver(chosenCardId) : getResolver(card.id);
+    if (resolver) {
+      const effect = resolver({ game: room, actor: player.id, targets, random: rng });
+      if (effect.log) {
+        log.push(...effect.log);
+      }
+    }
   }
 
   let won = false;
@@ -136,7 +177,7 @@ export function playCard(
   return { ok: true, value: { log, won } };
 }
 
-export function applyTimeoutDraw(room: Room, rng: Rng = Math.random): EngineResult<DrawOutcome> {
+export function applyDraw(room: Room, rng: Rng = Math.random): EngineResult<DrawOutcome> {
   if (room.status !== "ongoing") {
     return { ok: false, error: "GAME_NOT_ACTIVE" };
   }
@@ -148,6 +189,7 @@ export function applyTimeoutDraw(room: Room, rng: Rng = Math.random): EngineResu
   const cards = drawCards(room.deck, room.pile, amount, rng);
   player.hand.push(...cards);
   room.pendingDraw = 0;
+  room.pendingWild = undefined;
   advanceTurn(room);
   return {
     ok: true,

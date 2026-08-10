@@ -8,6 +8,9 @@ export interface DeckComposition {
   draw4: number;
   switchColor: number;
   shuffle: number;
+  vaultSilver: number;
+  vaultGold: number;
+  vaultDiamond: number;
 }
 
 export const DEFAULT_DECK_COMPOSITION: DeckComposition = {
@@ -18,6 +21,9 @@ export const DEFAULT_DECK_COMPOSITION: DeckComposition = {
   draw4: 10,
   switchColor: 0,
   shuffle: 0,
+  vaultSilver: 5,
+  vaultGold: 3,
+  vaultDiamond: 1,
 };
 
 export function totalCardCount(composition: DeckComposition): number {
@@ -27,8 +33,31 @@ export function totalCardCount(composition: DeckComposition): number {
     (composition.skip + composition.reverse + composition.draw2) * COLORS.length +
     composition.draw4 +
     composition.switchColor +
-    composition.shuffle
+    composition.shuffle +
+    composition.vaultSilver +
+    composition.vaultGold +
+    composition.vaultDiamond
   );
+}
+
+function vaultTokenCards(
+  type: "vault-silver" | "vault-gold" | "vault-diamond",
+  count: number,
+): Card[] {
+  const tier = type === "vault-silver" ? "Silver" : type === "vault-gold" ? "Gold" : "Diamond";
+  const cards: Card[] = [];
+  for (let i = 0; i < count; i++) {
+    cards.push({
+      id: `${type}-token-${i}`,
+      name: `${tier} Vault`,
+      type,
+      tags: ["wild"],
+      effect: `Play: choose one of 5 random ${tier} Vault effects.`,
+      source: "design (vault mechanism)",
+      status: "stable",
+    });
+  }
+  return cards;
 }
 
 export function buildBaseDeck(composition: DeckComposition = DEFAULT_DECK_COMPOSITION): Card[] {
@@ -130,6 +159,10 @@ export function buildBaseDeck(composition: DeckComposition = DEFAULT_DECK_COMPOS
       status: "stable",
     });
   }
+
+  cards.push(...vaultTokenCards("vault-silver", composition.vaultSilver));
+  cards.push(...vaultTokenCards("vault-gold", composition.vaultGold));
+  cards.push(...vaultTokenCards("vault-diamond", composition.vaultDiamond));
 
   return cards;
 }

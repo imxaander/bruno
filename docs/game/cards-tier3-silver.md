@@ -9,8 +9,9 @@ tags: [game, cards, tier3]
 # Tier III — Silver Vault Cards
 
 Silver Vault is the **lowest** vault tier (Tier III). Effects are relatively modest.
-Vault cards are **not** part of the base 110-card deck — they enter play via effects that
-grant vaults (see [deck-composition.md](./deck-composition.md) and `origins.md`).
+Vault cards are **not** dealt from the deck — they form the **offer pool** for vault tokens
+(5 silver tokens per game, each offering 5 random silver effects). See
+[deck-composition.md](./deck-composition.md) and [vault-mechanism.md](./vault-mechanism.md).
 
 ## Notation reminder
 
@@ -54,5 +55,20 @@ grant vaults (see [deck-composition.md](./deck-composition.md) and `origins.md`)
 
 ## Implementation status
 
-None of the Tier III vault cards are implemented in the current codebase (`game.js`).
-See `../modernization.md` for the plan to add them as data + engine effects.
+The 27 Tier III cards are transcribed into `packages/shared/src/cards/cards.ts` and used as
+the silver offer pool (`sampleVaultOffers`).
+
+Implemented resolvers: `t3-scrap-shot` (stable — pick a player, +1 and blind-discard 1),
+plus the +N exemplars `t3-mitosis` and `t3-double-edged-sword` (still `draft`). Cards without
+a registered resolver are excluded from the offer pool until resolved (see
+`effects/registry.ts`).
+
+Deferred resolver inventory (Phase 5c, Track A batch 1):
+
+- Target-picking done in this batch; the rest are deferred with reasons:
+  passives (`[P]`/`[sP]`), reveal/steal/switch, timed or burst draws, skip-for-N rounds,
+  "to play" conditions, allies, win/kill, `[Tentative]`, or unreadable text. Examples:
+  `t3-synchronize` (needs "last vault card" memory), `t3-double-trouble`/`t3-all-in` (ally
+  mechanic / round timer), `t3-sunder` (unreadable), `t3-liquidation` (skip-for-2-rounds).
+
+See `../modernization.md`.

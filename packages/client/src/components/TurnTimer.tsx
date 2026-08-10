@@ -35,7 +35,7 @@ export function TurnTimer({ seconds, active, total = 5 }: TurnTimerProps) {
       </div>
       <div className="turn-timer-caption">
         <p className="turn-timer-label">{active ? "Your Turn" : "Waiting"}</p>
-        <p className="turn-timer-sub">{active ? "Play or Draw" : "Opponent thinking"}</p>
+        <p className="turn-timer-sub">{active ? "Play a card" : "Opponent thinking"}</p>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import type { VaultOffer } from "@bruno/shared";
 import GameCard, { type VaultTier } from "./GameCard.js";
 
 const FONT_DISPLAY = "'Barlow Condensed', sans-serif";
@@ -282,6 +283,280 @@ export function OriginSelect({ onPick }: OriginSelectProps) {
               </span>
             </div>
           ))}
+        </div>
+      </Frame>
+    </Overlay>
+  );
+}
+
+const TIER_THEME: Record<
+  VaultOffer["type"],
+  { label: string; border: string; glow: string; text: string }
+> = {
+  "vault-silver": {
+    label: "SILVER",
+    border: "rgba(200,220,255,0.45)",
+    glow: "rgba(190,210,255,0.5)",
+    text: "#dfe9ff",
+  },
+  "vault-gold": {
+    label: "GOLD",
+    border: "rgba(255,214,90,0.55)",
+    glow: "rgba(255,200,60,0.55)",
+    text: "#ffd98a",
+  },
+  "vault-diamond": {
+    label: "DIAMOND",
+    border: "rgba(120,240,255,0.55)",
+    glow: "rgba(0,238,255,0.6)",
+    text: "#9ff0ff",
+  },
+};
+
+interface VaultPickerProps {
+  offers: VaultOffer[];
+  onPick: (offerId: string) => void;
+}
+
+export function VaultPicker({ offers, onPick }: VaultPickerProps) {
+  return (
+    <Overlay>
+      <Frame title="CHOOSE YOUR POWER" subtitle="Pick one of 5 random vault effects" width={560}>
+        <div
+          style={{
+            padding: "22px 24px 26px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          {offers.map((offer) => {
+            const tier = TIER_THEME[offer.type];
+            return (
+              <button
+                key={offer.id}
+                onClick={() => onPick(offer.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  padding: "12px 18px",
+                  background: "rgba(16,16,28,0.9)",
+                  border: `1px solid ${tier.border}`,
+                  borderRadius: 10,
+                  boxShadow: `0 0 18px ${tier.glow}, 0 4px 14px rgba(0,0,0,0.5)`,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  fontFamily: FONT_UI,
+                  transition: "transform 0.12s ease, box-shadow 0.12s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateX(6px)";
+                  e.currentTarget.style.boxShadow = `0 0 32px ${tier.glow}, 0 6px 20px rgba(0,0,0,0.6)`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateX(0)";
+                  e.currentTarget.style.boxShadow = `0 0 18px ${tier.glow}, 0 4px 14px rgba(0,0,0,0.5)`;
+                }}
+              >
+                <span
+                  style={{
+                    flexShrink: 0,
+                    width: 74,
+                    textAlign: "center",
+                    fontFamily: FONT_DISPLAY,
+                    fontWeight: 900,
+                    fontSize: 13,
+                    letterSpacing: "0.1em",
+                    color: tier.text,
+                    textShadow: `0 0 10px ${tier.glow}`,
+                  }}
+                >
+                  {tier.label}
+                </span>
+                <span
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    minWidth: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: FONT_DISPLAY,
+                      fontWeight: 800,
+                      fontSize: 18,
+                      color: "#e8f0ff",
+                      letterSpacing: "0.03em",
+                    }}
+                  >
+                    {offer.name}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      lineHeight: 1.35,
+                      color: "rgba(200,216,240,0.55)",
+                    }}
+                  >
+                    {offer.effect}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Frame>
+    </Overlay>
+  );
+}
+
+interface TargetPlayer {
+  id: string;
+  name: string;
+}
+
+interface TargetPickerProps {
+  players: TargetPlayer[];
+  min: number;
+  max: number;
+  onConfirm: (targetIds: string[]) => void;
+}
+
+export function TargetPicker({ players, min, max, onConfirm }: TargetPickerProps) {
+  const [selected, setSelected] = useState<string[]>([]);
+  const count = selected.length;
+  const ready = count >= min && count <= max;
+
+  const toggle = (id: string): void => {
+    setSelected((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((v) => v !== id);
+      }
+      if (prev.length >= max) {
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
+
+  return (
+    <Overlay>
+      <Frame
+        title="PICK TARGETS"
+        subtitle={`Choose ${min === max ? min : `${min}\u2013${max}`} player${max === 1 ? "" : "s"} to affect`}
+        width={460}
+      >
+        <div
+          style={{
+            padding: "20px 24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            maxHeight: 360,
+            overflowY: "auto",
+          }}
+        >
+          {players.map((player) => {
+            const checked = selected.includes(player.id);
+            const atLimit = !checked && count >= max;
+            return (
+              <button
+                key={player.id}
+                onClick={() => toggle(player.id)}
+                disabled={atLimit}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  padding: "12px 16px",
+                  background: checked ? "rgba(0,238,255,0.12)" : "rgba(16,16,28,0.9)",
+                  border: `1px solid ${checked ? "rgba(0,238,255,0.5)" : "rgba(200,216,240,0.12)"}`,
+                  borderRadius: 10,
+                  cursor: atLimit ? "not-allowed" : "pointer",
+                  opacity: atLimit ? 0.45 : 1,
+                  fontFamily: FONT_UI,
+                  textAlign: "left",
+                  transition: "all 0.12s ease",
+                }}
+              >
+                <span
+                  style={{
+                    width: 18,
+                    height: 18,
+                    flexShrink: 0,
+                    borderRadius: 5,
+                    border: `1px solid ${checked ? "#00eeff" : "rgba(200,216,240,0.25)"}`,
+                    background: checked ? "#00eeff" : "transparent",
+                    boxShadow: checked ? "0 0 10px rgba(0,238,255,0.7)" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#06060c",
+                    fontSize: 12,
+                    fontWeight: 900,
+                  }}
+                >
+                  {checked ? "\u2713" : ""}
+                </span>
+                <span
+                  style={{
+                    flex: 1,
+                    fontFamily: FONT_DISPLAY,
+                    fontWeight: 700,
+                    fontSize: 17,
+                    letterSpacing: "0.04em",
+                    color: checked ? "#00eeff" : "#e8f0ff",
+                  }}
+                >
+                  {player.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div
+          style={{
+            padding: "14px 24px 20px",
+            borderTop: "1px solid rgba(0,238,255,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 12,
+              color: ready ? "rgba(0,238,255,0.75)" : "rgba(200,216,240,0.4)",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+            }}
+          >
+            {count} / {max} selected
+          </span>
+          <button
+            onClick={() => onConfirm(selected)}
+            disabled={!ready}
+            style={{
+              fontFamily: FONT_DISPLAY,
+              fontWeight: 800,
+              fontSize: 15,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              padding: "10px 30px",
+              background: ready
+                ? "linear-gradient(90deg,#00eeff,#0090ff)"
+                : "rgba(200,216,240,0.08)",
+              color: ready ? "#06060c" : "rgba(200,216,240,0.3)",
+              border: "none",
+              borderRadius: 8,
+              cursor: ready ? "pointer" : "not-allowed",
+            }}
+          >
+            Confirm
+          </button>
         </div>
       </Frame>
     </Overlay>

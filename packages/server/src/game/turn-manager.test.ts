@@ -145,9 +145,56 @@ describe("performAction", () => {
     expect(result.error).toBe("NOT_YOUR_TURN");
   });
 
-  it("rejects a voluntary draw", () => {
+  it("draws when no card is playable", () => {
     const events: RoomEvent[] = [];
     const { manager, gameId } = setup(events);
+    const room = manager.getRoom(gameId)!;
+    room.pile = [makeCard({ id: "red-5", name: "5", type: "number", color: "red", number: 5 })];
+    room.activeColor = "red";
+    room.pendingDraw = 0;
+    room.currentTurnIndex = 0;
+    room.players[0]!.hand = [
+      makeCard({ id: "blue-3", name: "3", type: "number", color: "blue", number: 3 }),
+      makeCard({ id: "green-4", name: "4", type: "number", color: "green", number: 4 }),
+    ];
+
+    const before = room.players[0]!.hand.length;
+    const result = manager.performAction(gameId, "p0", {
+      gameId,
+      type: "draw",
+      playerId: "p0",
+    });
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(result.value.won).toBe(false);
+    expect(room.players[0]!.hand).toHaveLength(before + 1);
+    expect(room.pendingDraw).toBe(0);
+    expect(room.currentTurnIndex).toBe(1);
+    const turnEvents = events.filter((event) => event.type === "turn");
+    expect(turnEvents[turnEvents.length - 1]).toMatchObject({
+      type: "turn",
+      playerIndex: 1,
+      playerId: "p1",
+    });
+    expect(events.some((event) => event.type === "log" && event.message.includes("draws"))).toBe(
+      true,
+    );
+  });
+
+  it("rejects a draw when a card is playable", () => {
+    const events: RoomEvent[] = [];
+    const { manager, gameId } = setup(events);
+    const room = manager.getRoom(gameId)!;
+    room.pile = [makeCard({ id: "red-5", name: "5", type: "number", color: "red", number: 5 })];
+    room.activeColor = "red";
+    room.pendingDraw = 0;
+    room.currentTurnIndex = 0;
+    room.players[0]!.hand = [
+      makeCard({ id: "red-7", name: "7", type: "number", color: "red", number: 7 }),
+      makeCard({ id: "blue-2", name: "2", type: "number", color: "blue", number: 2 }),
+    ];
+
     const result = manager.performAction(gameId, "p0", {
       gameId,
       type: "draw",
@@ -182,8 +229,12 @@ describe("performAction", () => {
       throw new Error(result.error);
     }
     expect(result.value.won).toBe(false);
-    const turnEvent = events.find((event) => event.type === "turn");
-    expect(turnEvent?.type === "turn" && turnEvent.playerIndex).toBe(1);
+    const turnEvents = events.filter((event) => event.type === "turn");
+    expect(turnEvents[turnEvents.length - 1]).toMatchObject({
+      type: "turn",
+      playerIndex: 1,
+      playerId: "p1",
+    });
     expect(events.filter((event) => event.type === "log")).not.toHaveLength(0);
   });
 

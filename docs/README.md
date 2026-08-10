@@ -35,6 +35,7 @@ plan for the codebase.
 | `game/overview.md`                | Game concept, objective, and round flow.                     |
 | `game/rules.md`                   | Core rules: turns, playing, drawing, stacking, winning.      |
 | `game/deck-composition.md`        | What cards are in the deck and in what quantities.           |
+| `game/vault-mechanism.md`         | How vault tokens offer 5 random tier effects.                |
 | `game/cards-tier3-silver.md`      | Tier III (Silver Vault) card catalog.                        |
 | `game/cards-tier2-gold.md`        | Tier II (Gold Vault) card catalog.                           |
 | `game/cards-tier1-diamond.md`     | Tier I (Diamond Vault) card catalog.                         |

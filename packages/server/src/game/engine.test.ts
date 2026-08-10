@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Card, Color } from "@bruno/shared";
-import { applyTimeoutDraw, isPlayable, playCard } from "./engine.js";
+import { applyDraw, hasPlayableCard, isPlayable, playCard } from "./engine.js";
 import { RoomManager, type RoomResult } from "./room-manager.js";
 import type { Room } from "./room.js";
 import { TurnManager } from "./turn-manager.js";
@@ -37,6 +37,12 @@ const red5 = (): Card =>
   makeCard({ id: "red-5", name: "5", type: "number", color: "red", number: 5 });
 const green5 = (): Card =>
   makeCard({ id: "green-5", name: "5", type: "number", color: "green", number: 5 });
+const green4 = (): Card =>
+  makeCard({ id: "green-4", name: "4", type: "number", color: "green", number: 4 });
+const blue7 = (): Card =>
+  makeCard({ id: "blue-7", name: "7", type: "number", color: "blue", number: 7 });
+const red7 = (): Card =>
+  makeCard({ id: "red-7", name: "7", type: "number", color: "red", number: 7 });
 const redSkip = (): Card => makeCard({ id: "red-skip", name: "Skip", type: "skip", color: "red" });
 const greenSkip = (): Card =>
   makeCard({ id: "green-skip", name: "Skip", type: "skip", color: "green" });
@@ -114,6 +120,29 @@ describe("isPlayable", () => {
     expect(isPlayable(draw4(), room)).toBe(true);
     expect(isPlayable(red5(), room)).toBe(false);
     expect(isPlayable(redSkip(), room)).toBe(false);
+  });
+});
+
+describe("hasPlayableCard", () => {
+  it("is true when any hand card matches", () => {
+    const { room } = startGame(2);
+    setState(room, red5(), "red");
+    room.players[0]!.hand = [green4(), red7()];
+    expect(hasPlayableCard(room, room.players[0]!)).toBe(true);
+  });
+
+  it("is false when no hand card matches", () => {
+    const { room } = startGame(2);
+    setState(room, red5(), "red");
+    room.players[0]!.hand = [green4(), blue7()];
+    expect(hasPlayableCard(room, room.players[0]!)).toBe(false);
+  });
+
+  it("counts stack cards only while a draw is pending", () => {
+    const { room } = startGame(2);
+    setState(room, red2(), "red", 4);
+    room.players[0]!.hand = [green2(), red5()];
+    expect(hasPlayableCard(room, room.players[0]!)).toBe(true);
   });
 });
 
@@ -251,12 +280,12 @@ describe("playCard", () => {
   });
 });
 
-describe("applyTimeoutDraw", () => {
+describe("applyDraw", () => {
   it("draws 1 card on a plain timeout", () => {
     const { room } = startGame(2);
     const before = room.players[0]!.hand.length;
     setState(room, red5(), "red");
-    const result = applyTimeoutDraw(room, seeded(2));
+    const result = applyDraw(room, seeded(2));
     if (!result.ok) {
       throw new Error(result.error);
     }
@@ -269,7 +298,7 @@ describe("applyTimeoutDraw", () => {
   it("draws the pending stack total", () => {
     const { room } = startGame(2);
     setState(room, red2(), "red", 6);
-    const result = applyTimeoutDraw(room, seeded(3));
+    const result = applyDraw(room, seeded(3));
     if (!result.ok) {
       throw new Error(result.error);
     }

@@ -46,3 +46,9 @@ export function isVaultCard(card: Card): card is Card & { type: VaultCardType } 
 }
 
 export type VaultCardType = "vault-silver" | "vault-gold" | "vault-diamond";
+
+const VAULT_TOKEN_ID = /^vault-(silver|gold|diamond)-token-\d+$/;
+
+export function isVaultTokenCard(card: Card): card is Card & { type: VaultCardType } {
+  return isVaultCard(card) && VAULT_TOKEN_ID.test(card.id);
+}

@@ -1,8 +1,8 @@
 ---
 title: Deck Composition
 status: draft
-source: "current implementation (legacy/game.js DeckCardSet) + design intent"
-updated: 2026-08-09
+source: "current implementation (packages/shared/src/cards/deck.ts) + design intent"
+updated: 2026-08-10
 tags: [game, deck]
 ---
 
@@ -48,8 +48,8 @@ Each card has a PNG in `legacy/assets/images/cards/` named by the pattern used i
 
 ## 2. Deck constants (proposed target)
 
-In the modernized code (`packages/shared`), deck composition must be a typed, configurable
-value rather than a hard-coded class. Proposed shape:
+In the modernized code (`packages/shared`), deck composition is a typed, configurable value
+rather than a hard-coded class:
 
 ```ts
 interface DeckComposition {
@@ -60,26 +60,37 @@ interface DeckComposition {
   draw4: number; // total, colorless
   switchColor: number; // total, wild
   shuffle: number; // total, wild
+  vaultSilver: number; // silver vault tokens (5)
+  vaultGold: number; // gold vault tokens (3)
+  vaultDiamond: number; // diamond vault tokens (1)
 }
 ```
 
-See `../card-data-schema.md` for the full type contract.
+Default (`DEFAULT_DECK_COMPOSITION`): 10/5/5/5/10/0/0 base cards per the table above plus
+5/3/1 vault tokens = **119 cards total**. See `../card-data-schema.md` for the full type
+contract and `vault-mechanism.md` for how the tokens resolve.
 
 ## 3. Vault / special cards in the deck?
 
-| Card family            | In base deck? | How it enters play                                                                                               |
-| ---------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Vaults (Tier I/II/III) | **No**        | Via vault-giving effects (Offerings, Ruin, Pandora's Box, Masterchef, Fateweaver spins), Origins, and Locations. |
-| Locations              | **No**        | Selected/assigned at game start (see `locations.md`).                                                            |
-| Mayhem                 | **No**        | A Mayhem is rolled at the start of each round (see `mayhem.md`).                                                 |
-| Origin Vaults          | **No**        | Chosen before the game starts (see `origins.md`).                                                                |
+| Card family            | In base deck? | How it enters play                                                                                             |
+| ---------------------- | ------------- | -------------------------------------------------------------------------------------------------------------- |
+| Vaults (Tier I/II/III) | **Tokens**    | 9 vault tokens (5 silver / 3 gold / 1 diamond) are shuffled in; playing one offers 5 random same-tier effects. |
+| Locations              | **No**        | Selected/assigned at game start (see `locations.md`).                                                          |
+| Mayhem                 | **No**        | A Mayhem is rolled at the start of each round (see `mayhem.md`).                                               |
+| Origin Vaults          | **No**        | Chosen before the game starts (see `origins.md`).                                                              |
 
-> The PDF does **not** specify per-card quantities for the Vault families. Until the user
-> provides counts, vault cards are treated as effect-granted (one instance per trigger),
-> never as part of the shuffled deck.
+> Decision (2026-08-10, revised): the 90 catalog vault cards are the **offer pool only** and
+> are never shuffled into the deck. Instead the deck holds 9 vault **tokens** (5/3/1), each
+> worth a choice of 5 random effects from its tier. The default composition is **119 cards**
+> (110 base + 9 tokens). Tokens are always playable on your turn (wild-like) unless a draw
+> stack is pending; during a pending stack only `+2`/`+4` may be played. Vault tokens drawn
+> as the opening pile top are re-seeded (like `+4`) so the game always opens on a colored
+> card. Full flow in `vault-mechanism.md`.
 
 ## 4. Implementation status
 
-- Base deck: implemented in `legacy/game.js` (`populateDeck`).
-- Vaults / Locations / Mayhem / Origins: not implemented.
-- The stale comment at `legacy/game.js:31` should be corrected during modernization.
+- Base deck: implemented in `packages/shared/src/cards/deck.ts` (`buildBaseDeck`).
+- Vault tokens: implemented (5/3/1 = 9 tokens, 119-card deck); catalog stays as offer pool.
+- Vault play flow: implemented (offer prompt + resolver wiring + client `VaultPicker`).
+- Locations / Mayhem / Origins: data defined in `packages/shared/src/cards/`; gameplay wiring pending.
+- The stale comment at `legacy/game.js:31` remains unmodified (legacy is frozen).

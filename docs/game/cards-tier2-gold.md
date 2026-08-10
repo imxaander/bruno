@@ -10,7 +10,9 @@ tags: [game, cards, tier2]
 
 Gold Vault is the **middle** vault tier (Tier II). Effects are stronger versions of several
 Tier III cards (Hush II, Mitosis II, Scrap Shot II, Trade Sector II) plus unique ones.
-Vault cards are **not** part of the base 110-card deck.
+Vault cards are **not** dealt from the deck — they form the **offer pool** for vault tokens
+(3 gold tokens per game, each offering 5 random gold effects). See
+[deck-composition.md](./deck-composition.md) and [vault-mechanism.md](./vault-mechanism.md).
 
 ## Notation reminder
 
@@ -48,5 +50,19 @@ Vault cards are **not** part of the base 110-card deck.
 
 ## Implementation status
 
-None of the Tier II vault cards are implemented in the current codebase.
+The 21 Tier II cards are transcribed into `packages/shared/src/cards/cards.ts` and used as
+the gold offer pool (`sampleVaultOffers`).
+
+Implemented resolvers: `t2-scrap-shot` (stable — pick a player, +3 and blind-discard 3),
+`t2-card-a-palooza` (stable — shuffle all hands, deal back same counts), `t2-vault-hunter`
+(stable — pick 3 players, steal 2 random vaults each), plus the +N exemplar `t2-mitosis`
+(still `draft`). Cards without a registered resolver are excluded from the offer pool until
+resolved (see `effects/registry.ts`).
+
+Deferred resolver inventory (Phase 5c, Track A batch 1): passives, reveal/steal/switch,
+timed or burst draws, skip-for-N rounds, "to play" conditions, allies, `[Tentative]`, or
+unreadable text. Examples: `t2-force-of-will` (`[P]`), `t2-hush`/`t2-midas`/`t2-flood`
+(forced-color markers / skip hooks), `t2-twice-than-one` (`[Tentative]`),
+`t2-flight-of-icarus` (unreadable), `t2-triple-threat` (ally mechanic).
+
 See `../modernization.md`.

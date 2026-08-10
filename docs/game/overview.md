@@ -2,7 +2,7 @@
 title: Game Overview
 status: draft
 source: "1.4 BRUNO.pdf p.1 + current implementation"
-updated: 2026-08-09
+updated: 2026-08-10
 tags: [game, overview]
 ---
 
@@ -27,7 +27,6 @@ Be the first player to empty your hand and win the game. Winning triggers post-w
 ## Player count
 
 - Current implementation: 1–8 players per room (lobby UI shows `X / 8`).
-- Lobby minimum not enforced in code yet.
 - Some cards are player-count restricted (e.g. `Rewind` is _"4 or more players only"_).
 
 ## Round flow
@@ -35,8 +34,9 @@ Be the first player to empty your hand and win the game. Winning triggers post-w
 1. **Lobby** — players join a room; host starts the game.
 2. **Setup** — each player draws 8 cards; the deck is shuffled; a card is placed on the pile;
    a random player is picked to go first.
-3. **Turn** — the current player either plays a valid card or draws (5-second timer in the
-   current implementation; timeout auto-draws).
+3. **Turn** — the current player plays a valid card, or **draws** when they have no playable
+   card (5-second timer; a draw on timeout is automatic). While a draw-stack is pending they
+   may instead draw the total to eat the stack. Drawing always ends the turn.
 4. **Resolution** — played card effects apply (skip, reverse, draw stacking, vault effects).
 5. **Advance** — turn passes to the next player in direction (with skip handling).
 6. **Repeat** — rounds continue until a player empties their hand.

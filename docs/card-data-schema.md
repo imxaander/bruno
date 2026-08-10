@@ -2,7 +2,7 @@
 title: Card Data Schema
 status: proposed
 source: modernization plan + PDF card catalog
-updated: 2026-08-09
+updated: 2026-08-10
 tags: [data, schema]
 ---
 
@@ -75,11 +75,15 @@ interface DeckComposition {
   draw4: number; // total, colorless wild
   switchColor: number; // total, wild (0 in current config)
   shuffle: number; // total, wild (0 in current config)
+  vaultSilver: number; // silver vault tokens (5)
+  vaultGold: number; // gold vault tokens (3)
+  vaultDiamond: number; // diamond vault tokens (1)
 }
 ```
 
-See `game/deck-composition.md` for the current (110-card) values and open questions about
-vault inclusion in the deck.
+See `game/deck-composition.md` for values and `game/vault-mechanism.md` for the vault flow.
+Default is 119 cards (110 base + 9 vault tokens); the 90 catalog vault cards are the offer
+pool only and are not dealt (decision 2026-08-10, revised).
 
 ## 3. Game state (server-authoritative)
 
@@ -122,7 +126,7 @@ data + a resolver case:
 
 ```ts
 interface EffectContext {
-  game: EngineState; // full, authoritative state (server-side only)
+  game: Room; // full, authoritative state (server-side only)
   actor: PlayerId;
   targets?: PlayerId[];
   chosenColor?: Color;
@@ -135,9 +139,51 @@ type EffectResult = {
 };
 ```
 
+Implemented in `packages/server/src/game/effects/` (`types.ts`, `registry.ts`, `helpers.ts`,
+`catalog.ts`). Resolvers are keyed by card id via `registerResolver(cardId, resolver,
+inputs?)`; the engine runs the resolver for vault cards during `playCard`. A data invariant
+test requires a registered resolver for every `stable` card. Implemented resolvers today:
+
+- +N to all enemies: `t1-meiosis`, `t1-suicide`, `t1-damnation`.
+- +N to N picked players: `t3/t2-mitosis`, `t3-double-edged-sword`.
+- Target-picking batch (Phase 5c Track A): `t3/t2-scrap-shot` (target +N and blind discard),
+  `t2-vault-hunter` (steal vaults from 3 targets), `t1-g-switch` (swap hands),
+  `t2-card-a-palooza` (shuffle all hands).
+
+Vault tokens sample 5 random same-tier catalog offers at play time
+(`sampleVaultOffers`); the chosen offer's resolver runs and the token is placed on the pile.
+See `game/vault-mechanism.md`.
+
 Effects that need UI input (choose color, pick player, choose cards to discard/steal)
-declare their required inputs in `playCondition`/metadata and the socket contract exposes a
-typed "resolve prompt" flow.
+declare their required inputs in a resolver's metadata and the socket contract exposes a
+typed "resolve prompt" flow. Implemented prompt kinds: `choose-color`, `vault-choice`,
+`pick-players`.
+
+### 4.1 Target-picking input specs
+
+A resolver that picks players registers a target spec so the server knows to collect
+explicit targets before running the effect:
+
+```ts
+interface ResolverTargetInput {
+  min: number; // how many players must be chosen
+  max: number; // how many players may be chosen
+  allowSelf?: boolean; // default false: the actor may not target themselves
+}
+
+interface ResolverInputs {
+  targets?: ResolverTargetInput;
+}
+
+registerResolver("t3-scrap-shot", scrapShot(1, 1), { targets: { min: 1, max: 1 } });
+getResolverInputs("t3-scrap-shot"); // { targets: { min: 1, max: 1 } }
+```
+
+When a chosen vault offer declares `targets`, the room manager holds the play in a pending
+state and emits a `pick-players` prompt; the actor replies with a `choose-targets` action
+(`targetIds`), which is validated (count, distinct, seated, actor excluded unless
+`allowSelf`) and then completes the play, feeding the ids to the resolver's `targets`.
+Cards with no spec run immediately with random fallback targets (existing behavior).
 
 ## 5. Socket payload schemas (Zod)
 
@@ -149,12 +195,39 @@ import { z } from "zod";
 
 const GameAction = z.object({
   gameId: z.string(),
-  type: z.enum(["play", "draw", "choose-color"]),
+  type: z.enum(["play", "draw", "choose-color", "vault-choice", "choose-targets"]),
   playerId: z.string(),
   cardId: z.string().optional(),
   cardIndex: z.number().int().nonnegative().optional(),
   chosenColor: z.enum(["red", "blue", "green", "yellow"]).optional(),
+  targetIds: z.array(z.string()).optional(), // present for "choose-targets"
 });
+```
+
+```ts
+// server → client prompts
+const VaultOffer = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(["vault-silver", "vault-gold", "vault-diamond"]),
+  effect: z.string(),
+});
+
+const GamePrompt = z.discriminatedUnion("kind", [
+  { gameId: z.string(), kind: z.literal("choose-color") },
+  {
+    gameId: z.string(),
+    kind: z.literal("vault-choice"),
+    offers: z.array(VaultOffer),
+  },
+  {
+    gameId: z.string(),
+    kind: z.literal("pick-players"),
+    min: z.number(),
+    max: z.number(),
+    allowSelf: z.boolean().optional(),
+  },
+]);
 ```
 
 ## 6. Data provenance
