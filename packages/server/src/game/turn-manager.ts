@@ -1,4 +1,4 @@
-export const TURN_DURATION_MS = 5000;
+export const TURN_DURATION_MS = 7000;
 
 export type SetTimerFn = (callback: () => void, ms: number) => { cancel: () => void };
 

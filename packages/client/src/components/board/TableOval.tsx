@@ -1,4 +1,4 @@
-import type { CardView } from "@bruno/shared";
+import type { CardView, Color } from "@bruno/shared";
 import GameCard from "../GameCard.js";
 
 interface TableOvalProps {
@@ -6,9 +6,23 @@ interface TableOvalProps {
   pileTop: CardView | null;
   direction: 1 | -1;
   pendingDraw?: number;
+  activeColor?: Color | null;
 }
 
-export function TableOval({ deckCount, pileTop, direction, pendingDraw = 0 }: TableOvalProps) {
+const COLOR_THEME: Record<Color, { name: string; hex: string; glow: string }> = {
+  red: { name: "RED", hex: "#ff3355", glow: "rgba(255,51,85,0.7)" },
+  blue: { name: "BLUE", hex: "#00aaff", glow: "rgba(0,170,255,0.7)" },
+  green: { name: "GREEN", hex: "#22ff88", glow: "rgba(34,255,136,0.7)" },
+  yellow: { name: "YELLOW", hex: "#ffcc00", glow: "rgba(255,204,0,0.7)" },
+};
+
+export function TableOval({
+  deckCount,
+  pileTop,
+  direction,
+  pendingDraw = 0,
+  activeColor = null,
+}: TableOvalProps) {
   const arcPath = direction === 1 ? "M 20 6 A 14 14 0 0 1 34 20" : "M 20 6 A 14 14 0 0 0 6 20";
   const arrowPoints = direction === 1 ? "34,15 38,22 30,22" : "6,15 2,22 10,22";
 
@@ -29,6 +43,48 @@ export function TableOval({ deckCount, pileTop, direction, pendingDraw = 0 }: Ta
         position: "relative",
       }}
     >
+      {activeColor ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 14,
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 18px",
+            background: "rgba(8,8,14,0.9)",
+            border: `1px solid ${COLOR_THEME[activeColor].hex}55`,
+            borderRadius: 999,
+            boxShadow: `0 0 18px ${COLOR_THEME[activeColor].glow}, 0 0 40px ${COLOR_THEME[activeColor].glow}`,
+          }}
+        >
+          <div
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: COLOR_THEME[activeColor].hex,
+              boxShadow: `0 0 10px ${COLOR_THEME[activeColor].hex}`,
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              fontFamily: "'Barlow Condensed'",
+              fontWeight: 800,
+              fontSize: 13,
+              letterSpacing: "0.16em",
+              color: COLOR_THEME[activeColor].hex,
+              textShadow: `0 0 8px ${COLOR_THEME[activeColor].glow}`,
+            }}
+          >
+            ACTIVE COLOR: {COLOR_THEME[activeColor].name}
+          </span>
+        </div>
+      ) : null}
+
       {pendingDraw > 0 ? (
         <div
           style={{

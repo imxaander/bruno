@@ -35,7 +35,8 @@ Be the first player to empty your hand and win the game. Winning triggers post-w
 2. **Setup** — each player draws 8 cards; the deck is shuffled; a card is placed on the pile;
    a random player is picked to go first.
 3. **Turn** — the current player plays a valid card, or **draws** when they have no playable
-   card (5-second timer; a draw on timeout is automatic). While a draw-stack is pending they
+   card (7-second timer; a draw on timeout is automatic, and an open action prompt gets a
+   default choice instead). While a draw-stack is pending they
    may instead draw the total to eat the stack. Drawing always ends the turn.
 4. **Resolution** — played card effects apply (skip, reverse, draw stacking, vault effects).
 5. **Advance** — turn passes to the next player in direction (with skip handling).

@@ -4,7 +4,7 @@ interface TurnTimerProps {
   total?: number;
 }
 
-export function TurnTimer({ seconds, active, total = 5 }: TurnTimerProps) {
+export function TurnTimer({ seconds, active, total = 7 }: TurnTimerProps) {
   const r = 26;
   const circ = 2 * Math.PI * r;
   const ratio = active ? Math.max(0, Math.min(1, seconds / total)) : 1;

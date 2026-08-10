@@ -151,24 +151,24 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     socket?.emit("game:action", { gameId: roomId, type: "draw", playerId: identity.id });
   }, [socket, roomId, identity.id]);
 
-  const turnDuration = view?.turnDuration ?? 5;
+  const turnDuration = view?.turnDuration ?? 7;
   const myTurn = view ? view.currentTurnIndex === view.you.index : false;
   const canDraw =
     view != null && myTurn && !prompt && (view.pendingDraw > 0 || !view.you.playable.some(Boolean));
 
   useEffect(() => {
     setRemaining(turnDuration);
-  }, [turnDuration, view?.currentTurnIndex]);
+  }, [turnDuration, view?.currentTurnIndex, prompt]);
 
   useEffect(() => {
-    if (!myTurn || prompt) {
+    if (!myTurn) {
       return;
     }
     const id = window.setInterval(() => {
       setRemaining((value) => Math.max(0, value - 1));
     }, 1000);
     return () => window.clearInterval(id);
-  }, [myTurn, prompt, view?.currentTurnIndex]);
+  }, [myTurn, view?.currentTurnIndex]);
 
   if (!view) {
     return (
@@ -419,6 +419,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           pileTop={view.pileTop}
           direction={view.currentDirection}
           pendingDraw={view.pendingDraw}
+          activeColor={view.activeColor}
         />
       </div>
 
@@ -494,6 +495,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           pileTop={view.pileTop}
           direction={view.currentDirection}
           pendingDraw={view.pendingDraw}
+          activeColor={view.activeColor}
         />
         <div style={{ position: "absolute", right: 60, top: "50%", transform: "translateY(-50%)" }}>
           {timerControls}

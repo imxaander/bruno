@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Card, Color } from "@bruno/shared";
-import { CARDS } from "@bruno/shared";
+import { CARDS, isVaultTokenCard } from "@bruno/shared";
 import { RoomManager, type RoomEvent, type RoomResult } from "./room-manager.js";
 import { TurnManager } from "./turn-manager.js";
 
@@ -321,7 +321,7 @@ describe("RoomManager", () => {
     expect(result.error).toBe("INVALID_ACTION");
   });
 
-  it("clears a pending wild when the turn times out", () => {
+  it("applies the most-common hand color when choose-color times out", () => {
     const events: RoomEvent[] = [];
     const timers: Array<() => void> = [];
     const manager = new RoomManager({
@@ -340,23 +340,126 @@ describe("RoomManager", () => {
     room.activeColor = "red";
     room.pendingDraw = 0;
     room.currentTurnIndex = 0;
-    room.players[0]!.hand = [makeCard({ id: "d4", name: "Draw 4", type: "draw4", tags: ["wild"] })];
+    room.players[0]!.hand = [
+      makeCard({ id: "red-1", name: "1", type: "number", color: "red", number: 1 }),
+      makeCard({ id: "red-2", name: "2", type: "number", color: "red", number: 2 }),
+      makeCard({ id: "blue-3", name: "3", type: "number", color: "blue", number: 3 }),
+      makeCard({ id: "d4", name: "Draw 4", type: "draw4", tags: ["wild"] }),
+    ];
     value(
       manager.performAction(room.id, "p1", {
         gameId: room.id,
         type: "play",
         playerId: "p1",
-        cardIndex: 0,
+        cardIndex: 3,
       }),
     );
     expect(room.pendingWild).toBeDefined();
-    expect(timers).toHaveLength(1);
+    // prompt-open resets the turn timer (fresh window)
+    expect(timers).toHaveLength(2);
 
     timers.pop()!();
 
     expect(room.pendingWild).toBeUndefined();
-    expect(room.players[0]!.hand).toHaveLength(2);
-    expect(room.pendingDraw).toBe(0);
+    expect(room.players[0]!.hand).toHaveLength(3);
+    expect(room.pendingDraw).toBe(4);
+    expect(room.activeColor).toBe("red");
+    expect(room.currentTurnIndex).toBe(1);
+    expect(
+      events.some((event) => event.type === "log" && event.message.includes("defaulting")),
+    ).toBe(true);
+  });
+
+  it("auto-picks the first vault offer when vault-choice times out", () => {
+    const events: RoomEvent[] = [];
+    const timers: Array<() => void> = [];
+    const manager = new RoomManager({
+      eventSink: (event) => events.push(event),
+      turnManager: new TurnManager(5000, (callback) => {
+        timers.push(callback);
+        return { cancel: () => {} };
+      }),
+    });
+    const room = value(
+      manager.createRoom({ name: "A", playerId: "p1", playerName: "A", maxPlayers: 8 }),
+    );
+    value(manager.joinRoom(room.id, "p2", "B"));
+    value(manager.startGame(room.id, "p1", seeded(9)));
+    room.pendingDraw = 0;
+    room.currentTurnIndex = 0;
+    room.activeColor = "red";
+    room.players[0]!.hand = [vaultToken()];
+    room.pendingVault = {
+      cardIndex: 0,
+      playerId: "p1",
+      tier: "vault-silver",
+      offers: [
+        CARDS.find((card) => card.id === "t3-scrap-shot")!,
+        CARDS.find((card) => card.id === "t3-mitosis")!,
+      ],
+    };
+
+    timers[0]!();
+
+    expect(room.pendingVault).toBeUndefined();
+    expect(room.pile[room.pile.length - 1]).toMatchObject({ id: "vault-silver-token-0" });
+    // first offer resolves against the default target (first seated non-actor)
+    expect(
+      events.some((event) => event.type === "log" && event.message.includes("Scrap Shot")),
+    ).toBe(true);
+    expect(
+      events.some(
+        (event) => event.type === "log" && event.message.includes("hits B: +1 and discards"),
+      ),
+    ).toBe(true);
+    expect(room.currentTurnIndex).toBe(1);
+  });
+
+  it("auto-fills default targets when pick-players times out", () => {
+    const events: RoomEvent[] = [];
+    const timers: Array<() => void> = [];
+    const manager = new RoomManager({
+      eventSink: (event) => events.push(event),
+      turnManager: new TurnManager(5000, (callback) => {
+        timers.push(callback);
+        return { cancel: () => {} };
+      }),
+    });
+    const room = value(
+      manager.createRoom({ name: "A", playerId: "p1", playerName: "A", maxPlayers: 8 }),
+    );
+    value(manager.joinRoom(room.id, "p2", "B"));
+    value(manager.joinRoom(room.id, "p3", "C"));
+    value(manager.joinRoom(room.id, "p4", "D"));
+    value(manager.startGame(room.id, "p1", seeded(9)));
+    room.pendingDraw = 0;
+    room.currentTurnIndex = 0;
+    room.activeColor = "red";
+    room.players[0]!.hand = [vaultToken()];
+    for (let i = 1; i <= 3; i += 1) {
+      room.players[i]!.hand = [
+        makeCard({ id: "vault-silver-token-1", name: "Silver Vault", type: "vault-silver" }),
+        makeCard({ id: "vault-silver-token-2", name: "Silver Vault", type: "vault-silver" }),
+      ];
+    }
+    room.pendingVault = {
+      cardIndex: 0,
+      playerId: "p1",
+      tier: "vault-silver",
+      offers: [CARDS.find((card) => card.id === "t2-vault-hunter")!],
+      chosenCardId: "t2-vault-hunter",
+      targetSpec: { min: 3, max: 3 },
+    };
+
+    timers[0]!();
+
+    expect(room.pendingVault).toBeUndefined();
+    expect(
+      events.some(
+        (event) => event.type === "log" && event.message.includes("steals 6 vault token(s)"),
+      ),
+    ).toBe(true);
+    expect(room.players[0]!.hand.filter(isVaultTokenCard)).toHaveLength(6);
     expect(room.currentTurnIndex).toBe(1);
   });
 

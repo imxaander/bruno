@@ -91,7 +91,7 @@ describe("turn timeout via RoomManager", () => {
     room.currentTurnIndex = 0;
     const before = room.players[0]!.hand.length;
 
-    vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(7000);
 
     expect(room.players[0]!.hand).toHaveLength(before + 1);
     expect(room.currentTurnIndex).toBe(1);
@@ -108,7 +108,7 @@ describe("turn timeout via RoomManager", () => {
     room.currentTurnIndex = 0;
     room.pendingDraw = 6;
 
-    vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(7000);
 
     expect(room.players[0]!.hand).toHaveLength(8 + 6);
     expect(room.pendingDraw).toBe(0);

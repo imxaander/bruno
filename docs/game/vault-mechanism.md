@@ -37,14 +37,17 @@ voluntary-draw gate — holding only vaults never forces you to play (`hasPlayab
    diamond from the 42 diamond cards.
 3. A `vault-choice` prompt is emitted to the actor with the 5 offers (id, name, tier, effect
    text). The token is **not** committed to the pile until the choice is made; the turn timer
-   pauses while the prompt is open.
-4. The actor picks exactly one offer. No decline, no re-roll.
+   resets to a fresh full window when the prompt opens.
+4. The actor picks exactly one offer. No decline, no re-roll. If the timer expires, the
+   **first** offer is auto-chosen and announced in the log (choice guarantee — see
+   `rules.md` §7a).
 5. The chosen card's effect resolver runs and the token is placed on the pile.
 
 Chained sub-prompts are supported after the vault choice. Today: when the chosen offer's
 resolver declares a `targets` input spec (see `card-data-schema.md` §4.1), the server keeps
 the play pending and emits a `pick-players` prompt; the actor answers with a `choose-targets`
-action. Cards with no spec resolve immediately (random fallback targets where needed).
+action. If the pick-players timer expires, the default targets (first allowed seats) are
+applied. Cards with no spec resolve immediately (random fallback targets where needed).
 
 ## 3. Wire contract
 

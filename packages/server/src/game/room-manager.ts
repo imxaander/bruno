@@ -89,13 +89,93 @@ export class RoomManager {
     this.turnManager.scheduleTurn(roomId, () => this.onTurnTimeout(roomId));
   }
 
+  private defaultColor(room: Room, player: Player): Color {
+    const counts = new Map<Color, number>();
+    for (const card of player.hand) {
+      if (card.color) {
+        counts.set(card.color, (counts.get(card.color) ?? 0) + 1);
+      }
+    }
+    let best: Color | null = null;
+    let bestCount = 0;
+    for (const [color, count] of counts) {
+      if (count > bestCount) {
+        best = color;
+        bestCount = count;
+      }
+    }
+    return best ?? room.activeColor ?? "red";
+  }
+
+  private defaultTargetIds(
+    room: Room,
+    actor: Player,
+    spec: { min: number; allowSelf?: boolean },
+  ): string[] {
+    const candidates = room.players
+      .filter((player) => player.id !== actor.id || spec.allowSelf)
+      .map((player) => player.id);
+    return candidates.slice(0, spec.min);
+  }
+
+  private resolveOpenPrompt(room: Room, player: Player): boolean {
+    if (room.pendingWild) {
+      const pending = room.pendingWild;
+      room.pendingWild = undefined;
+      const color = this.defaultColor(room, player);
+      this.emit({
+        type: "log",
+        gameId: room.id,
+        message: `${player.name} didn't choose a color — defaulting to ${color}.`,
+      });
+      this.completePlay(room, player, pending.cardIndex, color);
+      return true;
+    }
+    if (room.pendingVault) {
+      const pending = room.pendingVault;
+      if (!pending.targetSpec) {
+        const offer = pending.offers[0];
+        if (offer) {
+          pending.chosenCardId = offer.id;
+          const spec = getResolverInputs(offer.id)?.targets;
+          if (spec) {
+            pending.targetSpec = spec;
+            pending.targetIds = this.defaultTargetIds(room, player, spec);
+          }
+          this.emit({
+            type: "log",
+            gameId: room.id,
+            message: `${player.name} didn't pick a vault effect — defaulting to ${offer.name}.`,
+          });
+          this.completePlay(room, player, pending.cardIndex, undefined);
+          return true;
+        }
+      } else {
+        pending.targetIds = this.defaultTargetIds(room, player, pending.targetSpec);
+        this.emit({
+          type: "log",
+          gameId: room.id,
+          message: `${player.name} didn't pick targets — defaulting to ${pending.targetIds.length} player(s).`,
+        });
+        this.completePlay(room, player, pending.cardIndex, undefined);
+        return true;
+      }
+    }
+    return false;
+  }
+
   private onTurnTimeout(roomId: string): void {
     const room = this.rooms.get(roomId);
     if (!room || room.status !== "ongoing") {
       return;
     }
-    room.pendingWild = undefined;
-    room.pendingVault = undefined;
+    const player = room.players[room.currentTurnIndex];
+    if (!player) {
+      return;
+    }
+    if (this.resolveOpenPrompt(room, player)) {
+      return;
+    }
     const result = applyDraw(room, this.rng);
     if (!result.ok) {
       return;
@@ -324,6 +404,7 @@ export class RoomManager {
     const card = player.hand[action.cardIndex];
     if (card?.type === "draw4" && !action.chosenColor) {
       room.pendingWild = { cardIndex: action.cardIndex, playerId: player.id };
+      this.scheduleTurn(room.id);
       this.emit({ type: "prompt", gameId: room.id, playerId: player.id, kind: "choose-color" });
       return { ok: true, value: { log: [], won: false, nextPlayerId: null } };
     }
@@ -335,6 +416,7 @@ export class RoomManager {
         tier: card.type,
         offers,
       };
+      this.scheduleTurn(room.id);
       this.emit({
         type: "prompt",
         gameId: room.id,
@@ -364,6 +446,7 @@ export class RoomManager {
     const spec = getResolverInputs(offer.id)?.targets;
     if (spec) {
       pending.targetSpec = spec;
+      this.scheduleTurn(room.id);
       this.emit({
         type: "prompt",
         gameId: room.id,
