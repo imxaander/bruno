@@ -80,10 +80,35 @@ packages/
 
 ## Configuration (server)
 
-| Env var      | Default                 | Purpose                                     |
-| ------------ | ----------------------- | ------------------------------------------- |
-| `PORT`       | `3000`                  | HTTP + Socket.io port.                      |
-| `CLIENT_URL` | `http://localhost:5173` | CORS origin allowed for socket connections. |
+| Env var      | Default                 | Purpose                                          |
+| ------------ | ----------------------- | ------------------------------------------------ |
+| `PORT`       | `3000`                  | HTTP + Socket.io port.                           |
+| `CLIENT_URL` | `http://localhost:5173` | CORS origin allowed for socket connections.      |
+| `STATIC_DIR` | `packages/client/dist`  | Built client to serve; auto-served if it exists. |
+
+## Deploy to Render
+
+BRUNO is a single Node process: the Express + Socket.io server also serves the built
+client, so there is one origin and no CORS or WebSocket proxy setup.
+
+1. Push the repo to GitHub and connect it to Render → **New Web Service**.
+2. Settings:
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+3. Render injects `PORT` automatically; `STATIC_DIR` defaults to `packages/client/dist`,
+   which the production build produces. No other env vars are required.
+4. Node version is pinned to `20` via `.node-version`.
+
+Caveats:
+
+- **In-memory state**: rooms and games live in the server process. A restart (deploy,
+  crash, sleep) wipes all active games, and you can't scale to multiple instances without
+  adding a Socket.io Redis adapter.
+- **Free tier sleeps**: Render's free web services spin down after ~15 minutes of
+  inactivity, so players hitting a sleeping service will fail to connect. Use the Starter
+  tier (or a paid plan) for an always-on game.
+- The health check is at `/health`. On paid plans you can point Render's health-check path
+  there to avoid restarts from unresponsive connections.
 
 ## Notes / gotchas
 

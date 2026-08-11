@@ -255,6 +255,9 @@ export class RoomManager {
     if (room.status === "ongoing") {
       if (oldNext !== null) {
         room.pendingDraw = 0;
+        // A disconnecting current-turn player drops any open prompt (their action is abandoned).
+        room.pendingWild = undefined;
+        room.pendingVault = undefined;
         room.currentTurnIndex = oldNext > removedIndex ? oldNext - 1 : oldNext;
       } else if (removedIndex < room.currentTurnIndex) {
         room.currentTurnIndex -= 1;

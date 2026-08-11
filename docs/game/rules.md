@@ -91,6 +91,10 @@ the timer expire gets a **default choice** instead of the prompt being dropped:
 Each auto-choice is announced in the game log. This guarantees an open prompt can never stall
 the game. Defaults are deterministic so they are unit-testable.
 
+A player who **leaves/disconnects while their own prompt is open** abandons the pending
+action: the prompt (and any pending wild/vault state) is dropped and the turn moves on to the
+next player.
+
 ## 8. Vaults (design + impl)
 
 - The deck holds **vault tokens** (5 silver / 3 gold / 1 diamond) rather than the catalog

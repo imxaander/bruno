@@ -49,8 +49,10 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     const onState = (state: PlayerView) => setView(state);
     const onLog = (payload: { gameId: string; message: string }) =>
       setLog((prev) => [payload.message, ...prev].slice(0, 50));
-    const onTurn = (payload: { gameId: string; playerIndex: number }) =>
+    const onTurn = (payload: { gameId: string; playerIndex: number }) => {
       setView((prev) => (prev ? { ...prev, currentTurnIndex: payload.playerIndex } : prev));
+      setPrompt(null);
+    };
     const onError = (payload: ErrorEnvelope) => setError(payload.message);
     const onPrompt = (payload: GamePrompt) => {
       if (payload.gameId === roomId) {
@@ -59,6 +61,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     };
     const onEndedEvent = (payload: GameEndedPayload) => {
       if (payload.gameId === roomId) {
+        setPrompt(null);
         onEnded(payload);
       }
     };
@@ -107,7 +110,6 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         playerId: identity.id,
         chosenColor: color,
       });
-      setPrompt(null);
     },
     [socket, roomId, identity.id],
   );
@@ -123,7 +125,6 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         playerId: identity.id,
         cardId,
       });
-      setPrompt(null);
     },
     [socket, roomId, identity.id],
   );
@@ -139,7 +140,6 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         playerId: identity.id,
         targetIds,
       });
-      setPrompt(null);
     },
     [socket, roomId, identity.id],
   );
@@ -309,9 +309,23 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     </div>
   );
 
+  const promptAction =
+    prompt?.kind === "choose-color"
+      ? "Choose a color"
+      : prompt?.kind === "vault-choice"
+        ? "Pick an effect"
+        : prompt?.kind === "pick-players"
+          ? "Pick targets"
+          : undefined;
+
   const timerControls = (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-      <TurnTimer seconds={Math.ceil(remaining)} active={myTurn} total={turnDuration} />
+      <TurnTimer
+        seconds={Math.ceil(remaining)}
+        active={myTurn}
+        total={turnDuration}
+        action={promptAction}
+      />
       {myTurn ? (
         <Button
           variant="outline"

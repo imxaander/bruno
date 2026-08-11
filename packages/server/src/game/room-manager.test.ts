@@ -156,6 +156,37 @@ describe("RoomManager", () => {
     expect(manager.getRoom(room.id)).toBeNull();
   });
 
+  it("drops the current player's open prompt when they leave", () => {
+    const manager = createManager();
+    const room = value(
+      manager.createRoom({ name: "A", playerId: "p1", playerName: "A", maxPlayers: 4 }),
+    );
+    value(manager.joinRoom(room.id, "p2", "B"));
+    value(manager.startGame(room.id, "p1", seeded(7)));
+    room.currentTurnIndex = 0;
+    room.pile = [makeCard({ id: "red-5", name: "5", type: "number", color: "red", number: 5 })];
+    room.activeColor = "red";
+    room.pendingDraw = 0;
+    room.pendingWild = { cardIndex: 0, playerId: "p1" };
+    room.pendingVault = { cardIndex: 0, playerId: "p1", tier: "vault-silver", offers: [] };
+    room.players[1]!.hand = [
+      makeCard({ id: "red-7", name: "7", type: "number", color: "red", number: 7 }),
+    ];
+
+    value(manager.leaveRoom(room.id, "p1"));
+
+    expect(room.pendingWild).toBeUndefined();
+    expect(room.pendingVault).toBeUndefined();
+    expect(room.currentTurnIndex).toBe(0);
+    const play = manager.performAction(room.id, "p2", {
+      gameId: room.id,
+      type: "play",
+      playerId: "p2",
+      cardIndex: 0,
+    });
+    expect(play.ok).toBe(true);
+  });
+
   it("allows a solo start (preview) and deals 8 cards", () => {
     const manager = createManager();
     const room = value(
