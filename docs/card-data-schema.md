@@ -150,9 +150,11 @@ test requires a registered resolver for every `stable` card. Implemented resolve
   `t2-vault-hunter` (steal vaults from 3 targets), `t1-g-switch` (swap hands),
   `t2-card-a-palooza` (shuffle all hands).
 
-Vault tokens sample 5 random same-tier catalog offers at play time
-(`sampleVaultOffers`); the chosen offer's resolver runs and the token is placed on the pile.
-See `game/vault-mechanism.md`.
+See `game/vault-effects-implemented.md` for the consolidated per-effect tracking log.
+
+Vault tokens sample up to 5 random same-tier catalog offers at play time, restricted to
+cards with a registered resolver (`sampleVaultOffers`); the chosen offer's resolver runs and
+the token is placed on the pile. See `game/vault-mechanism.md`.
 
 Effects that need UI input (choose color, pick player, choose cards to discard/steal)
 declare their required inputs in a resolver's metadata and the socket contract exposes a

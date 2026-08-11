@@ -278,6 +278,38 @@ describe("playCard", () => {
     expect(room.status).toBe("concluding");
     expect(room.winnerId).toBe("p0");
   });
+
+  it("attaches effect meta when resolving a vault token play", () => {
+    const { room } = startGame(2);
+    const offer = makeCard({
+      id: "t3-scrap-shot",
+      name: "Scrap Shot",
+      type: "vault-silver",
+      effect: "Hits a target for +1.",
+    });
+    room.pendingVault = {
+      cardIndex: 0,
+      playerId: "p0",
+      tier: "vault-silver",
+      offers: [offer],
+      chosenCardId: "t3-scrap-shot",
+    };
+    room.players[0]!.hand = [
+      makeCard({ id: "vault-silver-token-0", name: "Silver Vault", type: "vault-silver" }),
+    ];
+    setState(room, red5(), "red");
+    const result = playCard(room, room.players[0]!, 0, undefined, seeded(9));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(result.value.effect).toMatchObject({
+      cardId: "t3-scrap-shot",
+      name: "Scrap Shot",
+      tier: "vault-silver",
+      text: "Hits a target for +1.",
+    });
+    expect(result.value.effect?.lines.length).toBeGreaterThan(0);
+  });
 });
 
 describe("applyDraw", () => {

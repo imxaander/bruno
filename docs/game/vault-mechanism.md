@@ -32,12 +32,14 @@ voluntary-draw gate — holding only vaults never forces you to play (`hasPlayab
 ## 2. Playing a vault
 
 1. The player plays a vault token (their turn).
-2. The server samples **5 random distinct** catalog cards of that token's tier
-   (`sampleVaultOffers`). Silver draws from the 27 silver cards, gold from the 21 gold,
-   diamond from the 42 diamond cards.
-3. A `vault-choice` prompt is emitted to the actor with the 5 offers (id, name, tier, effect
-   text). The token is **not** committed to the pile until the choice is made; the turn timer
-   resets to a fresh full window when the prompt opens.
+2. The server samples **up to 5 random distinct implemented** catalog cards of that token's
+   tier (`sampleVaultOffers`): the pool is filtered to cards with a registered resolver
+   (see `vault-effects-implemented.md` §2), so only effects that actually run can be offered.
+   When fewer than 5 implemented cards exist for a tier, **all** of them are offered:
+   silver 3, gold 4, diamond 4 today.
+3. A `vault-choice` prompt is emitted to the actor with the sampled offers (id, name, tier,
+   effect text). The token is **not** committed to the pile until the choice is made; the
+   turn timer resets to a fresh full window when the prompt opens.
 4. The actor picks exactly one offer. No decline, no re-roll. If the timer expires, the
    **first** offer is auto-chosen and announced in the log (choice guarantee — see
    `rules.md` §7a).
@@ -100,3 +102,15 @@ applied. Cards with no spec resolve immediately (random fallback targets where n
   only and never appear in a dealt deck.
 - Implemented target-taking resolvers: `t3/t2-scrap-shot` (pick 1), `t2-vault-hunter`
   (pick 3), `t1-g-switch` (pick 1); `t2-card-a-palooza` affects everyone (no spec).
+
+### 4.1 Vault-effect banner
+
+When a chosen vault offer resolves, the server broadcasts a `game:effect` event (see
+`socket-contract.md`) to the whole room. The client shows a transient banner near the top
+center of the board — the resolved card's face (tier-colored) plus its human-readable result
+lines — and auto-dismisses it after ~3.5s. The banner is informational and never blocks input;
+the next `game:effect` replaces the current one immediately. Implementation:
+`packages/client/src/components/EffectBanner.tsx`, mounted with a dismiss timer in
+`packages/client/src/pages/Game.tsx`.
+
+Per-effect tracking and playtest log: `../game/vault-effects-implemented.md`.

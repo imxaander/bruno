@@ -10,7 +10,8 @@ tags: [game, cards, tier3]
 
 Silver Vault is the **lowest** vault tier (Tier III). Effects are relatively modest.
 Vault cards are **not** dealt from the deck — they form the **offer pool** for vault tokens
-(5 silver tokens per game, each offering 5 random silver effects). See
+(5 silver tokens per game, each offering up to 5 random silver effects, sampled from cards
+with a registered resolver). See
 [deck-composition.md](./deck-composition.md) and [vault-mechanism.md](./vault-mechanism.md).
 
 ## Notation reminder
@@ -71,4 +72,4 @@ Deferred resolver inventory (Phase 5c, Track A batch 1):
   `t3-synchronize` (needs "last vault card" memory), `t3-double-trouble`/`t3-all-in` (ally
   mechanic / round timer), `t3-sunder` (unreadable), `t3-liquidation` (skip-for-2-rounds).
 
-See `../modernization.md`.
+See `../modernization.md` and the tracking log in `vault-effects-implemented.md`.

@@ -10,7 +10,8 @@ tags: [game, cards, tier1]
 
 Diamond Vault is the **highest** vault tier (Tier I). Effects are the most powerful and often
 win-altering. Vault cards are **not** dealt from the deck — they form the **offer pool** for
-vault tokens (1 diamond token per game, each offering 5 random diamond effects). See
+vault tokens (1 diamond token per game, each offering up to 5 random diamond effects,
+sampled from cards with a registered resolver). See
 [deck-composition.md](./deck-composition.md) and [vault-mechanism.md](./vault-mechanism.md).
 
 ## Notation reminder
@@ -93,4 +94,4 @@ timed or burst draws, skip-for-N rounds, "to play" conditions, allies, win/kill,
 `[Tentative]`, or unreadable text. Examples: `t1-finality`/`t1-doomsday-button`/`t1-evening-star`/
 `t1-dawns-triumph` (kill mechanic — open design question, see `rules.md` §9).
 
-See `../modernization.md`.
+See `../modernization.md` and the tracking log in `vault-effects-implemented.md`.

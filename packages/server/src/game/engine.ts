@@ -1,5 +1,6 @@
 import type { Card, Color } from "@bruno/shared";
 import { isVaultCard, isVaultTokenCard } from "@bruno/shared";
+import type { VaultCardType } from "@bruno/shared";
 import { draw as drawCards, type Rng } from "./deck.js";
 import { getResolver } from "./effects/index.js";
 import type { Player, Room } from "./room.js";
@@ -18,6 +19,13 @@ export type EngineResult<T> = { ok: true; value: T } | { ok: false; error: Engin
 export interface PlayOutcome {
   log: string[];
   won: boolean;
+  effect?: {
+    cardId: string;
+    name: string;
+    tier: VaultCardType;
+    text: string;
+    lines: string[];
+  };
 }
 
 export interface DrawOutcome {
@@ -109,6 +117,7 @@ export function playCard(
   player.hand.splice(cardIndex, 1);
   room.pile.push(card);
   const log: string[] = [];
+  let effect: PlayOutcome["effect"] | undefined;
 
   switch (card.type) {
     case "draw4":
@@ -155,14 +164,27 @@ export function playCard(
 
   if (isVaultCard(card)) {
     const isToken = isVaultTokenCard(card);
-    const chosenCardId = isToken ? room.pendingVault?.chosenCardId : undefined;
-    const targets = isToken ? room.pendingVault?.targetIds : undefined;
+    const pending = room.pendingVault;
+    const chosenCardId = isToken ? pending?.chosenCardId : undefined;
+    const effectCard = chosenCardId
+      ? pending?.offers.find((offer) => offer.id === chosenCardId)
+      : card;
+    const targets = isToken ? pending?.targetIds : undefined;
     room.pendingVault = undefined;
     const resolver = chosenCardId ? getResolver(chosenCardId) : getResolver(card.id);
     if (resolver) {
-      const effect = resolver({ game: room, actor: player.id, targets, random: rng });
-      if (effect.log) {
-        log.push(...effect.log);
+      const result = resolver({ game: room, actor: player.id, targets, random: rng });
+      if (result.log) {
+        log.push(...result.log);
+      }
+      if (effectCard) {
+        effect = {
+          cardId: effectCard.id,
+          name: effectCard.name,
+          tier: effectCard.type as VaultCardType,
+          text: effectCard.effect ?? "",
+          lines: result.log ?? [],
+        };
       }
     }
   }
@@ -174,7 +196,7 @@ export function playCard(
     room.winnerName = player.name;
     won = true;
   }
-  return { ok: true, value: { log, won } };
+  return { ok: true, value: { log, won, effect } };
 }
 
 export function applyDraw(room: Room, rng: Rng = Math.random): EngineResult<DrawOutcome> {

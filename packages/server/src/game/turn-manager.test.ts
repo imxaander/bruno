@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Card } from "@bruno/shared";
 import { RoomManager, type RoomEvent, type RoomResult } from "./room-manager.js";
-import { TurnManager } from "./turn-manager.js";
+import { TurnManager, TURN_DURATION_MS } from "./turn-manager.js";
 
 function seeded(seed: number): () => number {
   let state = seed >>> 0;
@@ -91,7 +91,7 @@ describe("turn timeout via RoomManager", () => {
     room.currentTurnIndex = 0;
     const before = room.players[0]!.hand.length;
 
-    vi.advanceTimersByTime(7000);
+    vi.advanceTimersByTime(TURN_DURATION_MS);
 
     expect(room.players[0]!.hand).toHaveLength(before + 1);
     expect(room.currentTurnIndex).toBe(1);
@@ -108,7 +108,7 @@ describe("turn timeout via RoomManager", () => {
     room.currentTurnIndex = 0;
     room.pendingDraw = 6;
 
-    vi.advanceTimersByTime(7000);
+    vi.advanceTimersByTime(TURN_DURATION_MS);
 
     expect(room.players[0]!.hand).toHaveLength(8 + 6);
     expect(room.pendingDraw).toBe(0);

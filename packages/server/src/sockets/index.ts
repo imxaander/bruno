@@ -147,6 +147,18 @@ export function registerSockets(
       case "log":
         io.to(event.gameId).emit("game:log", { gameId: event.gameId, message: event.message });
         break;
+      case "effect":
+        io.to(event.gameId).emit("game:effect", {
+          gameId: event.gameId,
+          playerId: event.playerId,
+          playerName: event.playerName,
+          cardId: event.cardId,
+          name: event.name,
+          tier: event.tier,
+          text: event.text,
+          lines: event.lines,
+        });
+        break;
       case "turn":
         io.to(event.gameId).emit("game:turn", {
           gameId: event.gameId,

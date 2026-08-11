@@ -1,4 +1,12 @@
-import type { Card, Color, GameAction, LobbyPlayer, PlayerView, RoomSummary } from "@bruno/shared";
+import type {
+  Card,
+  Color,
+  GameAction,
+  LobbyPlayer,
+  PlayerView,
+  RoomSummary,
+  VaultCardType,
+} from "@bruno/shared";
 import { isVaultTokenCard } from "@bruno/shared";
 import { buildDeck, dealHands, seedPile, type Rng } from "./deck.js";
 import { applyDraw, hasPlayableCard, nextIndex, playCard, type EngineError } from "./engine.js";
@@ -40,6 +48,17 @@ export type RoomEvent =
       min: number;
       max: number;
       allowSelf?: boolean;
+    }
+  | {
+      type: "effect";
+      gameId: string;
+      playerId: string;
+      playerName: string;
+      cardId: string;
+      name: string;
+      tier: VaultCardType;
+      text: string;
+      lines: string[];
     };
 
 export type RoomEventSink = (event: RoomEvent) => void;
@@ -359,6 +378,16 @@ export class RoomManager {
     this.turnManager.cancelTurn(room.id);
     for (const message of result.value.log) {
       this.emit({ type: "log", gameId: room.id, message });
+    }
+    const effect = result.value.effect;
+    if (effect) {
+      this.emit({
+        type: "effect",
+        gameId: room.id,
+        playerId: player.id,
+        playerName: player.name,
+        ...effect,
+      });
     }
     if (result.value.won) {
       this.emit({

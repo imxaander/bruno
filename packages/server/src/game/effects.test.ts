@@ -110,10 +110,22 @@ describe("effect registry", () => {
 });
 
 describe("sampleVaultOffers", () => {
-  it("returns 5 distinct cards of the requested tier", () => {
+  it("returns only cards with a registered resolver", () => {
+    const offers = sampleVaultOffers("vault-silver", 5, seeded(42));
+    expect(offers.length).toBeGreaterThan(0);
+    expect(offers.every((card) => getResolver(card.id) !== undefined)).toBe(true);
+    expect(offers.every((card) => card.type === "vault-silver")).toBe(true);
+  });
+
+  it("returns fewer than the requested count when the tier has fewer implemented effects", () => {
+    const implemented = CARDS.filter(
+      (card) => card.type === "vault-diamond" && getResolver(card.id) !== undefined,
+    );
+    expect(implemented.length).toBeLessThan(5);
     const offers = sampleVaultOffers("vault-diamond", 5, seeded(42));
-    expect(offers).toHaveLength(5);
-    expect(new Set(offers.map((card) => card.id)).size).toBe(5);
+    expect(offers).toHaveLength(implemented.length);
+    expect(new Set(offers.map((card) => card.id)).size).toBe(implemented.length);
+    expect(offers.every((card) => getResolver(card.id) !== undefined)).toBe(true);
     expect(offers.every((card) => card.type === "vault-diamond")).toBe(true);
   });
 });
@@ -291,7 +303,7 @@ describe("target-picking resolver batch", () => {
 });
 
 describe("vault token flow", () => {
-  it("prompts a choice of 5 same-tier offers when a token is played", () => {
+  it("prompts a choice of the tier's implemented offers when a token is played", () => {
     const { manager, room, events } = startGame(2);
     room.players[0]!.hand = [vaultToken("vault-diamond"), skipCard()];
 
@@ -304,14 +316,20 @@ describe("vault token flow", () => {
     if (!result.ok) {
       throw new Error(result.error);
     }
+    const implemented = CARDS.filter(
+      (card) => card.type === "vault-diamond" && getResolver(card.id) !== undefined,
+    );
     expect(room.pendingVault).toMatchObject({
       cardIndex: 0,
       playerId: "p0",
       tier: "vault-diamond",
     });
-    expect(room.pendingVault?.offers).toHaveLength(5);
+    expect(room.pendingVault?.offers).toHaveLength(implemented.length);
     expect(room.pendingVault?.offers.every((card) => card.type === "vault-diamond")).toBe(true);
-    expect(new Set(room.pendingVault?.offers.map((card) => card.id)).size).toBe(5);
+    expect(room.pendingVault?.offers.every((card) => getResolver(card.id) !== undefined)).toBe(
+      true,
+    );
+    expect(new Set(room.pendingVault?.offers.map((card) => card.id)).size).toBe(implemented.length);
     expect(room.currentTurnIndex).toBe(0);
 
     const prompt = events.find((event) => event.type === "prompt");
@@ -330,18 +348,19 @@ describe("vault token flow", () => {
       }),
     );
     const offers = room.pendingVault!.offers;
+    const chosen = offers.find((offer) => !getResolverInputs(offer.id)?.targets) ?? offers[0]!;
 
     const result = manager.performAction(room.id, "p0", {
       gameId: room.id,
       type: "vault-choice",
       playerId: "p0",
-      cardId: offers[0]!.id,
+      cardId: chosen.id,
     });
     if (!result.ok) {
       throw new Error(result.error);
     }
     expect(room.pendingVault).toBeUndefined();
-    expect(room.players[0]!.hand).toHaveLength(1);
+    expect(room.players[0]!.hand.some((card) => isVaultTokenCard(card))).toBe(false);
     expect(room.currentTurnIndex).toBe(1);
   });
 

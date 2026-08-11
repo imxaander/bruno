@@ -378,22 +378,41 @@ describe("room lifecycle over the wire", () => {
       if (prompt.kind !== "vault-choice") {
         throw new Error("expected a vault-choice prompt");
       }
-      expect(prompt.offers).toHaveLength(5);
+      expect(prompt.offers).toHaveLength(3);
       expect(prompt.offers.every((offer) => offer.type === "vault-silver")).toBe(true);
-      expect(new Set(prompt.offers.map((offer) => offer.id)).size).toBe(5);
+      expect(new Set(prompt.offers.map((offer) => offer.id)).size).toBe(3);
 
+      const room = rooms.getRoom(gameId);
+      if (!room?.pendingVault) {
+        throw new Error("expected a pending vault");
+      }
+      const chosen = CARDS.find((card) => card.id === "t3-mitosis");
+      if (!chosen) {
+        throw new Error("missing t3-mitosis card");
+      }
+      room.pendingVault.offers = [chosen];
       const logEvent = once(alice, "game:log");
       const turnEvent = once(alice, "game:turn");
+      const effectEvent = once(alice, "game:effect");
       alice.emit("game:action", {
         gameId,
         type: "vault-choice",
         playerId: "PID-a",
-        cardId: prompt.offers[0]!.id,
+        cardId: chosen.id,
       });
       const [log] = await logEvent;
       expect(log.message).toContain("plays");
       const [turn] = await turnEvent;
       expect(turn.playerIndex).toBe(1);
+      const [effect] = await effectEvent;
+      expect(effect).toMatchObject({
+        gameId,
+        playerId: "PID-a",
+        cardId: chosen.id,
+        name: chosen.name,
+        tier: "vault-silver",
+      });
+      expect(effect.lines.length).toBeGreaterThan(0);
 
       const stateA = once(alice, "game:state");
       alice.emit("game:state:get", { gameId, playerId: "PID-a" });

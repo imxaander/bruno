@@ -127,6 +127,18 @@ export const GameEndedPayloadSchema = z.object({
 });
 export type GameEndedPayload = z.infer<typeof GameEndedPayloadSchema>;
 
+export const GameEffectSchema = z.object({
+  gameId: z.string().min(1),
+  playerId: z.string().min(1),
+  playerName: z.string().min(1),
+  cardId: z.string().min(1),
+  name: z.string().min(1),
+  tier: z.enum(["vault-silver", "vault-gold", "vault-diamond"]),
+  text: z.string(),
+  lines: z.array(z.string()),
+});
+export type GameEffect = z.infer<typeof GameEffectSchema>;
+
 export const RoomCreateReturnSchema = z.discriminatedUnion("ok", [
   z.object({
     ok: z.literal(true),

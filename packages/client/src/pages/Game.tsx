@@ -1,10 +1,17 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import type { ErrorEnvelope, GameEndedPayload, GamePrompt, PlayerView } from "@bruno/shared";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import type {
+  ErrorEnvelope,
+  GameEffect,
+  GameEndedPayload,
+  GamePrompt,
+  PlayerView,
+} from "@bruno/shared";
 import { Button } from "../components/Button.js";
 import { Seat } from "../components/Seat.js";
 import { TurnTimer } from "../components/TurnTimer.js";
 import { PlayerHand } from "../components/board/PlayerHand.js";
 import { TableOval } from "../components/board/TableOval.js";
+import EffectBanner from "../components/EffectBanner.js";
 import {
   ColorPicker,
   TargetPicker,
@@ -41,6 +48,13 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   const [logOpen, setLogOpen] = useState(false);
   const [prompt, setPrompt] = useState<GamePrompt | null>(null);
   const [remaining, setRemaining] = useState(0);
+  const [effect, setEffect] = useState<GameEffect | null>(null);
+  const [effectVisible, setEffectVisible] = useState(true);
+  const effectTimer = useRef<number[]>([]);
+
+  useEffect(() => {
+    return () => effectTimer.current.forEach(window.clearTimeout);
+  }, []);
 
   useEffect(() => {
     if (!socket) {
@@ -65,12 +79,24 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         onEnded(payload);
       }
     };
+    const onEffect = (payload: GameEffect) => {
+      if (payload.gameId === roomId) {
+        setEffect(payload);
+        setEffectVisible(true);
+        effectTimer.current.forEach(window.clearTimeout);
+        effectTimer.current = [
+          window.setTimeout(() => setEffectVisible(false), 3500),
+          window.setTimeout(() => setEffect(null), 3850),
+        ];
+      }
+    };
     socket.on("game:state", onState);
     socket.on("game:log", onLog);
     socket.on("game:turn", onTurn);
     socket.on("error", onError);
     socket.on("game:prompt", onPrompt);
     socket.on("game:ended", onEndedEvent);
+    socket.on("game:effect", onEffect);
     if (roomId && identity.id) {
       socket.emit("game:state:get", { gameId: roomId, playerId: identity.id });
     }
@@ -81,6 +107,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       socket.off("error", onError);
       socket.off("game:prompt", onPrompt);
       socket.off("game:ended", onEndedEvent);
+      socket.off("game:effect", onEffect);
     };
   }, [socket, roomId, identity.id, onEnded]);
 
@@ -452,18 +479,6 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       <div
         style={{
           position: "absolute",
-          bottom: 204,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 2,
-        }}
-      >
-        {meLabel}
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
           bottom: 0,
           left: "50%",
           transform: "translateX(-50%)",
@@ -475,6 +490,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           playable={view.you.playable}
           myTurn={myTurn}
           onPlay={playCard}
+          badge={meLabel}
         />
       </div>
     </div>
@@ -552,6 +568,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       ) : null}
       {board}
       {logPanel}
+      {effect ? <EffectBanner effect={effect} visible={effectVisible} /> : null}
       {prompt?.kind === "choose-color" ? <ColorPicker onPick={chooseColor} /> : null}
       {prompt?.kind === "vault-choice" && prompt.offers ? (
         <VaultPicker offers={prompt.offers} onPick={chooseVault} />

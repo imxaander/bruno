@@ -443,6 +443,21 @@ describe("RoomManager", () => {
         (event) => event.type === "log" && event.message.includes("hits B: +1 and discards"),
       ),
     ).toBe(true);
+    const effectEvents = events.filter((event) => event.type === "effect");
+    expect(effectEvents).toHaveLength(1);
+    const effectEvent = effectEvents[0];
+    expect(effectEvent).toMatchObject({
+      type: "effect",
+      gameId: room.id,
+      playerId: "p1",
+      playerName: "A",
+      cardId: "t3-scrap-shot",
+      tier: "vault-silver",
+    });
+    if (!effectEvent || effectEvent.type !== "effect") {
+      throw new Error("expected an effect event");
+    }
+    expect(effectEvent.lines.length).toBeGreaterThan(0);
     expect(room.currentTurnIndex).toBe(1);
   });
 

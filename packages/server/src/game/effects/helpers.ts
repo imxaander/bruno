@@ -2,6 +2,7 @@ import type { Card, VaultCardType } from "@bruno/shared";
 import { CARDS } from "@bruno/shared";
 import type { Player, Room } from "../room.js";
 import { draw as drawCards, type Rng } from "../deck.js";
+import { getResolver } from "./registry.js";
 
 let tokenCounter = 100;
 
@@ -78,7 +79,7 @@ export function resolveTargets(
 
 export function sampleVaultOffers(tier: VaultCardType, count: number, rng: Rng): Card[] {
   return sampleDistinct(
-    CARDS.filter((card) => card.type === tier),
+    CARDS.filter((card) => card.type === tier && getResolver(card.id) !== undefined),
     count,
     rng,
   );

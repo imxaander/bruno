@@ -85,7 +85,7 @@ the timer expire gets a **default choice** instead of the prompt being dropped:
 | Prompt         | Default on expiry                                                                                    |
 | -------------- | ---------------------------------------------------------------------------------------------------- |
 | `choose-color` | Most common color in the actor's hand (ties → first seen); fallback `activeColor`, then `red`.       |
-| `vault-choice` | The **first** of the 5 offered effects.                                                              |
+| `vault-choice` | The **first** of the offered effects.                                                                |
 | `pick-players` | The first N seated players (in seat order) that the spec allows (actor excluded unless `allowSelf`). |
 
 Each auto-choice is announced in the game log. This guarantees an open prompt can never stall
@@ -100,10 +100,12 @@ next player.
 - The deck holds **vault tokens** (5 silver / 3 gold / 1 diamond) rather than the catalog
   cards. Playing a token is always legal on your turn (wild-like) unless a draw stack is
   pending.
-- Playing a token offers the actor **5 random distinct effects** from that token's tier; the
-  actor picks exactly one (no decline, no re-roll). The token is placed on the pile and the
-  chosen effect resolves. Opening the prompt resets the turn timer to a fresh full window; if
-  it expires, the **first** offer is auto-chosen (see [Choice guarantee](#7a-choice-guarantee)).
+- Playing a token offers the actor **up to 5 random distinct effects** from that token's tier,
+  sampled from cards with a registered resolver (all of them when fewer than 5 exist — silver
+  3, gold 4, diamond 4); the actor picks exactly one (no decline, no re-roll). The token is
+  placed on the pile and the chosen effect resolves. Opening the prompt resets the turn timer
+  to a fresh full window; if it expires, the **first** offer is auto-chosen (see
+  [Choice guarantee](#7a-choice-guarantee)).
 - Vaults are **ignored** by the voluntary-draw gate: holding only vaults never blocks a
   voluntary draw.
 - See [vault-mechanism.md](./vault-mechanism.md) for the full flow.

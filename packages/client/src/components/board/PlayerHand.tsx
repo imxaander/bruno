@@ -1,32 +1,143 @@
-import type { CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { CardView } from "@bruno/shared";
 import GameCard from "../GameCard.js";
+import {
+  CARD_W,
+  CARD_H,
+  FAN_STEP,
+  MIN_SPACING,
+  chunkHand,
+  fanMetrics,
+  layoutMode,
+  scrollSpacing,
+} from "./hand-layout.js";
 
 interface PlayerHandProps {
   hand: CardView[];
   playable: boolean[];
   myTurn: boolean;
   onPlay: (index: number) => void;
+  badge?: ReactNode;
 }
 
-export function PlayerHand({ hand, playable, myTurn, onPlay }: PlayerHandProps) {
-  const CARD_W = 76;
-  const CARD_H = 108;
+const BOX_WIDTH: CSSProperties = { width: "min(80vw, 1100px)" };
+
+export function PlayerHand({ hand, playable, myTurn, onPlay, badge }: PlayerHandProps) {
   const n = hand.length;
-  const centerIdx = (n - 1) / 2;
+  const mode = layoutMode(n).mode;
+  const rows = chunkHand(hand);
+  const [boxWidth, setBoxWidth] = useState(0);
+  const fanRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = fanRef.current;
+    if (!el) {
+      return;
+    }
+    const update = () => setBoxWidth(el.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [mode]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+    el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+  }, [n, mode]);
+
+  const width = boxWidth || 1100;
+  const longestRow = rows.reduce((max, row) => Math.max(max, row.length), 0);
+  const spacing =
+    mode === "scroll"
+      ? scrollSpacing(n, width)
+      : Math.min(FAN_STEP, Math.max(MIN_SPACING, (width - CARD_W) / Math.max(longestRow - 1, 1)));
+
+  const cardButton = (
+    card: CardView,
+    globalIndex: number,
+    left: string,
+    transform: string,
+    zIndex: number,
+  ) => {
+    const canPlay = myTurn && playable[globalIndex] === true;
+    return (
+      <button
+        key={card.id}
+        disabled={!canPlay}
+        onClick={() => onPlay(globalIndex)}
+        style={
+          {
+            position: "absolute",
+            bottom: 0,
+            left,
+            padding: 0,
+            background: "none",
+            border: "none",
+            cursor: canPlay ? "pointer" : "default",
+            transform,
+            transformOrigin: `${CARD_W / 2}px ${CARD_H + 160}px`,
+            zIndex,
+            transition: "transform 0.16s ease",
+          } as CSSProperties
+        }
+      >
+        <GameCard card={card} size="md" lifted={canPlay} dimmed={!canPlay} />
+      </button>
+    );
+  };
+
+  const fanBox = (rowCards: CardView[], startIndex: number, extra?: CSSProperties) => {
+    const metrics = fanMetrics(rowCards.length, spacing);
+    return (
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          height: 140,
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "center",
+          ...extra,
+        }}
+      >
+        {rowCards.map((card, i) =>
+          cardButton(
+            card,
+            startIndex + i,
+            `calc(50% + ${metrics.xOffset(i)}px)`,
+            `translateY(${canPlayLift(myTurn, playable[startIndex + i])}px) rotate(${metrics.angle(i)}deg)`,
+            metrics.zIndex(i),
+          ),
+        )}
+      </div>
+    );
+  };
+
+  let rowStart = 0;
+  const fanBoxes = rows.map((row, r) => {
+    const box = fanBox(row, rowStart, r > 0 ? { marginTop: -20 } : undefined);
+    rowStart += row.length;
+    return box;
+  });
 
   return (
     <div
       style={{
-        height: 204,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "flex-end",
         paddingBottom: 16,
+        gap: 8,
       }}
     >
-      <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+      {badge ? <div>{badge}</div> : null}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <div
           style={{
             width: 6,
@@ -51,50 +162,48 @@ export function PlayerHand({ hand, playable, myTurn, onPlay }: PlayerHandProps) 
           ({n} cards)
         </span>
       </div>
-      <div
-        style={{
-          position: "relative",
-          width: 600,
-          height: 140,
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "center",
-        }}
-      >
-        {hand.map((card, i) => {
-          const canPlay = myTurn && playable[i] === true;
-          const angle = ((i - centerIdx) / Math.max(centerIdx, 1)) * 20;
-          const xOffset = (i - centerIdx) * 62;
-          const yLift = canPlay ? -14 : 0;
-          const zIndex =
-            i === Math.round(centerIdx) ? 10 : 10 - Math.abs(i - Math.round(centerIdx));
-          return (
-            <button
-              key={card.id}
-              disabled={!canPlay}
-              onClick={() => onPlay(i)}
-              style={
-                {
-                  position: "absolute",
-                  bottom: 0,
-                  left: "50%",
-                  marginLeft: -(CARD_W / 2),
-                  padding: 0,
-                  background: "none",
-                  border: "none",
-                  cursor: canPlay ? "pointer" : "default",
-                  transform: `translateX(${xOffset}px) translateY(${yLift}px) rotate(${angle}deg)`,
-                  transformOrigin: `${CARD_W / 2}px ${CARD_H + 160}px`,
-                  zIndex,
-                  transition: "transform 0.16s ease",
-                } as CSSProperties
-              }
-            >
-              <GameCard card={card} size="md" lifted={canPlay} dimmed={!canPlay} />
-            </button>
-          );
-        })}
-      </div>
+      {mode === "scroll" ? (
+        <div
+          ref={(el) => {
+            fanRef.current = el;
+            scrollRef.current = el;
+          }}
+          style={{
+            ...BOX_WIDTH,
+            height: 140,
+            overflowX: "auto",
+            display: "flex",
+            alignItems: "flex-end",
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              height: 140,
+              width: Math.max(width, (n - 1) * spacing + CARD_W),
+              flexShrink: 0,
+            }}
+          >
+            {hand.map((card, i) =>
+              cardButton(
+                card,
+                i,
+                `${i * spacing}px`,
+                `translateY(${canPlayLift(myTurn, playable[i])}px)`,
+                i,
+              ),
+            )}
+          </div>
+        </div>
+      ) : (
+        <div ref={fanRef} style={BOX_WIDTH}>
+          {fanBoxes}
+        </div>
+      )}
     </div>
   );
+}
+
+function canPlayLift(myTurn: boolean, isPlayable: boolean | undefined): number {
+  return myTurn && isPlayable === true ? -14 : 0;
 }

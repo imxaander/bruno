@@ -321,7 +321,11 @@ interface VaultPickerProps {
 export function VaultPicker({ offers, onPick }: VaultPickerProps) {
   return (
     <Overlay>
-      <Frame title="CHOOSE YOUR POWER" subtitle="Pick one of 5 random vault effects" width={560}>
+      <Frame
+        title="CHOOSE YOUR POWER"
+        subtitle={`Pick one of ${offers.length} vault effects`}
+        width={560}
+      >
         <div
           style={{
             padding: "22px 24px 26px",
