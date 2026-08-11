@@ -32,6 +32,12 @@ export interface ServerToClientEvents {
   "game:start:return": (payload: { ok: boolean; gameId?: string }) => void;
   "game:state": (state: PlayerView) => void;
   "game:log": (payload: { gameId: string; message: string }) => void;
+  "game:draw": (payload: {
+    gameId: string;
+    playerId: string;
+    playerName: string;
+    count: number;
+  }) => void;
   "game:effect": (payload: GameEffect) => void;
   "game:turn": (payload: { gameId: string; playerIndex: number }) => void;
   "game:prompt": (payload: GamePrompt) => void;

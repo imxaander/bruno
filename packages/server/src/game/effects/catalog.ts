@@ -145,37 +145,41 @@ function cardAPalooza(context: EffectContext): EffectResult {
 
 registerResolver("t2-card-a-palooza", cardAPalooza);
 
-/** "Pick 3 players and steal 2 random vaults from them." */
+/** "Pick 1–3 players and steal up to 2 random vaults in total from them." */
 function vaultHunter(context: EffectContext): EffectResult {
   const actor = actorPlayer(context);
   if (!actor) {
     return { applied: false };
   }
   const targets = resolveTargets(context.game, context.actor, context.targets, 3, context.random);
+  const vaults = targets.flatMap((target) => target.hand.filter(isVaultTokenCard));
+  const stolenFrom = new Set<string>();
   let stolen = 0;
-  const targetNames: string[] = [];
-  for (const target of targets) {
-    const vaults = target.hand.filter(isVaultTokenCard);
-    for (let i = 0; i < 2; i += 1) {
-      const card = randomOf(vaults, context.random);
-      if (!card) {
-        break;
-      }
-      vaults.splice(vaults.indexOf(card), 1);
-      target.hand.splice(target.hand.indexOf(card), 1);
-      actor.hand.push(card);
-      stolen += 1;
+  for (let i = 0; i < 2; i += 1) {
+    const card = randomOf(vaults, context.random);
+    if (!card) {
+      break;
     }
-    targetNames.push(target.name);
+    vaults.splice(vaults.indexOf(card), 1);
+    const holder = targets.find((target) => target.hand.includes(card));
+    if (!holder) {
+      break;
+    }
+    holder.hand.splice(holder.hand.indexOf(card), 1);
+    actor.hand.push(card);
+    stolen += 1;
+    stolenFrom.add(holder.name);
   }
   const name = actorName(context);
   return {
     applied: true,
-    log: [`${name} steals ${stolen} vault token(s) from ${targetNames.join(", ") || "nobody"}.`],
+    log: [
+      `${name} steals ${stolen} vault token(s) from ${[...stolenFrom].join(", ") || "nobody"}.`,
+    ],
   };
 }
 
-registerResolver("t2-vault-hunter", vaultHunter, { targets: { min: 3, max: 3 } });
+registerResolver("t2-vault-hunter", vaultHunter, { targets: { min: 1, max: 3 } });
 
 /** "Switch hands with anyone." */
 function gSwitch(context: EffectContext): EffectResult {

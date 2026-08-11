@@ -67,12 +67,12 @@ and `legacy/views/game.html` (client side).
 
 All payloads defined in `@bruno/shared` with Zod schemas. Events grouped and namespaced:
 
-| Area  | Proposed events                                                                                                                                                                                                     |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rooms | `rooms:list`, `rooms:list:return`, `rooms:create`, `rooms:create:return`                                                                                                                                            |
-| Lobby | `lobby:join`, `lobby:join:return`, `lobby:leave`, `lobby:update`, `game:start`, `game:start:return`                                                                                                                 |
-| Game  | `game:action` (play/draw/choose-color/vault-choice/choose-targets), `game:prompt` (choose-color/vault-choice/pick-players), `game:state` (typed `PlayerView`), `game:log`, `game:effect`, `game:turn`, `game:ended` |
-| Meta  | `error` (typed error envelope)                                                                                                                                                                                      |
+| Area  | Proposed events                                                                                                                                                                                                                  |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rooms | `rooms:list`, `rooms:list:return`, `rooms:create`, `rooms:create:return`                                                                                                                                                         |
+| Lobby | `lobby:join`, `lobby:join:return`, `lobby:leave`, `lobby:update`, `game:start`, `game:start:return`                                                                                                                              |
+| Game  | `game:action` (play/draw/choose-color/vault-choice/choose-targets), `game:prompt` (choose-color/vault-choice/pick-players), `game:state` (typed `PlayerView`), `game:log`, `game:draw`, `game:effect`, `game:turn`, `game:ended` |
+| Meta  | `error` (typed error envelope)                                                                                                                                                                                                   |
 
 Every server handler validates its payload with Zod before touching engine state; every
 client handler gets a typed payload. See `target.md` and `card-data-schema.md`.
@@ -87,3 +87,8 @@ chosen vault offer declares a `targets` input spec. See `../game/vault-mechanism
 (`vault-silver`/`vault-gold`/`vault-diamond`), `text` (the card's effect description), and
 `lines` (the human-readable resolver log lines). Clients use it to render the vault-effect
 banner. See `../game/vault-mechanism.md` §4.
+
+`game:draw` is broadcast to the room whenever a player draws from the deck (voluntary DRAW
+button, timeout auto-draw, or a stacked +2/+4 draw): `gameId`, `playerId`, `playerName`,
+`count`. Clients use it to animate cards flying from the deck to that player's seat. Cards
+granted by vault effects are not part of this event — only player draw actions animate.

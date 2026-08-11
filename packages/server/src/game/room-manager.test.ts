@@ -494,7 +494,7 @@ describe("RoomManager", () => {
       tier: "vault-silver",
       offers: [CARDS.find((card) => card.id === "t2-vault-hunter")!],
       chosenCardId: "t2-vault-hunter",
-      targetSpec: { min: 3, max: 3 },
+      targetSpec: { min: 1, max: 3 },
     };
 
     timers[0]!();
@@ -502,10 +502,10 @@ describe("RoomManager", () => {
     expect(room.pendingVault).toBeUndefined();
     expect(
       events.some(
-        (event) => event.type === "log" && event.message.includes("steals 6 vault token(s)"),
+        (event) => event.type === "log" && event.message.includes("steals 2 vault token(s)"),
       ),
     ).toBe(true);
-    expect(room.players[0]!.hand.filter(isVaultTokenCard)).toHaveLength(6);
+    expect(room.players[0]!.hand.filter(isVaultTokenCard)).toHaveLength(2);
     expect(room.currentTurnIndex).toBe(1);
   });
 
@@ -666,7 +666,7 @@ describe("vault target picking", () => {
     );
   });
 
-  it("requires exactly 3 targets for vault-hunter and steals tokens", () => {
+  it("accepts 1-3 targets for vault-hunter and steals 2 vaults in total", () => {
     const manager = createManager();
     const room = setupTargetGame(manager, 4);
     for (const index of [1, 2, 3]) {
@@ -677,29 +677,29 @@ describe("vault target picking", () => {
       ];
     }
 
-    seededVault(manager, room, "t2-vault-hunter", { min: 3, max: 3 });
-    const tooFew = manager.performAction(room.id, "p1", {
+    seededVault(manager, room, "t2-vault-hunter", { min: 1, max: 3 });
+    const tooMany = manager.performAction(room.id, "p1", {
       gameId: room.id,
       type: "choose-targets",
       playerId: "p1",
-      targetIds: ["p2", "p3"],
+      targetIds: ["p2", "p3", "p4", "p1"],
     });
-    if (tooFew.ok) {
-      throw new Error("expected too-few targets to fail");
+    if (tooMany.ok) {
+      throw new Error("expected too-many targets to fail");
     }
-    expect(tooFew.error).toBe("INVALID_ACTION");
+    expect(tooMany.error).toBe("INVALID_ACTION");
 
     const result = manager.performAction(room.id, "p1", {
       gameId: room.id,
       type: "choose-targets",
       playerId: "p1",
-      targetIds: ["p2", "p3", "p4"],
+      targetIds: ["p2", "p3"],
     });
     if (!result.ok) {
       throw new Error(result.error);
     }
     expect(room.pendingVault).toBeUndefined();
-    expect(room.players[0]!.hand.filter((card) => card.type === "vault-silver")).toHaveLength(6);
+    expect(room.players[0]!.hand.filter((card) => card.type === "vault-silver")).toHaveLength(2);
   });
 
   it("rejects choose-targets when no vault is pending", () => {
@@ -789,7 +789,7 @@ describe("vault target picking", () => {
     const manager = createManager();
     const room = setupTargetGame(manager, 3);
 
-    seededVault(manager, room, "t2-vault-hunter", { min: 3, max: 3 });
+    seededVault(manager, room, "t2-vault-hunter", { min: 1, max: 3 });
     value(
       manager.performAction(room.id, "p1", {
         gameId: room.id,

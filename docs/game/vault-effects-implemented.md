@@ -31,19 +31,19 @@ Effect notation follows the rules glossary: `+N` = add N cards from the deck. Se
 
 ## 2. Implemented effects
 
-| ID                      | Name               | Tier    | Effect (canonical)                                  | Target spec        | Data status | Verified |
-| ----------------------- | ------------------ | ------- | --------------------------------------------------- | ------------------ | ----------- | -------- |
-| `t3-scrap-shot`         | Scrap Shot I       | Silver  | Pick a player: `+1` them, blind-discard 1 from them | pick 1             | stable      | —        |
-| `t3-mitosis`            | Mitosis I          | Silver  | `+1` to 2 players                                   | none (random)      | draft       | —        |
-| `t3-double-edged-sword` | Double Edged Sword | Silver  | `+4` a player and `+1` yourself                     | none (random)      | draft       | —        |
-| `t2-scrap-shot`         | Scrap Shot II      | Gold    | Pick a player: `+3` them, blind-discard 3 from them | pick 1             | stable      | —        |
-| `t2-mitosis`            | Mitosis II         | Gold    | `+2` to 2 players                                   | none (random)      | draft       | —        |
-| `t2-card-a-palooza`     | Card-a-Palooza     | Gold    | Shuffle all hands together, deal back same counts   | none (all players) | stable      | —        |
-| `t2-vault-hunter`       | Vault Hunter       | Gold    | Pick 3 players: steal 2 random vault tokens each    | pick 3             | stable      | —        |
-| `t1-meiosis`            | Meiosis            | Diamond | `+3` to all enemy players                           | none (all others)  | draft       | —        |
-| `t1-suicide`            | Suicide            | Diamond | `+12` to yourself and `+12` to an enemy             | none (random)      | draft       | —        |
-| `t1-g-switch`           | G-Switch           | Diamond | Switch hands with a picked player                   | pick 1             | stable      | —        |
-| `t1-damnation`          | Damnation          | Diamond | `+1` to yourself and `+23` to an enemy              | none (random)      | draft       | —        |
+| ID                      | Name               | Tier    | Effect (canonical)                                    | Target spec        | Data status | Verified |
+| ----------------------- | ------------------ | ------- | ----------------------------------------------------- | ------------------ | ----------- | -------- |
+| `t3-scrap-shot`         | Scrap Shot I       | Silver  | Pick a player: `+1` them, blind-discard 1 from them   | pick 1             | stable      | —        |
+| `t3-mitosis`            | Mitosis I          | Silver  | `+1` to 2 players                                     | none (random)      | draft       | —        |
+| `t3-double-edged-sword` | Double Edged Sword | Silver  | `+4` a player and `+1` yourself                       | none (random)      | draft       | —        |
+| `t2-scrap-shot`         | Scrap Shot II      | Gold    | Pick a player: `+3` them, blind-discard 3 from them   | pick 1             | stable      | —        |
+| `t2-mitosis`            | Mitosis II         | Gold    | `+2` to 2 players                                     | none (random)      | draft       | —        |
+| `t2-card-a-palooza`     | Card-a-Palooza     | Gold    | Shuffle all hands together, deal back same counts     | none (all players) | stable      | —        |
+| `t2-vault-hunter`       | Vault Hunter       | Gold    | Pick 1–3 players: steal up to 2 vault tokens in total | pick 1–3           | stable      | —        |
+| `t1-meiosis`            | Meiosis            | Diamond | `+3` to all enemy players                             | none (all others)  | draft       | —        |
+| `t1-suicide`            | Suicide            | Diamond | `+12` to yourself and `+12` to an enemy               | none (random)      | draft       | —        |
+| `t1-g-switch`           | G-Switch           | Diamond | Switch hands with a picked player                     | pick 1             | stable      | —        |
+| `t1-damnation`          | Damnation          | Diamond | `+1` to yourself and `+23` to an enemy                | none (random)      | draft       | —        |
 
 - **Data status** is the `status` field in `packages/shared/src/cards/cards.ts`. A resolver
   exists for every row above; `draft` rows are not yet "officially" counted in the offer
@@ -58,8 +58,9 @@ Effect notation follows the rules glossary: `+N` = add N cards from the deck. Se
 - `scrap-shot` (`t3`/`t2`): adds `+N`, then removes N cards **at random** from the target's
   hand without revealing them (anti-cheat — the target's hand is never serialized). If the
   target has fewer than N cards, only what's available is removed.
-- `vault-hunter`: from each picked target, steals up to 2 **vault tokens** at random
-  (id matches `vault-*-token-*`). If a target holds no tokens, nothing is stolen from them.
+- `vault-hunter`: steals up to 2 **vault tokens** in total from the picked players, drawn
+  at random from their combined tokens (id matches `vault-*-token-*`). Both tokens can come
+  from a single player or any combination; if fewer are available, only what exists is stolen.
 - `card-a-palooza`: pools every player's hand into one shuffled deck and redeals in seat
   order, preserving each player's original hand size. No player's hand is ever exposed.
 - `g-switch`: swaps the actor's hand and the picked target's hand wholesale.
@@ -68,7 +69,8 @@ Effect notation follows the rules glossary: `+N` = add N cards from the deck. Se
 - `meiosis`: `+3` to every player except the actor (no teams exist yet).
 - `suicide` / `damnation` / `double-edged-sword`: `+N` to the actor and `+M` to a single
   (random) enemy.
-- Playing any vault card clears `activeColor` (tokens and their effects are colorless/wild).
+- Playing a vault token keeps the active color unchanged (tokens are colorless/wild but do
+  not clear the current color).
 
 ## 4. Caveats / known gaps
 

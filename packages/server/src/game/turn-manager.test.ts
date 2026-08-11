@@ -96,6 +96,9 @@ describe("turn timeout via RoomManager", () => {
     expect(room.players[0]!.hand).toHaveLength(before + 1);
     expect(room.currentTurnIndex).toBe(1);
     expect(events.some((event) => event.type === "log")).toBe(true);
+    expect(
+      events.some((event) => event.type === "draw" && event.playerId === "p0" && event.count === 1),
+    ).toBe(true);
   });
 
   it("draws the full pending stack total on timeout", () => {
@@ -180,6 +183,9 @@ describe("performAction", () => {
     expect(events.some((event) => event.type === "log" && event.message.includes("draws"))).toBe(
       true,
     );
+    expect(
+      events.some((event) => event.type === "draw" && event.playerId === "p0" && event.count === 1),
+    ).toBe(true);
   });
 
   it("rejects a draw when a card is playable", () => {

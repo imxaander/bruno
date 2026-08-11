@@ -11,6 +11,7 @@ import { Seat } from "../components/Seat.js";
 import { TurnTimer } from "../components/TurnTimer.js";
 import { PlayerHand } from "../components/board/PlayerHand.js";
 import { TableOval } from "../components/board/TableOval.js";
+import DrawFly, { type DrawFlyTarget } from "../components/board/DrawFly.js";
 import EffectBanner from "../components/EffectBanner.js";
 import {
   ColorPicker,
@@ -51,9 +52,16 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   const [effect, setEffect] = useState<GameEffect | null>(null);
   const [effectVisible, setEffectVisible] = useState(true);
   const effectTimer = useRef<number[]>([]);
+  const [drawTargets, setDrawTargets] = useState<DrawFlyTarget[]>([]);
+  const drawTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    return () => effectTimer.current.forEach(window.clearTimeout);
+    return () => {
+      effectTimer.current.forEach(window.clearTimeout);
+      if (drawTimer.current) {
+        window.clearTimeout(drawTimer.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -90,8 +98,31 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         ];
       }
     };
+    const onDraw = (payload: {
+      gameId: string;
+      playerId: string;
+      playerName: string;
+      count: number;
+    }) => {
+      if (payload.gameId !== roomId) {
+        return;
+      }
+      setDrawTargets((prev) => {
+        const next = [
+          ...prev.filter((target) => target.playerId !== payload.playerId),
+          { playerId: payload.playerId, playerName: payload.playerName, count: payload.count },
+        ];
+        const totalCards = next.reduce((sum, target) => sum + target.count, 0);
+        if (drawTimer.current) {
+          window.clearTimeout(drawTimer.current);
+        }
+        drawTimer.current = window.setTimeout(() => setDrawTargets([]), totalCards * 120 + 900);
+        return next;
+      });
+    };
     socket.on("game:state", onState);
     socket.on("game:log", onLog);
+    socket.on("game:draw", onDraw);
     socket.on("game:turn", onTurn);
     socket.on("error", onError);
     socket.on("game:prompt", onPrompt);
@@ -103,6 +134,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     return () => {
       socket.off("game:state", onState);
       socket.off("game:log", onLog);
+      socket.off("game:draw", onDraw);
       socket.off("game:turn", onTurn);
       socket.off("error", onError);
       socket.off("game:prompt", onPrompt);
@@ -440,7 +472,11 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   const board = isRing ? (
     <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
       {opponents.map((player, i) => (
-        <div key={player.id} style={{ position: "absolute", zIndex: 2, ...SEATS_8P[i] }}>
+        <div
+          key={player.id}
+          data-player-seat={player.id}
+          style={{ position: "absolute", zIndex: 2, ...SEATS_8P[i] }}
+        >
           <Seat player={player} compact />
         </div>
       ))}
@@ -485,13 +521,15 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           zIndex: 2,
         }}
       >
-        <PlayerHand
-          hand={view.you.hand}
-          playable={view.you.playable}
-          myTurn={myTurn}
-          onPlay={playCard}
-          badge={meLabel}
-        />
+        <div data-player-hand={identity.id}>
+          <PlayerHand
+            hand={view.you.hand}
+            playable={view.you.playable}
+            myTurn={myTurn}
+            onPlay={playCard}
+            badge={meLabel}
+          />
+        </div>
       </div>
     </div>
   ) : (
@@ -507,7 +545,9 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         }}
       >
         {opponents.map((player) => (
-          <Seat key={player.id} player={player} />
+          <div key={player.id} data-player-seat={player.id}>
+            <Seat player={player} />
+          </div>
         ))}
       </div>
       <div
@@ -532,12 +572,14 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         </div>
       </div>
       <div style={{ flexShrink: 0 }}>
-        <PlayerHand
-          hand={view.you.hand}
-          playable={view.you.playable}
-          myTurn={myTurn}
-          onPlay={playCard}
-        />
+        <div data-player-hand={identity.id}>
+          <PlayerHand
+            hand={view.you.hand}
+            playable={view.you.playable}
+            myTurn={myTurn}
+            onPlay={playCard}
+          />
+        </div>
       </div>
     </div>
   );
@@ -569,6 +611,13 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       {board}
       {logPanel}
       {effect ? <EffectBanner effect={effect} visible={effectVisible} /> : null}
+      {drawTargets.length > 0 ? (
+        <DrawFly
+          targets={drawTargets}
+          playerOrder={view.players.map((player) => player.id)}
+          myId={identity.id}
+        />
+      ) : null}
       {prompt?.kind === "choose-color" ? <ColorPicker onPick={chooseColor} /> : null}
       {prompt?.kind === "vault-choice" && prompt.offers ? (
         <VaultPicker offers={prompt.offers} onPick={chooseVault} />

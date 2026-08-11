@@ -147,7 +147,7 @@ test requires a registered resolver for every `stable` card. Implemented resolve
 - +N to all enemies: `t1-meiosis`, `t1-suicide`, `t1-damnation`.
 - +N to N picked players: `t3/t2-mitosis`, `t3-double-edged-sword`.
 - Target-picking batch (Phase 5c Track A): `t3/t2-scrap-shot` (target +N and blind discard),
-  `t2-vault-hunter` (steal vaults from 3 targets), `t1-g-switch` (swap hands),
+  `t2-vault-hunter` (steal vaults from 1–3 targets), `t1-g-switch` (swap hands),
   `t2-card-a-palooza` (shuffle all hands).
 
 See `game/vault-effects-implemented.md` for the consolidated per-effect tracking log.

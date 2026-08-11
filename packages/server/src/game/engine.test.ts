@@ -121,6 +121,15 @@ describe("isPlayable", () => {
     expect(isPlayable(red5(), room)).toBe(false);
     expect(isPlayable(redSkip(), room)).toBe(false);
   });
+
+  it("treats a colorless wild top as matching any card", () => {
+    const { room } = startGame(2);
+    room.pile = [{ ...draw4(), type: "vault-silver", name: "Silver Vault" }];
+    room.activeColor = null;
+    expect(isPlayable(red5(), room)).toBe(true);
+    expect(isPlayable(greenSkip(), room)).toBe(true);
+    expect(isPlayable(redReverse(), room)).toBe(true);
+  });
 });
 
 describe("hasPlayableCard", () => {

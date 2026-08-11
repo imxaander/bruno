@@ -132,7 +132,7 @@ export function TableOval({
       ) : null}
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
-        <div style={{ position: "relative" }}>
+        <div data-deck style={{ position: "relative" }}>
           <GameCard
             faceDown
             size="lg"

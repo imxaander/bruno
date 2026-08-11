@@ -405,7 +405,7 @@ export const CARDS: Card[] = [
     name: "Vault Hunter",
     type: "vault-gold",
     tags: [],
-    effect: "Pick 3 players and steal 2 random vaults from them.",
+    effect: "Pick 1-3 players and steal up to 2 vault cards from them.",
     source: "1.4 BRUNO.pdf p.4",
     status: "stable",
   },

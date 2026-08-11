@@ -36,6 +36,7 @@ function fail<T>(error: RoomError | EngineError): RoomResult<T> {
 
 export type RoomEvent =
   | { type: "log"; gameId: string; message: string }
+  | { type: "draw"; gameId: string; playerId: string; playerName: string; count: number }
   | { type: "turn"; gameId: string; playerIndex: number; playerId: string }
   | { type: "ended"; gameId: string; winnerId: string; winnerName: string }
   | { type: "prompt"; gameId: string; playerId: string; kind: "choose-color" }
@@ -199,6 +200,13 @@ export class RoomManager {
     if (!result.ok) {
       return;
     }
+    this.emit({
+      type: "draw",
+      gameId: roomId,
+      playerId: player.id,
+      playerName: player.name,
+      count: result.value.drawn,
+    });
     for (const message of result.value.log) {
       this.emit({ type: "log", gameId: roomId, message });
     }
@@ -567,6 +575,13 @@ export class RoomManager {
         return fail(result.error);
       }
       this.turnManager.cancelTurn(room.id);
+      this.emit({
+        type: "draw",
+        gameId,
+        playerId: player.id,
+        playerName: player.name,
+        count: result.value.drawn,
+      });
       for (const message of result.value.log) {
         this.emit({ type: "log", gameId, message });
       }

@@ -27,7 +27,8 @@ The deck contains **9 vault tokens** instead of the catalog cards:
 Tokens are colorless `wild` cards: playable any time it is your turn unless a draw stack is
 pending (during a pending stack only `+2`/`+4` may be played). They are ignored by the
 voluntary-draw gate — holding only vaults never forces you to play (`hasPlayableCard` with
-`countVaults: false`).
+`countVaults: false`). A vault token keeps the color that was active before it was played, so
+the next player must still match that color (a token does not clear the active color).
 
 ## 2. Playing a vault
 
@@ -101,7 +102,7 @@ applied. Cards with no spec resolve immediately (random fallback targets where n
 - Catalog cards remain in `CARDS` with their resolvers registered; they are the offer pool
   only and never appear in a dealt deck.
 - Implemented target-taking resolvers: `t3/t2-scrap-shot` (pick 1), `t2-vault-hunter`
-  (pick 3), `t1-g-switch` (pick 1); `t2-card-a-palooza` affects everyone (no spec).
+  (pick 1–3), `t1-g-switch` (pick 1); `t2-card-a-palooza` affects everyone (no spec).
 
 ### 4.1 Vault-effect banner
 

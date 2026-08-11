@@ -42,7 +42,7 @@ with a registered resolver). See
 | `t2-foedus`           | Foedus           | `[sP]`        | Pick a player to ally with for 5 rounds. If one of you wins, reduce the cards of the other player to 1.                                                                 | p.4    |                                                                                             |
 | `t2-cruelty`          | Cruelty          | `[sP]`        | Pick 2 players, neither of them can win until both of their hands are reduced to 1.                                                                                     | p.4    |                                                                                             |
 | `t2-parasitism`       | Parasitism       | `[P]`         | Pick a player, whenever they play a green card, discard a card from your hand. Discard your cards starting in 9-0, switch color, skip, reverse, +2, +4, and Tier III-I. | p.4    | "Discard your cards starting in 9-0..." = order in which your own cards get discarded.      |
-| `t2-vault-hunter`     | Vault Hunter     | —             | Pick 3 players and steal 2 random vaults from them.                                                                                                                     | p.4    |                                                                                             |
+| `t2-vault-hunter`     | Vault Hunter     | —             | Pick 1-3 players and steal up to 2 vault cards from them.                                                                                                               | p.4    |                                                                                             |
 | `t2-rummage`          | Rummage          | —             | Discard your hand. Draw 1 for each card discarded. It's your turn again.                                                                                                | p.4    |                                                                                             |
 | `t2-triple-threat`    | Triple Threat    | —             | Ally with 2 players forever, go between them. All of you share your cards and punishments.                                                                              | p.4    |                                                                                             |
 | `t2-twice-than-one`   | Twice than One!  | `[Tentative]` | Get 2 Silver Vaults.                                                                                                                                                    | p.4    |                                                                                             |
@@ -56,7 +56,7 @@ the gold offer pool (`sampleVaultOffers`).
 
 Implemented resolvers: `t2-scrap-shot` (stable — pick a player, +3 and blind-discard 3),
 `t2-card-a-palooza` (stable — shuffle all hands, deal back same counts), `t2-vault-hunter`
-(stable — pick 3 players, steal 2 random vaults each), plus the +N exemplar `t2-mitosis`
+(stable — pick 1-3 players, steal up to 2 vaults in total), plus the +N exemplar `t2-mitosis`
 (still `draft`). Cards without a registered resolver are excluded from the offer pool until
 resolved (see `effects/registry.ts`).
 

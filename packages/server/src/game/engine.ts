@@ -61,7 +61,7 @@ export function isPlayable(card: Card, room: Room): boolean {
     return true;
   }
   if (!room.activeColor) {
-    return false;
+    return true;
   }
   if (card.color === room.activeColor) {
     return true;
@@ -151,7 +151,6 @@ export function playCard(
     case "vault-silver":
     case "vault-gold":
     case "vault-diamond":
-      room.activeColor = null;
       log.push(`${player.name} plays ${card.name}.`);
       advanceTurn(room);
       break;

@@ -419,7 +419,7 @@ describe("room lifecycle over the wire", () => {
       const [viewA] = await stateA;
       expect(viewA.you.hand).toHaveLength(1);
       expect(viewA.pileTop?.type).toBe("vault-silver");
-      expect(viewA.activeColor).toBeNull();
+      expect(viewA.activeColor).toBe("red");
       expect(viewA.currentTurnIndex).toBe(1);
       assertNoLeaks(viewA);
 
@@ -521,11 +521,14 @@ describe("room lifecycle over the wire", () => {
       });
 
       const logEvent = once(alice, "game:log");
+      const drawEvent = once(alice, "game:draw");
       const turnEvent = once(alice, "game:turn");
       timers.fireAll();
 
       const [log] = await logEvent;
       expect(log.message).toContain("draws 1 card");
+      const [draw] = await drawEvent;
+      expect(draw).toMatchObject({ gameId, playerId: "PID-a", count: 1 });
       const [turn] = await turnEvent;
       expect(turn.playerIndex).toBe(1);
 

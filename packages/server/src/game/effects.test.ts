@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Card, VaultCardType } from "@bruno/shared";
 import { CARDS, isVaultTokenCard } from "@bruno/shared";
-import { hasPlayableCard, playCard } from "./engine.js";
+import { hasPlayableCard, isPlayable, playCard } from "./engine.js";
 import {
   getResolver,
   getResolverInputs,
@@ -99,7 +99,7 @@ describe("effect registry", () => {
   it("declares target input specs for pick-player cards", () => {
     expect(getResolverInputs("t3-scrap-shot")).toEqual({ targets: { min: 1, max: 1 } });
     expect(getResolverInputs("t2-scrap-shot")).toEqual({ targets: { min: 1, max: 1 } });
-    expect(getResolverInputs("t2-vault-hunter")).toEqual({ targets: { min: 3, max: 3 } });
+    expect(getResolverInputs("t2-vault-hunter")).toEqual({ targets: { min: 1, max: 3 } });
     expect(getResolverInputs("t1-g-switch")).toEqual({ targets: { min: 1, max: 1 } });
   });
 
@@ -259,15 +259,11 @@ describe("target-picking resolver batch", () => {
     expect(room.players.map((player) => player.hand.length)).toEqual([3, 1, 2]);
   });
 
-  it("steals 2 random vault tokens from each of 3 targets (t2-vault-hunter)", () => {
+  it("steals 2 vault tokens in total from the picked targets (t2-vault-hunter)", () => {
     const { room } = startGame(4);
     for (const index of [1, 2, 3]) {
-      const target = room.players[index]!;
-      target.hand = [vaultToken("vault-silver"), vaultToken("vault-gold"), skipCard(), skipCard()];
+      room.players[index]!.hand = [vaultToken("vault-silver"), vaultToken("vault-gold")];
     }
-    const targetCounts = [1, 2, 3].map(
-      (index) => room.players[index]!.hand.filter(isVaultTokenCard).length,
-    );
 
     const effect = getResolver("t2-vault-hunter")!({
       game: room,
@@ -276,12 +272,44 @@ describe("target-picking resolver batch", () => {
       random: seeded(3),
     });
     expect(effect.applied).toBe(true);
-    for (const index of [1, 2, 3]) {
-      expect(room.players[index]!.hand.filter(isVaultTokenCard)).toHaveLength(
-        targetCounts[index - 1]! - 2,
-      );
-    }
-    expect(room.players[0]!.hand.filter(isVaultTokenCard)).toHaveLength(6);
+    const remaining = [1, 2, 3]
+      .map((index) => room.players[index]!.hand.filter(isVaultTokenCard).length)
+      .reduce((sum, count) => sum + count, 0);
+    expect(remaining).toBe(4);
+    expect(room.players[0]!.hand.filter(isVaultTokenCard)).toHaveLength(2);
+  });
+
+  it("can steal both vaults from a single target (t2-vault-hunter)", () => {
+    const { room } = startGame(4);
+    room.players[1]!.hand = [vaultToken("vault-silver"), vaultToken("vault-gold")];
+    room.players[2]!.hand = [skipCard()];
+    room.players[3]!.hand = [skipCard()];
+
+    const effect = getResolver("t2-vault-hunter")!({
+      game: room,
+      actor: "p0",
+      targets: ["p1"],
+      random: seeded(7),
+    });
+    expect(effect.applied).toBe(true);
+    expect(room.players[1]!.hand.filter(isVaultTokenCard)).toHaveLength(0);
+    expect(room.players[0]!.hand.filter(isVaultTokenCard)).toHaveLength(2);
+  });
+
+  it("steals what is available when the targets hold fewer than 2 vaults (t2-vault-hunter)", () => {
+    const { room } = startGame(3);
+    room.players[1]!.hand = [vaultToken("vault-silver")];
+    room.players[2]!.hand = [skipCard()];
+
+    const effect = getResolver("t2-vault-hunter")!({
+      game: room,
+      actor: "p0",
+      targets: ["p1", "p2"],
+      random: seeded(11),
+    });
+    expect(effect.applied).toBe(true);
+    expect(room.players[1]!.hand.filter(isVaultTokenCard)).toHaveLength(0);
+    expect(room.players[0]!.hand.filter(isVaultTokenCard)).toHaveLength(1);
   });
 
   it("switches the actor's hand with the target's (t1-g-switch)", () => {
@@ -471,6 +499,39 @@ describe("vault playability", () => {
     if (!result.ok) {
       throw new Error(result.error);
     }
+  });
+
+  it("keeps the pre-vault color active after a vault token", () => {
+    const { room } = startGame(2);
+    room.activeColor = "green";
+    room.players[0]!.hand = [vaultToken("vault-silver")];
+    room.pendingVault = {
+      cardIndex: 0,
+      playerId: "p0",
+      tier: "vault-silver",
+      offers: [CARDS.find((c) => c.id === "t3-scrap-shot")!],
+      chosenCardId: "t3-scrap-shot",
+    };
+
+    const result = playCard(room, room.players[0]!, 0, undefined, seeded(6));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(room.activeColor).toBe("green");
+    const greenCard = {
+      id: "green-4",
+      name: "4",
+      type: "number" as const,
+      color: "green" as const,
+      number: 4,
+      tags: [],
+      effect: "",
+      source: "test",
+      status: "stable" as const,
+    };
+    const redCard = { ...greenCard, id: "red-4", color: "red" as const };
+    expect(isPlayable(greenCard, room)).toBe(true);
+    expect(isPlayable(redCard, room)).toBe(false);
   });
 
   it("blocks vault tokens during a pending draw stack", () => {
