@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Card, VaultCardType } from "@bruno/shared";
 import { CARDS, isVaultTokenCard } from "@bruno/shared";
-import { hasPlayableCard, isPlayable, playCard } from "./engine.js";
+import { isPlayable, playCard } from "./engine.js";
 import {
   getResolver,
   getResolverInputs,
@@ -544,16 +544,5 @@ describe("vault playability", () => {
       throw new Error("expected the vault token to be blocked");
     }
     expect(result.error).toBe("CARD_NOT_PLAYABLE");
-  });
-
-  it("ignores vault tokens for the voluntary draw gate", () => {
-    const { room } = startGame(2);
-    room.players[0]!.hand = [vaultToken("vault-gold")];
-    room.activeColor = "green";
-    room.pile[0] = { ...room.pile[0]!, color: "green" };
-    const gate = hasPlayableCard;
-
-    expect(gate(room, room.players[0]!, { countVaults: false })).toBe(false);
-    expect(gate(room, room.players[0]!)).toBe(true);
   });
 });

@@ -1,28 +1,13 @@
-import type { CardView, Color } from "@bruno/shared";
+import type { CardView } from "@bruno/shared";
 import GameCard from "../GameCard.js";
 
 interface TableOvalProps {
   deckCount: number;
   pileTop: CardView | null;
   direction: 1 | -1;
-  pendingDraw?: number;
-  activeColor?: Color | null;
 }
 
-const COLOR_THEME: Record<Color, { name: string; hex: string; glow: string }> = {
-  red: { name: "RED", hex: "#ff3355", glow: "rgba(255,51,85,0.7)" },
-  blue: { name: "BLUE", hex: "#00aaff", glow: "rgba(0,170,255,0.7)" },
-  green: { name: "GREEN", hex: "#22ff88", glow: "rgba(34,255,136,0.7)" },
-  yellow: { name: "YELLOW", hex: "#ffcc00", glow: "rgba(255,204,0,0.7)" },
-};
-
-export function TableOval({
-  deckCount,
-  pileTop,
-  direction,
-  pendingDraw = 0,
-  activeColor = null,
-}: TableOvalProps) {
+export function TableOval({ deckCount, pileTop, direction }: TableOvalProps) {
   const arcPath = direction === 1 ? "M 20 6 A 14 14 0 0 1 34 20" : "M 20 6 A 14 14 0 0 0 6 20";
   const arrowPoints = direction === 1 ? "34,15 38,22 30,22" : "6,15 2,22 10,22";
 
@@ -30,8 +15,8 @@ export function TableOval({
     <div
       style={{
         width: "100%",
-        maxWidth: 720,
-        height: 200,
+        maxWidth: 980,
+        height: 220,
         borderRadius: "50%",
         background: "radial-gradient(ellipse at center, #0d0d1c 0%, #090914 100%)",
         border: "2px solid rgba(0,238,255,0.08)",
@@ -43,94 +28,6 @@ export function TableOval({
         position: "relative",
       }}
     >
-      {activeColor ? (
-        <div
-          style={{
-            position: "absolute",
-            top: 14,
-            left: "50%",
-            transform: "translateX(-50%)",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "6px 18px",
-            background: "rgba(8,8,14,0.9)",
-            border: `1px solid ${COLOR_THEME[activeColor].hex}55`,
-            borderRadius: 999,
-            boxShadow: `0 0 18px ${COLOR_THEME[activeColor].glow}, 0 0 40px ${COLOR_THEME[activeColor].glow}`,
-          }}
-        >
-          <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              background: COLOR_THEME[activeColor].hex,
-              boxShadow: `0 0 10px ${COLOR_THEME[activeColor].hex}`,
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{
-              fontFamily: "'Barlow Condensed'",
-              fontWeight: 800,
-              fontSize: 13,
-              letterSpacing: "0.16em",
-              color: COLOR_THEME[activeColor].hex,
-              textShadow: `0 0 8px ${COLOR_THEME[activeColor].glow}`,
-            }}
-          >
-            ACTIVE COLOR: {COLOR_THEME[activeColor].name}
-          </span>
-        </div>
-      ) : null}
-
-      {pendingDraw > 0 ? (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 14,
-            left: "50%",
-            transform: "translateX(-50%)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-            padding: "8px 22px",
-            background: "rgba(255,120,0,0.1)",
-            border: "1px solid rgba(255,150,0,0.4)",
-            borderRadius: 999,
-            boxShadow: "0 0 24px rgba(255,140,0,0.25), 0 0 60px rgba(255,120,0,0.12)",
-            animation: "neon-pulse 1.4s ease-in-out infinite",
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "'Barlow Condensed'",
-              fontWeight: 900,
-              fontSize: 20,
-              lineHeight: 1,
-              color: "#ffaa00",
-              textShadow: "0 0 10px rgba(255,170,0,0.8)",
-              letterSpacing: "0.04em",
-            }}
-          >
-            +{pendingDraw}
-          </span>
-          <span
-            style={{
-              fontSize: 8,
-              fontWeight: 700,
-              color: "rgba(255,190,80,0.7)",
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-            }}
-          >
-            Pending — draw or stack
-          </span>
-        </div>
-      ) : null}
-
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
         <div data-deck style={{ position: "relative" }}>
           <GameCard

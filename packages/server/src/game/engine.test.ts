@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Card, Color } from "@bruno/shared";
-import { applyDraw, hasPlayableCard, isPlayable, playCard } from "./engine.js";
+import { applyDraw, isPlayable, playCard } from "./engine.js";
 import { RoomManager, type RoomResult } from "./room-manager.js";
 import type { Room } from "./room.js";
 import { TurnManager } from "./turn-manager.js";
@@ -37,12 +37,6 @@ const red5 = (): Card =>
   makeCard({ id: "red-5", name: "5", type: "number", color: "red", number: 5 });
 const green5 = (): Card =>
   makeCard({ id: "green-5", name: "5", type: "number", color: "green", number: 5 });
-const green4 = (): Card =>
-  makeCard({ id: "green-4", name: "4", type: "number", color: "green", number: 4 });
-const blue7 = (): Card =>
-  makeCard({ id: "blue-7", name: "7", type: "number", color: "blue", number: 7 });
-const red7 = (): Card =>
-  makeCard({ id: "red-7", name: "7", type: "number", color: "red", number: 7 });
 const redSkip = (): Card => makeCard({ id: "red-skip", name: "Skip", type: "skip", color: "red" });
 const greenSkip = (): Card =>
   makeCard({ id: "green-skip", name: "Skip", type: "skip", color: "green" });
@@ -129,29 +123,6 @@ describe("isPlayable", () => {
     expect(isPlayable(red5(), room)).toBe(true);
     expect(isPlayable(greenSkip(), room)).toBe(true);
     expect(isPlayable(redReverse(), room)).toBe(true);
-  });
-});
-
-describe("hasPlayableCard", () => {
-  it("is true when any hand card matches", () => {
-    const { room } = startGame(2);
-    setState(room, red5(), "red");
-    room.players[0]!.hand = [green4(), red7()];
-    expect(hasPlayableCard(room, room.players[0]!)).toBe(true);
-  });
-
-  it("is false when no hand card matches", () => {
-    const { room } = startGame(2);
-    setState(room, red5(), "red");
-    room.players[0]!.hand = [green4(), blue7()];
-    expect(hasPlayableCard(room, room.players[0]!)).toBe(false);
-  });
-
-  it("counts stack cards only while a draw is pending", () => {
-    const { room } = startGame(2);
-    setState(room, red2(), "red", 4);
-    room.players[0]!.hand = [green2(), red5()];
-    expect(hasPlayableCard(room, room.players[0]!)).toBe(true);
   });
 });
 

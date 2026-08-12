@@ -391,28 +391,79 @@ body {
   }
 }
 
-.your-turn-banner {
-  position: absolute;
-  top: 24%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  pointer-events: none;
-  padding: 8px 28px 7px;
-  background: rgba(7, 7, 12, 0.55);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(0, 238, 255, 0.25);
+/* ── Table status cluster ─────────────────────────────────── */
+.table-status {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
   border-radius: 999px;
+  background: rgba(7, 7, 12, 0.7);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(0, 238, 255, 0.14);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+}
+
+.status-segment {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 20px;
+}
+
+.status-segment + .status-segment {
+  border-left: 1px solid rgba(0, 238, 255, 0.14);
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-color-name {
+  font-family: var(--bruno-font-display);
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.16em;
+}
+
+.status-draw-plus {
   font-family: var(--bruno-font-display);
   font-weight: 900;
-  font-size: 20px;
-  letter-spacing: 0.28em;
+  font-size: 24px;
+  line-height: 1;
+  color: #ffaa00;
+  text-shadow: 0 0 10px rgba(255, 170, 0, 0.8);
+}
+
+.status-draw-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 190, 80, 0.75);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.status-turn-label {
+  font-family: var(--bruno-font-display);
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.24em;
   color: #00eeff;
   text-shadow:
     0 0 8px rgba(0, 238, 255, 0.9),
     0 0 24px rgba(0, 238, 255, 0.5);
+}
+
+.status-turn {
   animation: your-turn-banner 1.2s ease-in-out infinite;
-  white-space: nowrap;
+}
+
+.status-waiting .status-turn-label {
+  color: rgba(200, 216, 240, 0.35);
+  text-shadow: none;
 }
 
 @keyframes your-turn-banner {

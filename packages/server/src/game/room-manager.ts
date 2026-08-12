@@ -9,7 +9,7 @@ import type {
 } from "@bruno/shared";
 import { isVaultTokenCard } from "@bruno/shared";
 import { buildDeck, dealHands, seedPile, type Rng } from "./deck.js";
-import { applyDraw, hasPlayableCard, nextIndex, playCard, type EngineError } from "./engine.js";
+import { applyDraw, nextIndex, playCard, type EngineError } from "./engine.js";
 import { sampleVaultOffers, getResolverInputs } from "./effects/index.js";
 import { toLobbyPlayers, toPlayerView, toRoomSummary } from "./player-view.js";
 import { HAND_SIZE, type Player, Room } from "./room.js";
@@ -565,9 +565,6 @@ export class RoomManager {
     }
     if (action.type === "draw") {
       if (room.pendingWild || room.pendingVault) {
-        return fail("DRAW_NOT_ALLOWED");
-      }
-      if (room.pendingDraw === 0 && hasPlayableCard(room, player, { countVaults: false })) {
         return fail("DRAW_NOT_ALLOWED");
       }
       const result = applyDraw(room, this.rng);

@@ -188,7 +188,7 @@ describe("performAction", () => {
     ).toBe(true);
   });
 
-  it("rejects a draw when a card is playable", () => {
+  it("draws even when a card is playable", () => {
     const events: RoomEvent[] = [];
     const { manager, gameId } = setup(events);
     const room = manager.getRoom(gameId)!;
@@ -201,15 +201,19 @@ describe("performAction", () => {
       makeCard({ id: "blue-2", name: "2", type: "number", color: "blue", number: 2 }),
     ];
 
+    const before = room.players[0]!.hand.length;
     const result = manager.performAction(gameId, "p0", {
       gameId,
       type: "draw",
       playerId: "p0",
     });
-    if (result.ok) {
-      throw new Error("expected a DRAW_NOT_ALLOWED failure");
+    if (!result.ok) {
+      throw new Error(result.error);
     }
-    expect(result.error).toBe("DRAW_NOT_ALLOWED");
+    expect(result.value.won).toBe(false);
+    expect(room.players[0]!.hand).toHaveLength(before + 1);
+    expect(room.pendingDraw).toBe(0);
+    expect(room.currentTurnIndex).toBe(1);
   });
 
   it("plays a card, emits logs and the next turn", () => {

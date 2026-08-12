@@ -69,20 +69,6 @@ export function isPlayable(card: Card, room: Room): boolean {
   return isSymbolMatch(card, pileTop(room));
 }
 
-export function hasPlayableCard(
-  room: Room,
-  player: Player,
-  options: { countVaults?: boolean } = {},
-): boolean {
-  const countVaults = options.countVaults ?? true;
-  return player.hand.some((card) => {
-    if (!countVaults && isVaultCard(card)) {
-      return false;
-    }
-    return isPlayable(card, room);
-  });
-}
-
 export function nextIndex(room: Room, steps = 1): number {
   const n = room.players.length;
   if (n === 0) {

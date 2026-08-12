@@ -11,6 +11,7 @@ import { Seat } from "../components/Seat.js";
 import { TurnTimer } from "../components/TurnTimer.js";
 import { TurnIndicator } from "../components/TurnIndicator.js";
 import { EventHistory } from "../components/EventHistory.js";
+import { TableStatus } from "../components/TableStatus.js";
 import { PlayerHand } from "../components/board/PlayerHand.js";
 import { TableOval } from "../components/board/TableOval.js";
 import DrawFly, { type DrawFlyTarget } from "../components/board/DrawFly.js";
@@ -213,8 +214,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
 
   const turnDuration = view?.turnDuration ?? 7;
   const myTurn = view ? view.currentTurnIndex === view.you.index : false;
-  const canDraw =
-    view != null && myTurn && !prompt && (view.pendingDraw > 0 || !view.you.playable.some(Boolean));
+  const canDraw = view != null && myTurn && !prompt;
 
   useEffect(() => {
     setRemaining(turnDuration);
@@ -428,6 +428,22 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   const board = isRing ? (
     <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
       <TurnIndicator myTurn={myTurn} />
+      <div
+        style={{
+          position: "absolute",
+          top: "14%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 30,
+          pointerEvents: "none",
+        }}
+      >
+        <TableStatus
+          activeColor={view.activeColor}
+          pendingDraw={view.pendingDraw}
+          myTurn={myTurn}
+        />
+      </div>
       {opponents.map((player, i) => (
         <div
           key={player.id}
@@ -445,15 +461,13 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           left: "50%",
           transform: "translate(-50%, -50%)",
           zIndex: 1,
-          width: "58%",
+          width: "64%",
         }}
       >
         <TableOval
           deckCount={view.deckCount}
           pileTop={view.pileTop}
           direction={view.currentDirection}
-          pendingDraw={view.pendingDraw}
-          activeColor={view.activeColor}
         />
       </div>
 
@@ -527,12 +541,26 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           position: "relative",
         }}
       >
+        <div
+          style={{
+            position: "absolute",
+            top: "12%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 30,
+            pointerEvents: "none",
+          }}
+        >
+          <TableStatus
+            activeColor={view.activeColor}
+            pendingDraw={view.pendingDraw}
+            myTurn={myTurn}
+          />
+        </div>
         <TableOval
           deckCount={view.deckCount}
           pileTop={view.pileTop}
           direction={view.currentDirection}
-          pendingDraw={view.pendingDraw}
-          activeColor={view.activeColor}
         />
         <div style={{ position: "absolute", right: 60, top: "50%", transform: "translateY(-50%)" }}>
           {timerControls}
