@@ -365,3 +365,112 @@ body {
   color: rgba(200, 216, 240, 0.35);
   font-weight: 600;
 }
+
+/* ── Your turn indicator ──────────────────────────────────── */
+.your-turn-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    rgba(0, 238, 255, 0.12) 0%,
+    rgba(0, 238, 255, 0.05) 45%,
+    rgba(0, 238, 255, 0) 75%
+  );
+  animation: your-turn-glow 2s ease-in-out infinite;
+}
+
+@keyframes your-turn-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.your-turn-banner {
+  position: absolute;
+  top: 24%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  pointer-events: none;
+  padding: 8px 28px 7px;
+  background: rgba(7, 7, 12, 0.55);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(0, 238, 255, 0.25);
+  border-radius: 999px;
+  font-family: var(--bruno-font-display);
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.28em;
+  color: #00eeff;
+  text-shadow:
+    0 0 8px rgba(0, 238, 255, 0.9),
+    0 0 24px rgba(0, 238, 255, 0.5);
+  animation: your-turn-banner 1.2s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+@keyframes your-turn-banner {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── Event history ────────────────────────────────────────── */
+.event-history {
+  position: fixed;
+  top: 52px;
+  bottom: 0;
+  left: 0;
+  width: 220px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 14px 18px;
+  background: rgba(7, 7, 12, 0.72);
+  backdrop-filter: blur(6px);
+  border-right: 1px solid rgba(0, 238, 255, 0.12);
+  font-family: var(--bruno-font-ui);
+}
+
+.event-history-title {
+  margin: 0;
+  font-family: var(--bruno-font-display);
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(0, 238, 255, 0.7);
+  flex-shrink: 0;
+}
+
+.event-history-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.event-history-line {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(200, 216, 240, 0.65);
+}
+
+.event-history-empty {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(200, 216, 240, 0.35);
+}

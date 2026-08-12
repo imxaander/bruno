@@ -1,14 +1,15 @@
 export const FAN_STEP = 62;
 export const MIN_SPACING = 36;
 export const FAN_MAX = 12;
-export const ROW_MAX_TOTAL = 28;
+export const ROW_2_MAX = 24;
+export const ROW_3_MAX = 36;
 export const CARD_W = 76;
 export const CARD_H = 108;
 
 export type HandLayout = { mode: "fan" | "rows" | "scroll" };
 
 export function layoutMode(n: number): HandLayout {
-  if (n > ROW_MAX_TOTAL) {
+  if (n > ROW_3_MAX) {
     return { mode: "scroll" };
   }
   if (n > FAN_MAX) {
@@ -22,6 +23,11 @@ export function chunkHand<T>(items: T[]): T[][] {
   const mode = layoutMode(n);
   if (mode.mode !== "rows") {
     return [items];
+  }
+  if (n > ROW_2_MAX) {
+    const first = Math.ceil(n / 3);
+    const second = Math.ceil((n - first) / 2);
+    return [items.slice(0, first), items.slice(first, first + second), items.slice(first + second)];
   }
   const first = Math.ceil(n / 2);
   return [items.slice(0, first), items.slice(first)];

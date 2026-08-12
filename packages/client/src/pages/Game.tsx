@@ -9,6 +9,8 @@ import type {
 import { Button } from "../components/Button.js";
 import { Seat } from "../components/Seat.js";
 import { TurnTimer } from "../components/TurnTimer.js";
+import { TurnIndicator } from "../components/TurnIndicator.js";
+import { EventHistory } from "../components/EventHistory.js";
 import { PlayerHand } from "../components/board/PlayerHand.js";
 import { TableOval } from "../components/board/TableOval.js";
 import DrawFly, { type DrawFlyTarget } from "../components/board/DrawFly.js";
@@ -46,7 +48,6 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   const [view, setView] = useState<PlayerView | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [logOpen, setLogOpen] = useState(false);
   const [prompt, setPrompt] = useState<GamePrompt | null>(null);
   const [remaining, setRemaining] = useState(0);
   const [effect, setEffect] = useState<GameEffect | null>(null);
@@ -332,23 +333,6 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         </span>
       </div>
       <button
-        onClick={() => setLogOpen((open) => !open)}
-        style={{
-          padding: "5px 14px",
-          fontFamily: "'Rajdhani'",
-          fontWeight: 600,
-          fontSize: 12,
-          background: "transparent",
-          color: logOpen ? "#00eeff" : "rgba(200,216,240,0.4)",
-          border: `1px solid ${logOpen ? "rgba(0,238,255,0.4)" : "rgba(200,216,240,0.1)"}`,
-          borderRadius: 5,
-          cursor: "pointer",
-          letterSpacing: "0.08em",
-        }}
-      >
-        LOG
-      </button>
-      <button
         onClick={goLobby}
         style={{
           padding: "5px 14px",
@@ -441,36 +425,9 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     </div>
   );
 
-  const logPanel = logOpen ? (
-    <div
-      style={{
-        position: "fixed",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 50,
-        maxHeight: 180,
-        overflowY: "auto",
-        background: "rgba(7,7,12,0.97)",
-        borderTop: "1px solid rgba(0,238,255,0.15)",
-        padding: "12px 24px",
-        fontFamily: "'Rajdhani', sans-serif",
-      }}
-    >
-      {log.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 12, color: "rgba(200,216,240,0.4)" }}>No events yet.</p>
-      ) : (
-        log.map((line, index) => (
-          <p key={index} style={{ margin: "2px 0", fontSize: 12, color: "rgba(200,216,240,0.6)" }}>
-            {line}
-          </p>
-        ))
-      )}
-    </div>
-  ) : null;
-
   const board = isRing ? (
     <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+      <TurnIndicator myTurn={myTurn} />
       {opponents.map((player, i) => (
         <div
           key={player.id}
@@ -533,7 +490,16 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       </div>
     </div>
   ) : (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        position: "relative",
+      }}
+    >
+      <TurnIndicator myTurn={myTurn} />
       <div
         style={{
           display: "flex",
@@ -557,6 +523,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           alignItems: "center",
           justifyContent: "center",
           padding: "0 60px",
+          paddingLeft: 300,
           position: "relative",
         }}
       >
@@ -609,7 +576,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         </div>
       ) : null}
       {board}
-      {logPanel}
+      <EventHistory events={log} />
       {effect ? <EffectBanner effect={effect} visible={effectVisible} /> : null}
       {drawTargets.length > 0 ? (
         <DrawFly
