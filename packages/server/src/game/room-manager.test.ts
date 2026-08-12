@@ -187,18 +187,40 @@ describe("RoomManager", () => {
     expect(play.ok).toBe(true);
   });
 
-  it("allows a solo start (preview) and deals 8 cards", () => {
+  it("allows a solo start (preview) and deals base hand cards", () => {
     const manager = createManager();
     const room = value(
       manager.createRoom({ name: "A", playerId: "p1", playerName: "A", maxPlayers: 8 }),
     );
     value(manager.startGame(room.id, "p1", seeded(11)));
     expect(room.status).toBe("ongoing");
-    expect(room.players[0]?.hand).toHaveLength(8);
+    expect(room.players[0]?.hand.length).toBeGreaterThanOrEqual(8);
     expect(room.pile).toHaveLength(1);
-    expect(room.deck).toHaveLength(119 - 8 - 1);
+    expect(room.deck).toHaveLength(119 - (room.players[0]?.hand.length ?? 8) - 1);
     expect(room.currentTurnIndex).toBe(0);
     expect(room.currentDirection).toBe(1);
+  });
+
+  it("applies location, origin, and mayhem effects at game start", () => {
+    const events: RoomEvent[] = [];
+    const manager = new RoomManager({
+      eventSink: (event) => events.push(event),
+      turnManager: new TurnManager(5000, () => ({ cancel: () => {} })),
+    });
+    const room = value(
+      manager.createRoom({ name: "A", playerId: "p1", playerName: "A", maxPlayers: 3 }),
+    );
+    value(manager.joinRoom(room.id, "p2", "B"));
+    value(manager.joinRoom(room.id, "p3", "C"));
+
+    value(manager.startGame(room.id, "p1", seeded(9)));
+
+    expect(room.locationId).toBeDefined();
+    expect(room.mayhemEventId).toBeDefined();
+    expect(room.players.every((player) => player.originId)).toBe(true);
+    expect(events.some((event) => event.type === "log" && event.message.includes("Location:"))).toBe(true);
+    expect(events.some((event) => event.type === "log" && event.message.includes("Mayhem begins:"))).toBe(true);
+    expect(events.some((event) => event.type === "log" && event.message.includes("begins as"))).toBe(true);
   });
 
   it("rejects a non-host start", () => {
@@ -226,13 +248,13 @@ describe("RoomManager", () => {
     const view = value(manager.getPlayerView(room.id, "p1"));
     expect(view.playerCount).toBe(3);
     expect(view.you.index).toBe(0);
-    expect(view.you.hand).toHaveLength(8);
+    expect(view.you.hand.length).toBeGreaterThanOrEqual(8);
     for (const card of view.you.hand) {
       expect(card).toHaveProperty("id");
       expect(card).toHaveProperty("type");
     }
     expect(view.pileTop).not.toBeNull();
-    expect(view.deckCount).toBe(119 - 3 * 8 - 1);
+    expect(view.deckCount).toBe(119 - view.you.hand.length - (3 - 1) * 8 - 1);
 
     const serialized = JSON.stringify(view);
     expect(serialized).not.toContain('"pile":');

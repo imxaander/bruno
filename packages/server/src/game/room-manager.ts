@@ -11,7 +11,14 @@ import { isVaultTokenCard } from "@bruno/shared";
 import { buildDeck, dealHands, seedPile, type Rng } from "./deck.js";
 import { applyDraw, nextIndex, playCard, type EngineError } from "./engine.js";
 import { sampleVaultOffers, getResolverInputs } from "./effects/index.js";
-import { chooseRandomLocation, chooseRandomMayhem } from "./systems.js";
+import {
+  applyLocationStart,
+  applyMayhem,
+  applyOriginStart,
+  chooseRandomLocation,
+  chooseRandomMayhem,
+  chooseRandomOrigin,
+} from "./systems.js";
 import { toLobbyPlayers, toPlayerView, toRoomSummary } from "./player-view.js";
 import { HAND_SIZE, type Player, Room } from "./room.js";
 import { TurnManager } from "./turn-manager.js";
@@ -61,6 +68,7 @@ export type RoomEvent =
       tier: VaultCardType;
       text: string;
       lines: string[];
+      targetNames?: string[];
     };
 
 export type RoomEventSink = (event: RoomEvent) => void;
@@ -349,15 +357,29 @@ export class RoomManager {
     const hands = dealHands(room.deck, room.players.length, HAND_SIZE);
     room.players.forEach((player, index) => {
       player.hand = hands[index] ?? [];
-      if (!player.artifactIds) {
-        player.artifactIds = [];
-      }
-      if (!player.originId) {
-        player.originId = undefined;
-      }
+      player.artifactIds = player.artifactIds ?? [];
+      player.originId = chooseRandomOrigin(rng);
     });
     room.locationId = chooseRandomLocation(rng);
     room.mayhemEventId = chooseRandomMayhem(rng);
+
+    const locationLogs = applyLocationStart(room, rng);
+    for (const message of locationLogs) {
+      this.emit({ type: "log", gameId: room.id, message });
+    }
+
+    for (const player of room.players) {
+      const originLogs = applyOriginStart(room, player, rng);
+      for (const message of originLogs) {
+        this.emit({ type: "log", gameId: room.id, message });
+      }
+    }
+
+    const mayhemLogs = applyMayhem(room, rng);
+    for (const message of mayhemLogs) {
+      this.emit({ type: "log", gameId: room.id, message });
+    }
+
     let top = seedPile(room.deck, room.pile);
     while (
       top &&
@@ -411,12 +433,14 @@ export class RoomManager {
     }
     const effect = result.value.effect;
     if (effect) {
+      const targetNames = effect.targets?.map((id) => room.getPlayer(id)?.name ?? id) ?? [];
       this.emit({
         type: "effect",
         gameId: room.id,
         playerId: player.id,
         playerName: player.name,
         ...effect,
+        targetNames,
       });
     }
     if (result.value.won) {

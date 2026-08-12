@@ -69,12 +69,12 @@ function Overlay({ children }: { children: ReactNode }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(2,4,8,0.88)",
+        background: "rgba(2,4,8,0.06)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 100,
-        backdropFilter: "blur(4px)",
+        backdropFilter: "blur(1px)",
       }}
     >
       {children}
@@ -219,6 +219,95 @@ export interface VaultOption {
   tier: VaultTier;
   value: string;
   name: string;
+}
+
+export interface LocationTheme {
+  title: string;
+  glow: string;
+  accent: string;
+  soft: string;
+  page: string;
+  background: string;
+}
+
+const LOCATION_THEMES: Record<string, LocationTheme> = {
+  "loc-fields": {
+    title: "Fields",
+    glow: "rgba(144, 238, 144, 0.35)",
+    accent: "#b8f7a5",
+    soft: "rgba(180, 247, 165, 0.12)",
+    page: "radial-gradient(circle at 30% 20%, rgba(180,247,165,0.16), transparent 26%), radial-gradient(circle at 70% 80%, rgba(90,220,150,0.14), transparent 20%)",
+    background: "linear-gradient(180deg, #071107 0%, #0c1510 100%)",
+  },
+  "loc-silver-prairie": {
+    title: "Silver Prairie",
+    glow: "rgba(210, 230, 255, 0.35)",
+    accent: "#e0f3ff",
+    soft: "rgba(200, 220, 255, 0.12)",
+    page: "radial-gradient(circle at 20% 30%, rgba(230,245,255,0.14), transparent 24%), radial-gradient(circle at 80% 70%, rgba(190,215,245,0.1), transparent 18%)",
+    background: "linear-gradient(180deg, #070a12 0%, #0f161f 100%)",
+  },
+  "loc-desert": {
+    title: "Desert",
+    glow: "rgba(255, 197, 115, 0.32)",
+    accent: "#ffd89b",
+    soft: "rgba(255, 214, 145, 0.12)",
+    page: "radial-gradient(circle at 70% 20%, rgba(255,210,145,0.16), transparent 22%), radial-gradient(circle at 25% 75%, rgba(255,160,90,0.08), transparent 18%)",
+    background: "linear-gradient(180deg, #120a03 0%, #1a0f06 100%)",
+  },
+  "loc-scorched-earth": {
+    title: "Scorched Earth",
+    glow: "rgba(255, 110, 55, 0.38)",
+    accent: "#ffb17d",
+    soft: "rgba(255, 140, 75, 0.12)",
+    page: "radial-gradient(circle at 45% 25%, rgba(255,160,110,0.16), transparent 24%), radial-gradient(circle at 75% 75%, rgba(255,90,40,0.1), transparent 18%)",
+    background: "linear-gradient(180deg, #160806 0%, #1f0d08 100%)",
+  },
+  "loc-ocean": {
+    title: "Ocean",
+    glow: "rgba(64, 184, 255, 0.38)",
+    accent: "#6fd9ff",
+    soft: "rgba(100, 200, 255, 0.12)",
+    page: "radial-gradient(circle at 60% 20%, rgba(100,215,255,0.16), transparent 24%), radial-gradient(circle at 25% 75%, rgba(50,120,210,0.12), transparent 18%)",
+    background: "linear-gradient(180deg, #04112d 0%, #071d38 100%)",
+  },
+  "loc-abyssal-depths": {
+    title: "Abyssal Depths",
+    glow: "rgba(98, 205, 255, 0.38)",
+    accent: "#9ce8ff",
+    soft: "rgba(140, 225, 255, 0.14)",
+    page: "radial-gradient(circle at 55% 25%, rgba(150,235,255,0.16), transparent 22%), radial-gradient(circle at 30% 75%, rgba(20,80,140,0.12), transparent 18%)",
+    background: "linear-gradient(180deg, #020c18 0%, #07142a 100%)",
+  },
+  "loc-volcano": {
+    title: "Volcano",
+    glow: "rgba(255, 100, 60, 0.42)",
+    accent: "#ff964e",
+    soft: "rgba(255, 130, 85, 0.12)",
+    page: "radial-gradient(circle at 55% 25%, rgba(255,145,95,0.16), transparent 22%), radial-gradient(circle at 25% 75%, rgba(200,70,40,0.12), transparent 18%)",
+    background: "linear-gradient(180deg, #130805 0%, #1d0d08 100%)",
+  },
+  "loc-hell-gate": {
+    title: "Hell Gate",
+    glow: "rgba(200, 90, 255, 0.38)",
+    accent: "#c78cff",
+    soft: "rgba(185, 115, 255, 0.12)",
+    page: "radial-gradient(circle at 50% 25%, rgba(195,140,255,0.16), transparent 22%), radial-gradient(circle at 80% 70%, rgba(140,60,210,0.12), transparent 18%)",
+    background: "linear-gradient(180deg, #10070f 0%, #140a16 100%)",
+  },
+};
+
+const DEFAULT_LOCATION_THEME: LocationTheme = {
+  title: "Location",
+  glow: "rgba(255,255,255,0.22)",
+  accent: "#c8d8f0",
+  soft: "rgba(255,255,255,0.08)",
+  page: "radial-gradient(circle at 50% 30%, rgba(255,255,255,0.12), transparent 22%)",
+  background: "linear-gradient(180deg, #09101a 0%, #0d1723 100%)",
+};
+
+export function getLocationTheme(locationId: string): LocationTheme {
+  return LOCATION_THEMES[locationId] ?? DEFAULT_LOCATION_THEME;
 }
 
 const ORIGIN_OPTIONS: VaultOption[] = [
@@ -567,6 +656,154 @@ export function TargetPicker({ players, min, max, onConfirm }: TargetPickerProps
   );
 }
 
+interface LocationRevealProps {
+  name: string;
+  effect: string;
+  theme: LocationTheme;
+  onDone: () => void;
+}
+
+export function LocationReveal({ name, effect, theme, onDone }: LocationRevealProps) {
+  return (
+    <Overlay>
+      <div
+        style={{
+          width: "min(720px, 92vw)",
+          borderRadius: 18,
+          overflow: "hidden",
+          border: `1px solid ${theme.accent}`,
+          boxShadow: `0 0 100px ${theme.glow}, 0 24px 48px rgba(0,0,0,0.72)`,
+          position: "relative",
+          background: theme.background,
+        }}
+      >
+        <div style={{ padding: "24px 32px 18px", textAlign: "center" }}>
+          <p
+            style={{
+              margin: 0,
+              fontFamily: FONT_UI,
+              fontWeight: 700,
+              fontSize: 13,
+              color: theme.accent,
+              letterSpacing: "0.28em",
+              textTransform: "uppercase",
+            }}
+          >
+            LOCATION REVEAL
+          </p>
+          <h2
+            style={{
+              margin: "18px 0 0",
+              fontFamily: FONT_DISPLAY,
+              fontWeight: 900,
+              fontSize: 72,
+              color: "#fff",
+              textShadow: `0 0 28px ${theme.glow}`,
+            }}
+          >
+            {name}
+          </h2>
+        </div>
+        <div style={{ padding: "0 32px 24px" }}>
+          <div
+            style={{
+              padding: "18px 22px",
+              borderRadius: 14,
+              background: theme.soft,
+              border: `1px solid rgba(255,255,255,0.08)`,
+              boxShadow: `inset 0 0 38px rgba(255,255,255,0.08)`,
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontFamily: FONT_DISPLAY,
+                fontWeight: 800,
+                fontSize: 20,
+                letterSpacing: "0.02em",
+                color: "#eef7ff",
+              }}
+            >
+              Startup effect
+            </p>
+            <p
+              style={{
+                margin: "12px 0 0",
+                fontSize: 15,
+                lineHeight: 1.7,
+                color: "rgba(240,245,255,0.92)",
+              }}
+            >
+              {effect}
+            </p>
+          </div>
+          <div
+            style={{
+              marginTop: 24,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 18,
+            }}
+          >
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                fontSize: 13,
+                letterSpacing: "0.18em",
+                color: theme.accent,
+                textTransform: "uppercase",
+                fontWeight: 700,
+              }}
+            >
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: "50%",
+                  background: theme.glow,
+                  boxShadow: `0 0 24px ${theme.glow}`,
+                }}
+              />
+              Game location activated
+            </span>
+          </div>
+        </div>
+        <div style={{ padding: "16px 32px 26px", textAlign: "center" }}>
+          <button
+            onClick={onDone}
+            style={{
+              fontFamily: FONT_DISPLAY,
+              fontWeight: 800,
+              fontSize: 15,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              padding: "12px 34px",
+              background: theme.accent,
+              color: "#061018",
+              border: "none",
+              borderRadius: 12,
+              cursor: "pointer",
+              transition: "transform 0.12s ease, box-shadow 0.12s ease",
+              boxShadow: `0 0 28px ${theme.glow}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
+
 interface MayhemRevealProps {
   playerName: string;
   cardValue: string;
@@ -574,6 +811,7 @@ interface MayhemRevealProps {
   powerName: string;
   effectText: ReactNode;
   target: string;
+  resultText: ReactNode;
   onDone: () => void;
 }
 
@@ -584,6 +822,7 @@ export function MayhemReveal({
   powerName,
   effectText,
   target,
+  resultText,
   onDone,
 }: MayhemRevealProps) {
   return (
@@ -593,13 +832,13 @@ export function MayhemReveal({
           width: "min(760px, 92vw)",
           borderRadius: 14,
           overflow: "hidden",
-          border: "1px solid rgba(255,180,0,0.3)",
+          border: "1px solid rgba(0,238,255,0.24)",
           boxShadow:
-            "0 0 60px rgba(255,160,0,0.2), 0 0 120px rgba(255,100,0,0.1), 0 24px 64px rgba(0,0,0,0.9)",
+            "0 0 60px rgba(0,238,255,0.08), 0 0 120px rgba(0,238,255,0.06), 0 24px 64px rgba(0,0,0,0.9)",
           position: "relative",
           background: [
-            "repeating-conic-gradient(from 12deg at 50% 46%, rgba(255,200,0,0.055) 0deg 2deg, transparent 2deg 30deg)",
-            "radial-gradient(ellipse at 50% 46%, rgba(255,165,0,0.22) 0%, rgba(255,110,0,0.08) 38%, transparent 64%)",
+            "repeating-conic-gradient(from 12deg at 50% 46%, rgba(0,238,255,0.05) 0deg 2deg, transparent 2deg 30deg)",
+            "radial-gradient(ellipse at 50% 46%, rgba(0,230,255,0.18) 0%, rgba(0,160,255,0.08) 38%, transparent 64%)",
             "#0b0b12",
           ].join(", "),
         }}
@@ -628,12 +867,12 @@ export function MayhemReveal({
               letterSpacing: "0.04em",
               lineHeight: 0.9,
               margin: 0,
-              color: "#ffcc00",
+              color: "#00eeff",
               textShadow:
-                "0 0 40px rgba(255,200,0,1), 0 0 80px rgba(255,160,0,0.7), 0 0 140px rgba(255,100,0,0.4), 4px 4px 0 rgba(180,80,0,0.5)",
+                "0 0 40px rgba(0,238,255,0.9), 0 0 80px rgba(0,170,255,0.6), 0 0 120px rgba(0,120,255,0.35), 4px 4px 0 rgba(0,80,120,0.45)",
             }}
           >
-            MAYHEM!
+            VAULT EFFECT
           </h2>
         </div>
         <div
@@ -649,12 +888,12 @@ export function MayhemReveal({
             style={{
               flexShrink: 0,
               animation: "reveal-in 0.55s cubic-bezier(0.34,1.56,0.64,1) both",
-              filter: "drop-shadow(0 0 32px rgba(255,190,0,0.7))",
+              filter: "drop-shadow(0 0 32px rgba(0,238,255,0.5))",
             }}
           >
             <GameCard vault={tier} value={cardValue} size="xl" lifted />
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 280 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 320 }}>
             <div>
               <p
                 style={{
@@ -662,10 +901,10 @@ export function MayhemReveal({
                   fontFamily: FONT_DISPLAY,
                   fontWeight: 900,
                   fontSize: 36,
-                  color: "#ffaa00",
+                  color: "#99f7ff",
                   letterSpacing: "0.04em",
                   lineHeight: 1,
-                  textShadow: "0 0 20px rgba(255,170,0,0.8)",
+                  textShadow: "0 0 20px rgba(0,238,255,0.35)",
                 }}
               >
                 {powerName}
@@ -673,7 +912,7 @@ export function MayhemReveal({
               <div
                 style={{
                   height: 2,
-                  background: "linear-gradient(90deg, rgba(255,170,0,0.6), transparent)",
+                  background: "linear-gradient(90deg, rgba(0,238,255,0.6), transparent)",
                   marginTop: 8,
                   borderRadius: 2,
                 }}
@@ -683,8 +922,8 @@ export function MayhemReveal({
               style={{
                 margin: 0,
                 fontSize: 16,
-                color: "rgba(220,230,248,0.82)",
-                lineHeight: 1.65,
+                color: "rgba(220,230,248,0.88)",
+                lineHeight: 1.7,
                 fontWeight: 500,
               }}
             >
@@ -694,51 +933,76 @@ export function MayhemReveal({
         </div>
         <div
           style={{
-            borderTop: "1px solid rgba(255,160,0,0.2)",
-            padding: "14px 40px",
-            background: "rgba(255,130,0,0.07)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 16,
+            padding: "0 40px 20px",
+            display: "grid",
+            gap: 14,
+            gridTemplateColumns: "1fr 1fr",
           }}
         >
           <div
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#ff6040",
-              boxShadow: "0 0 10px rgba(255,80,40,0.9)",
-              flexShrink: 0,
-              animation: "neon-pulse 1s ease-in-out infinite",
-            }}
-          />
-          <p
-            style={{
-              margin: 0,
-              fontFamily: FONT_UI,
-              fontWeight: 700,
-              fontSize: 13,
-              color: "rgba(255,130,0,0.75)",
-              letterSpacing: "0.22em",
-              textTransform: "uppercase",
+              padding: "18px 20px",
+              background: "rgba(0,238,255,0.08)",
+              border: "1px solid rgba(0,238,255,0.18)",
+              borderRadius: 12,
             }}
           >
-            Effect applied to: &nbsp;
-            <span style={{ color: "#ff9060", fontWeight: 700 }}>{target}</span>
-          </p>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 11,
+                letterSpacing: "0.18em",
+                color: "rgba(200,216,240,0.55)",
+                textTransform: "uppercase",
+                fontWeight: 700,
+              }}
+            >
+              Target
+            </p>
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: 17,
+                color: "#e8f9ff",
+                fontWeight: 700,
+                lineHeight: 1.4,
+              }}
+            >
+              {target}
+            </p>
+          </div>
           <div
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#ff6040",
-              boxShadow: "0 0 10px rgba(255,80,40,0.9)",
-              flexShrink: 0,
-              animation: "neon-pulse 1s ease-in-out infinite 0.5s",
+              padding: "18px 20px",
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 12,
             }}
-          />
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: 11,
+                letterSpacing: "0.18em",
+                color: "rgba(200,216,240,0.55)",
+                textTransform: "uppercase",
+                fontWeight: 700,
+              }}
+            >
+              Actual outcome
+            </p>
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: 17,
+                color: "#e8f9ff",
+                fontWeight: 700,
+                lineHeight: 1.4,
+              }}
+            >
+              {resultText}
+            </p>
+          </div>
         </div>
         <div style={{ padding: "16px 40px 24px", textAlign: "center" }}>
           <button
@@ -750,15 +1014,15 @@ export function MayhemReveal({
               letterSpacing: "0.12em",
               textTransform: "uppercase",
               padding: "10px 32px",
-              background: "rgba(255,170,0,0.12)",
-              color: "#ffaa00",
-              border: "1px solid rgba(255,170,0,0.4)",
+              background: "rgba(0,238,255,0.12)",
+              color: "#ddf8ff",
+              border: "1px solid rgba(0,238,255,0.4)",
               borderRadius: 8,
               cursor: "pointer",
               transition: "all 0.12s ease",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,170,0,0.22)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,170,0,0.12)")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,238,255,0.2)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(0,238,255,0.12)")}
           >
             Continue
           </button>

@@ -136,6 +136,7 @@ export const GameEffectSchema = z.object({
   tier: z.enum(["vault-silver", "vault-gold", "vault-diamond"]),
   text: z.string(),
   lines: z.array(z.string()),
+  targetNames: z.array(z.string()).optional(),
 });
 export type GameEffect = z.infer<typeof GameEffectSchema>;
 

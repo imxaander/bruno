@@ -25,6 +25,7 @@ export interface PlayOutcome {
     tier: VaultCardType;
     text: string;
     lines: string[];
+    targets?: string[];
   };
 }
 
@@ -169,6 +170,7 @@ export function playCard(
           tier: effectCard.type as VaultCardType,
           text: effectCard.effect ?? "",
           lines: result.log ?? [],
+          targets,
         };
       }
     }

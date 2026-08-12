@@ -37,8 +37,20 @@ export function applyLocationStart(room: Room, rng: Rng): string[] {
       }
       return log;
     }
+    case "loc-silver-prairie":
+      return ["Location: Silver Prairie — each player may trade one card with each other player once."];
+    case "loc-desert":
+      return ["Location: Desert — a random player is skipped at the beginning of the game."];
     case "loc-scorched-earth":
       return ["Location: Scorched Earth — players with 1 card may be rescued by the leader."];
+    case "loc-ocean":
+      return ["Location: Ocean — the first vault any player plays is a Diamond Vault."];
+    case "loc-abyssal-depths":
+      return ["Location: Abyssal Depths — all vaults are Diamond Vault."];
+    case "loc-volcano":
+      return ["Location: Volcano — Silver and Gold effects are doubled."];
+    case "loc-hell-gate":
+      return ["Location: Hell Gate — Diamond Vault behavior is active."];
     default:
       return [`Location: ${room.locationId} is active.`];
   }

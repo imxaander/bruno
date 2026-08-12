@@ -20,7 +20,16 @@ describe("card catalog", () => {
     expect(silver.length).toBe(27);
     expect(gold.length).toBe(21);
     expect(diamond.length).toBe(42);
-    expect(locations.map((card) => card.id)).toEqual(["loc-fields", "loc-scorched-earth"]);
+    expect(locations.map((card) => card.id)).toEqual([
+      "loc-fields",
+      "loc-silver-prairie",
+      "loc-desert",
+      "loc-scorched-earth",
+      "loc-ocean",
+      "loc-abyssal-depths",
+      "loc-volcano",
+      "loc-hell-gate",
+    ]);
     expect(origins.map((card) => card.id)).toEqual([
       "origin-vault-keeper",
       "origin-technomancer",

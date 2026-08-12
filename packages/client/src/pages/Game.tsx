@@ -6,6 +6,7 @@ import type {
   GamePrompt,
   PlayerView,
 } from "@bruno/shared";
+import { getCard } from "@bruno/shared";
 import { Button } from "../components/Button.js";
 import { Seat } from "../components/Seat.js";
 import { TurnTimer } from "../components/TurnTimer.js";
@@ -20,7 +21,11 @@ import {
   ColorPicker,
   TargetPicker,
   VaultPicker,
+  LocationReveal,
+  getLocationTheme,
+  MayhemReveal,
   type CardColorName,
+  type LocationTheme,
 } from "../components/modals.js";
 import type { BrunoSocket } from "../socket/client.js";
 import type { PlayerIdentity } from "../socket/useSocket.js";
@@ -53,15 +58,28 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   const [remaining, setRemaining] = useState(0);
   const [effect, setEffect] = useState<GameEffect | null>(null);
   const [effectVisible, setEffectVisible] = useState(true);
+  const [showEffectReveal, setShowEffectReveal] = useState(false);
+  const [locationRevealData, setLocationRevealData] = useState<{
+    id: string;
+    name: string;
+    effect: string;
+    theme: LocationTheme;
+  } | null>(null);
+  const [revealedLocationId, setRevealedLocationId] = useState<string | null>(null);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
   const effectTimer = useRef<number[]>([]);
   const [drawTargets, setDrawTargets] = useState<DrawFlyTarget[]>([]);
   const drawTimer = useRef<number | null>(null);
+  const locationModalTimer = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
       effectTimer.current.forEach(window.clearTimeout);
       if (drawTimer.current) {
         window.clearTimeout(drawTimer.current);
+      }
+      if (locationModalTimer.current) {
+        window.clearTimeout(locationModalTimer.current);
       }
     };
   }, []);
@@ -92,11 +110,15 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     const onEffect = (payload: GameEffect) => {
       if (payload.gameId === roomId) {
         setEffect(payload);
+        setShowEffectReveal(true);
         setEffectVisible(true);
         effectTimer.current.forEach(window.clearTimeout);
         effectTimer.current = [
-          window.setTimeout(() => setEffectVisible(false), 3500),
-          window.setTimeout(() => setEffect(null), 3850),
+          window.setTimeout(() => {
+            setEffectVisible(false);
+            setShowEffectReveal(false);
+          }, 5000),
+          window.setTimeout(() => setEffect(null), 5150),
         ];
       }
     };
@@ -144,6 +166,35 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       socket.off("game:effect", onEffect);
     };
   }, [socket, roomId, identity.id, onEnded]);
+
+  useEffect(() => {
+    if (!view?.locationId || view.locationId === revealedLocationId) {
+      return;
+    }
+    const card = getCard(view.locationId);
+    if (!card || card.type !== "location") {
+      return;
+    }
+    const theme = getLocationTheme(view.locationId);
+    const message = `Location: ${card.name} — ${card.effect}`;
+    setLocationRevealData({
+      id: view.locationId,
+      name: card.name,
+      effect: card.effect,
+      theme,
+    });
+    setLocationModalOpen(true);
+    setRevealedLocationId(view.locationId);
+    setLog((prev) => (prev.some((line) => line === message) ? prev : [message, ...prev].slice(0, 50)));
+
+    if (locationModalTimer.current) {
+      window.clearTimeout(locationModalTimer.current);
+    }
+    locationModalTimer.current = window.setTimeout(() => {
+      setLocationModalOpen(false);
+      locationModalTimer.current = null;
+    }, 5000);
+  }, [view?.locationId, revealedLocationId]);
 
   const playCard = useCallback(
     (index: number) => {
@@ -261,6 +312,11 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   const connected = socket?.connected ?? false;
   const isRing = view.playerCount > 4;
 
+  const theme = locationRevealData?.theme;
+  const pageBackground = theme
+    ? `${theme.page}, ${theme.background}`
+    : "radial-gradient(ellipse at 50% 40%, #0c0c1a 0%, #080810 60%, #060610 100%)";
+
   const header = (
     <div
       style={{
@@ -270,8 +326,9 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         alignItems: "center",
         padding: "0 24px",
         gap: 16,
-        background: "rgba(7,7,12,0.98)",
-        borderBottom: "1px solid rgba(0,238,255,0.07)",
+        background: theme ? "rgba(5,8,14,0.94)" : "rgba(7,7,12,0.98)",
+        borderBottom: theme ? `1px solid ${theme.accent}` : "1px solid rgba(0,238,255,0.07)",
+        boxShadow: theme ? `0 0 40px ${theme.soft}` : undefined,
       }}
     >
       <span
@@ -584,7 +641,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       style={{
         width: "100%",
         height: "100vh",
-        background: "radial-gradient(ellipse at 50% 40%, #0c0c1a 0%, #080810 60%, #060610 100%)",
+        background: pageBackground,
         fontFamily: "'Rajdhani', sans-serif",
         display: "flex",
         flexDirection: "column",
@@ -605,7 +662,46 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       ) : null}
       {board}
       <EventHistory events={log} />
-      {effect ? <EffectBanner effect={effect} visible={effectVisible} /> : null}
+      {effect && !showEffectReveal ? <EffectBanner effect={effect} visible={effectVisible} /> : null}
+      {locationModalOpen && locationRevealData ? (
+        <LocationReveal
+          name={locationRevealData.name}
+          effect={locationRevealData.effect}
+          theme={locationRevealData.theme}
+          onDone={() => setLocationModalOpen(false)}
+        />
+      ) : null}
+      {showEffectReveal && effect ? (
+        <MayhemReveal
+          playerName={effect.playerName}
+          cardValue={effect.name}
+          tier={
+            effect.tier === "vault-silver"
+              ? "silver"
+              : effect.tier === "vault-gold"
+                ? "gold"
+                : "diamond"
+          }
+          powerName={effect.name}
+          effectText={effect.text}
+          target={
+            effect.targetNames && effect.targetNames.length > 0
+              ? effect.targetNames.join(", ")
+              : "No explicit target"
+          }
+          resultText={
+            effect.lines.length > 0
+              ? effect.lines.map((line, index) => (
+                  <span key={index}>
+                    {line}
+                    {index < effect.lines.length - 1 ? <br /> : null}
+                  </span>
+                ))
+              : "No outcome details."
+          }
+          onDone={() => setShowEffectReveal(false)}
+        />
+      ) : null}
       {drawTargets.length > 0 ? (
         <DrawFly
           targets={drawTargets}
