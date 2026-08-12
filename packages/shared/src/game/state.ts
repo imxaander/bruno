@@ -28,6 +28,8 @@ export interface PlayerView {
   currentDirection: 1 | -1;
   activeColor: Color | null;
   pendingDraw: number;
+  locationId?: string;
+  mayhemEventId?: string;
   status: GameStatus;
   turnDuration: number;
 }

@@ -60,6 +60,8 @@ export function toPlayerView(
     currentDirection: room.currentDirection,
     activeColor: room.activeColor,
     pendingDraw: room.pendingDraw,
+    locationId: room.locationId,
+    mayhemEventId: room.mayhemEventId,
     status: room.status,
     turnDuration: turnDurationSeconds,
   };

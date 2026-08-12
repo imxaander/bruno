@@ -6,6 +6,8 @@ export interface Player {
   name: string;
   isHost: boolean;
   hand: Card[];
+  originId?: string;
+  artifactIds: string[];
 }
 
 export const HAND_SIZE = 8;
@@ -32,6 +34,8 @@ export class Room {
   currentTurnIndex = 0;
   currentDirection: 1 | -1 = 1;
   activeColor: Color | null = null;
+  locationId?: string;
+  mayhemEventId?: string;
   pendingDraw = 0;
   pendingWild?: { cardIndex: number; playerId: string };
   pendingVault?: PendingVault;

@@ -11,6 +11,7 @@ import { isVaultTokenCard } from "@bruno/shared";
 import { buildDeck, dealHands, seedPile, type Rng } from "./deck.js";
 import { applyDraw, nextIndex, playCard, type EngineError } from "./engine.js";
 import { sampleVaultOffers, getResolverInputs } from "./effects/index.js";
+import { chooseRandomLocation, chooseRandomMayhem } from "./systems.js";
 import { toLobbyPlayers, toPlayerView, toRoomSummary } from "./player-view.js";
 import { HAND_SIZE, type Player, Room } from "./room.js";
 import { TurnManager } from "./turn-manager.js";
@@ -228,7 +229,13 @@ export class RoomManager {
       hostId: input.playerId,
       maxPlayers: input.maxPlayers,
     });
-    room.players.push({ id: input.playerId, name: input.playerName, isHost: true, hand: [] });
+    room.players.push({
+      id: input.playerId,
+      name: input.playerName,
+      isHost: true,
+      hand: [],
+      artifactIds: [],
+    });
     this.rooms.set(room.id, room);
     return { ok: true, value: room };
   }
@@ -261,7 +268,13 @@ export class RoomManager {
     if (room.playerCount >= room.maxPlayers) {
       return fail("ROOM_FULL");
     }
-    room.players.push({ id: playerId, name: playerName, isHost: false, hand: [] });
+    room.players.push({
+      id: playerId,
+      name: playerName,
+      isHost: false,
+      hand: [],
+      artifactIds: [],
+    });
     return { ok: true, value: room };
   }
 
@@ -336,7 +349,15 @@ export class RoomManager {
     const hands = dealHands(room.deck, room.players.length, HAND_SIZE);
     room.players.forEach((player, index) => {
       player.hand = hands[index] ?? [];
+      if (!player.artifactIds) {
+        player.artifactIds = [];
+      }
+      if (!player.originId) {
+        player.originId = undefined;
+      }
     });
+    room.locationId = chooseRandomLocation(rng);
+    room.mayhemEventId = chooseRandomMayhem(rng);
     let top = seedPile(room.deck, room.pile);
     while (
       top &&
@@ -353,6 +374,7 @@ export class RoomManager {
     room.pendingWild = undefined;
     room.currentTurnIndex = Math.floor(rng() * room.players.length);
     room.currentDirection = 1;
+
     this.emit({ type: "log", gameId: room.id, message: "The game has started." });
     this.emitTurn(room);
     this.scheduleTurn(room.id);
