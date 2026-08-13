@@ -76,13 +76,13 @@ contract and `vault-mechanism.md` for how the tokens resolve.
 | ---------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Vaults (Tier I/II/III) | **Tokens**    | 9 vault tokens (5 silver / 3 gold / 1 diamond) are shuffled in; playing one offers up to 5 random same-tier effects (implemented resolvers only). |
 | Locations              | **No**        | Selected/assigned at game start (see `locations.md`).                                                                                             |
-| Mayhem                 | **No**        | A Mayhem is rolled at the start of each round (see `mayhem.md`).                                                                                  |
+| Mayhem                 | **No**        | Hell Gate's location effect: a random event per round while it is active (see `mayhem.md`).                                                       |
 | Origin Vaults          | **No**        | Chosen before the game starts (see `origins.md`).                                                                                                 |
 
 > Decision (2026-08-10, revised): the 90 catalog vault cards are the **offer pool only** and
 > are never shuffled into the deck. Instead the deck holds 9 vault **tokens** (5/3/1), each
 > worth a choice of up to 5 random effects from its tier (sampled from cards with a
-> registered resolver; when fewer than 5 exist — silver 3, gold 4, diamond 4 — all are
+> registered resolver; when fewer than 5 exist — silver 19, gold 17, diamond 26 — all are
 > offered). The default composition is **119 cards**
 > (110 base + 9 tokens). Tokens are always playable on your turn (wild-like) unless a draw
 > stack is pending; during a pending stack only `+2`/`+4` may be played. Vault tokens drawn
@@ -94,5 +94,6 @@ contract and `vault-mechanism.md` for how the tokens resolve.
 - Base deck: implemented in `packages/shared/src/cards/deck.ts` (`buildBaseDeck`).
 - Vault tokens: implemented (5/3/1 = 9 tokens, 119-card deck); catalog stays as offer pool.
 - Vault play flow: implemented (offer prompt + resolver wiring + client `VaultPicker`).
-- Locations / Mayhem / Origins: data defined in `packages/shared/src/cards/`; gameplay wiring pending.
+- Locations / Origins: data defined in `packages/shared/src/cards/`; gameplay wiring pending.
+- Mayhem: implemented, wired to `loc-hell-gate` (see `mayhem.md`).
 - The stale comment at `legacy/game.js:31` remains unmodified (legacy is frozen).

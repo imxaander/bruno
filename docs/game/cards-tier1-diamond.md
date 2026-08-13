@@ -85,13 +85,21 @@ The 42 Tier I cards are transcribed into `packages/shared/src/cards/cards.ts` an
 the diamond offer pool (`sampleVaultOffers`).
 
 Implemented resolvers: `t1-g-switch` (stable — switch hands with a picked player), plus the
-+N exemplars `t1-meiosis`, `t1-suicide`, `t1-damnation` (still `draft`). Cards without a
-registered resolver are excluded from the offer pool until resolved (see
-`effects/registry.ts`).
+current batch `t1-meiosis`, `t1-suicide`, `t1-damnation`, `t1-global-silence`, `t1-sloth`,
+`t1-envy`, `t1-genesis`, `t1-plunder`, `t1-avarice`, `t1-scrapheap`, `t1-scrapstorm`,
+`t1-jack-of-all-trades`, `t1-jack-master`, `t1-all-seeing-eye`, `t1-omniscient` (all still
+`draft`), `t1-thrice-than-twice` (`[Tentative]`), and the event-passive batch `t1-tyranny`,
+`t1-equality`, `t1-zephyr`, `t1-prayers`, `t1-silver-tongue`, `t1-maim`, `t1-scourge`,
+`t1-cutthroat` (draft) plus `t1-ultimate-machine-form` (`[Tentative]`) — see the Wave 5
+section in `vault-effects-tracking.md`. Cards without a registered resolver are
+excluded from the offer pool until resolved (see `effects/registry.ts`).
 
-Deferred resolver inventory (Phase 5c, Track A batch 1): passives, reveal/steal/switch,
+Deferred resolver inventory (Phase 5c, Track A batch 1): reveal/steal/switch,
 timed or burst draws, skip-for-N rounds, "to play" conditions, allies, win/kill,
-`[Tentative]`, or unreadable text. Examples: `t1-finality`/`t1-doomsday-button`/`t1-evening-star`/
+`[Tentative]`, or unreadable text (the diamond `[P]`/`[sP]` passives shipped in Wave 5 —
+`t1-tyranny`, `t1-equality`, `t1-zephyr`, `t1-prayers`, `t1-silver-tongue`, `t1-maim`,
+`t1-scourge`, `t1-cutthroat`, `t1-ultimate-machine-form`). Examples:
+`t1-finality`/`t1-doomsday-button`/`t1-evening-star`/
 `t1-dawns-triumph` (kill mechanic — open design question, see `rules.md` §9).
 
-See `../modernization.md` and the tracking log in `vault-effects-implemented.md`.
+See `../modernization.md` and the tracking log in `vault-effects-tracking.md`.

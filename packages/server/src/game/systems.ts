@@ -2,13 +2,28 @@ import type { Card, VaultCardType } from "@bruno/shared";
 import { cardsByType, MAYHEM_EVENTS } from "@bruno/shared";
 import { addCards, grantVaultTokens, randomOf } from "./effects/helpers.js";
 import type { Player, Room } from "./room.js";
-import type { Rng } from "./deck.js";
+import { shuffle, type Rng } from "./deck.js";
 
 function chooseRandom<T>(items: readonly T[], rng: Rng): T | undefined {
   if (items.length === 0) {
     return undefined;
   }
   return items[Math.floor(rng() * items.length)];
+}
+
+/**
+ * The tier whose effects a vault token will offer. loc-ocean upgrades only the
+ * first vault of the game; loc-abyssal-depths (and loc-forest, not yet in the
+ * catalog) upgrade every vault.
+ */
+export function effectiveVaultTier(room: Room, tier: VaultCardType): VaultCardType {
+  if (room.locationId === "loc-abyssal-depths" || room.locationId === "loc-forest") {
+    return "vault-diamond";
+  }
+  if (room.locationId === "loc-ocean" && !room.firstVaultPlayed) {
+    return "vault-diamond";
+  }
+  return tier;
 }
 
 export function chooseRandomLocation(rng: Rng): string | undefined {
@@ -38,9 +53,17 @@ export function applyLocationStart(room: Room, rng: Rng): string[] {
       return log;
     }
     case "loc-silver-prairie":
-      return ["Location: Silver Prairie — each player may trade one card with each other player once."];
-    case "loc-desert":
-      return ["Location: Desert — a random player is skipped at the beginning of the game."];
+      return [
+        "Location: Silver Prairie — each player may trade one card with each other player once.",
+      ];
+    case "loc-desert": {
+      const target = chooseRandom(room.players, rng);
+      if (!target) {
+        return ["Location: Desert — no players to skip."];
+      }
+      target.skippedTurns = (target.skippedTurns ?? 0) + 1;
+      return [`Location: Desert — ${target.name} is skipped at the start of the game.`];
+    }
     case "loc-scorched-earth":
       return ["Location: Scorched Earth — players with 1 card may be rescued by the leader."];
     case "loc-ocean":
@@ -50,7 +73,7 @@ export function applyLocationStart(room: Room, rng: Rng): string[] {
     case "loc-volcano":
       return ["Location: Volcano — Silver and Gold effects are doubled."];
     case "loc-hell-gate":
-      return ["Location: Hell Gate — Diamond Vault behavior is active."];
+      return ["Location: Hell Gate — Mayhem strikes each round."];
     default:
       return [`Location: ${room.locationId} is active.`];
   }
@@ -76,6 +99,31 @@ export function applyOriginStart(room: Room, player: Player, rng: Rng): string[]
     default:
       return [];
   }
+}
+
+/**
+ * Mayhem is the effect of the Hell Gate location (`loc-hell-gate`), not a
+ * per-game default. While Hell Gate is the active location, a fresh event is
+ * rolled at the start of each round, excluding every event already used this
+ * game. When the pool is exhausted it resets so repeats become possible again.
+ * No-op in any other location.
+ */
+export function rollNextMayhem(room: Room, rng: Rng): string[] {
+  if (room.locationId !== "loc-hell-gate") {
+    return [];
+  }
+  let pool = MAYHEM_EVENTS.filter((event) => !room.usedMayhemIds.includes(event.id));
+  if (pool.length === 0) {
+    room.usedMayhemIds = [];
+    pool = MAYHEM_EVENTS.slice();
+  }
+  const next = chooseRandom(pool, rng);
+  if (!next) {
+    return [];
+  }
+  room.mayhemEventId = next.id;
+  room.usedMayhemIds.push(next.id);
+  return applyMayhem(room, rng);
 }
 
 export function applyMayhem(room: Room, rng: Rng): string[] {
@@ -114,6 +162,37 @@ export function applyMayhem(room: Room, rng: Rng): string[] {
       if (least) {
         const extra = addCards(room, least, 4, rng);
         log.push(`${least.name} draws ${extra} extra cards for having the fewest cards.`);
+      }
+      break;
+    }
+    case "mayhem-4": {
+      const target = chooseRandom(room.players, rng);
+      if (target) {
+        target.skippedTurns = (target.skippedTurns ?? 0) + 1;
+        log.push(`${target.name} is skipped for 1 turn.`);
+      }
+      break;
+    }
+    case "mayhem-5": {
+      const [first, second] = shuffle(room.players, rng);
+      const targets = [first, second].filter((player): player is Player => player !== undefined);
+      for (const target of targets) {
+        target.skippedTurns = (target.skippedTurns ?? 0) + 1;
+        log.push(`${target.name} is skipped for 1 turn.`);
+      }
+      break;
+    }
+    case "mayhem-6": {
+      const most = [...room.players].sort((a, b) => b.hand.length - a.hand.length)[0];
+      for (const player of room.players) {
+        if (player === most) {
+          continue;
+        }
+        player.skippedTurns = (player.skippedTurns ?? 0) + 6;
+        log.push(`${player.name} is skipped for 6 turns.`);
+      }
+      if (most) {
+        log.push(`${most.name} is spared for having the most cards.`);
       }
       break;
     }

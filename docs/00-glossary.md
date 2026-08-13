@@ -41,7 +41,7 @@ code, use these terms exactly.
 | **Deck**          | The face-down draw stack.                                                                                                 |
 | **Draw stacking** | The +2/+4 chain: playing a draw card while a draw effect is pending adds to the total the next non-draw player must draw. |
 | **Location**      | A board/environment card that modifies rules for the whole game (Fields, Volcano, etc.).                                  |
-| **Mayhem**        | A random event applied at the start of every round.                                                                       |
+| **Mayhem**        | A random event applied at the start of each round while the Hell Gate location is active.                                 |
 | **Origin Vault**  | A starting-power card chosen before the game (Vault Keeper, Technomancer, Grand Architect, Masterchef, Fateweaver).       |
 | **Host**          | The player who created the room and may start the game.                                                                   |
 | **Lobby**         | Pre-game room where players gather before the game starts.                                                                |

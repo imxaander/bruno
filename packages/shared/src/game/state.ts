@@ -18,6 +18,12 @@ export interface PublicPlayer {
   handCount: number;
 }
 
+/** A hand this viewer is entitled to see (vault reveal effects). */
+export interface RevealedHand {
+  playerId: string;
+  cards: CardView[];
+}
+
 export interface PlayerView {
   playerCount: number;
   players: PublicPlayer[];
@@ -32,4 +38,5 @@ export interface PlayerView {
   mayhemEventId?: string;
   status: GameStatus;
   turnDuration: number;
+  revealed?: RevealedHand[];
 }

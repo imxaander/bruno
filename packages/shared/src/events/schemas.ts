@@ -9,6 +9,7 @@ export const GameActionTypeSchema = z.enum([
   "choose-color",
   "vault-choice",
   "choose-targets",
+  "choose-cards",
 ]);
 
 export const GameActionSchema = z.object({
@@ -19,6 +20,7 @@ export const GameActionSchema = z.object({
   cardIndex: z.number().int().nonnegative().optional(),
   chosenColor: ColorSchema.optional(),
   targetIds: z.array(z.string().min(1)).optional(),
+  cardIds: z.array(z.string().min(1)).optional(),
 });
 export type GameAction = z.infer<typeof GameActionSchema>;
 
@@ -92,6 +94,20 @@ export const PickPlayersPromptSchema = z.object({
 });
 export type PickPlayersPrompt = z.infer<typeof PickPlayersPromptSchema>;
 
+/** Optional per-source bounds for a pick-cards prompt (e.g. 1–4 from each of 2 players). */
+export const PickCardsPromptSchema = z.object({
+  min: z.number().int().min(1),
+  max: z.number().int().min(1),
+  sourcePlayerIds: z.array(z.string().min(1)),
+  perPlayer: z
+    .object({
+      min: z.number().int().min(1),
+      max: z.number().int().min(1),
+    })
+    .optional(),
+});
+export type PickCardsPrompt = z.infer<typeof PickCardsPromptSchema>;
+
 export const GamePromptSchema = z.discriminatedUnion("kind", [
   z.object({
     gameId: z.string().min(1),
@@ -108,6 +124,19 @@ export const GamePromptSchema = z.discriminatedUnion("kind", [
     min: z.number().int().min(1),
     max: z.number().int().min(1),
     allowSelf: z.boolean().optional(),
+  }),
+  z.object({
+    gameId: z.string().min(1),
+    kind: z.literal("pick-cards"),
+    min: z.number().int().min(1),
+    max: z.number().int().min(1),
+    sourcePlayerIds: z.array(z.string().min(1)),
+    perPlayer: z
+      .object({
+        min: z.number().int().min(1),
+        max: z.number().int().min(1),
+      })
+      .optional(),
   }),
 ]);
 export type GamePrompt = z.infer<typeof GamePromptSchema>;

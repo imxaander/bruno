@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { VaultOffer } from "@bruno/shared";
+import type { CardView, VaultOffer } from "@bruno/shared";
 import GameCard, { type VaultTier } from "./GameCard.js";
 
 const FONT_DISPLAY = "'Barlow Condensed', sans-serif";
@@ -656,6 +656,219 @@ export function TargetPicker({ players, min, max, onConfirm }: TargetPickerProps
   );
 }
 
+export interface CardPickerSource {
+  playerId: string;
+  playerName: string;
+  cards: CardView[];
+}
+
+interface CardPickerProps {
+  sources: CardPickerSource[];
+  min: number;
+  max: number;
+  perPlayer?: { min: number; max: number };
+  onConfirm: (cardIds: string[]) => void;
+}
+
+export function CardPicker({ sources, min, max, perPlayer, onConfirm }: CardPickerProps) {
+  const [selected, setSelected] = useState<string[]>([]);
+  const totalAvailable = sources.reduce((sum, source) => sum + source.cards.length, 0);
+  const effectiveMin = Math.min(min, totalAvailable);
+  const count = selected.length;
+  const ready =
+    count >= effectiveMin &&
+    count <= max &&
+    (perPlayer
+      ? sources.every((source) => {
+          const picked = source.cards.filter((card) => selected.includes(card.id)).length;
+          return picked >= Math.min(perPlayer.min, source.cards.length) && picked <= perPlayer.max;
+        })
+      : true);
+
+  const toggle = (cardId: string, source: CardPickerSource): void => {
+    setSelected((prev) => {
+      if (prev.includes(cardId)) {
+        return prev.filter((id) => id !== cardId);
+      }
+      if (prev.length >= max) {
+        return prev;
+      }
+      if (perPlayer) {
+        const picked = source.cards.filter((card) => prev.includes(card.id)).length;
+        if (picked >= perPlayer.max) {
+          return prev;
+        }
+      }
+      return [...prev, cardId];
+    });
+  };
+
+  const subtitle =
+    perPlayer && perPlayer.min === perPlayer.max
+      ? `Pick exactly ${perPlayer.min} from each player`
+      : perPlayer
+        ? `Pick ${min}\u2013${max} total, ${perPlayer.min}\u2013${perPlayer.max} from each`
+        : `Pick ${effectiveMin === max ? max : `${effectiveMin}\u2013${max}`} card${max === 1 ? "" : "s"}`;
+
+  return (
+    <Overlay>
+      <Frame
+        title="PICK CARDS"
+        subtitle={`${subtitle} \u2014 hands are revealed to you`}
+        width={720}
+      >
+        <div
+          style={{
+            padding: "18px 24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 18,
+            maxHeight: 420,
+            overflowY: "auto",
+          }}
+        >
+          {sources.map((source) => {
+            const picked = source.cards.filter((card) => selected.includes(card.id)).length;
+            const atSourceLimit = perPlayer !== undefined && picked >= perPlayer.max;
+            return (
+              <div key={source.playerId}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 10,
+                    marginBottom: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: FONT_DISPLAY,
+                      fontWeight: 800,
+                      fontSize: 16,
+                      color: "#00eeff",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {source.playerName}
+                  </span>
+                  <span style={{ fontSize: 11, color: "rgba(200,216,240,0.4)", fontWeight: 600 }}>
+                    {source.cards.length} card{source.cards.length === 1 ? "" : "s"}
+                    {perPlayer ? ` \u00b7 ${picked}/${perPlayer.max} picked` : ""}
+                  </span>
+                </div>
+                {source.cards.length === 0 ? (
+                  <span
+                    style={{ fontSize: 12, color: "rgba(200,216,240,0.3)", fontStyle: "italic" }}
+                  >
+                    No cards in hand.
+                  </span>
+                ) : (
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    {source.cards.map((card) => {
+                      const checked = selected.includes(card.id);
+                      const disabled = !checked && (count >= max || atSourceLimit);
+                      return (
+                        <div key={card.id} style={{ position: "relative" }}>
+                          <button
+                            onClick={() => toggle(card.id, source)}
+                            disabled={disabled}
+                            style={{
+                              padding: 0,
+                              background: "none",
+                              border: "none",
+                              cursor: disabled ? "not-allowed" : "pointer",
+                              opacity: disabled ? 0.4 : 1,
+                              transition: "transform 0.12s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!disabled) {
+                                e.currentTarget.style.transform = "translateY(-6px)";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "translateY(0)";
+                            }}
+                          >
+                            <GameCard card={card} size="sm" />
+                          </button>
+                          {checked ? (
+                            <span
+                              style={{
+                                position: "absolute",
+                                top: -6,
+                                right: -6,
+                                width: 22,
+                                height: 22,
+                                borderRadius: "50%",
+                                background: "#00eeff",
+                                color: "#06060c",
+                                fontSize: 13,
+                                fontWeight: 900,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                boxShadow: "0 0 14px rgba(0,238,255,0.9)",
+                                zIndex: 2,
+                              }}
+                            >
+                              {"\u2713"}
+                            </span>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div
+          style={{
+            padding: "14px 24px 20px",
+            borderTop: "1px solid rgba(0,238,255,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 12,
+              color: ready ? "rgba(0,238,255,0.75)" : "rgba(200,216,240,0.4)",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+            }}
+          >
+            {count} / {max} selected
+          </span>
+          <button
+            onClick={() => onConfirm(selected)}
+            disabled={!ready}
+            style={{
+              fontFamily: FONT_DISPLAY,
+              fontWeight: 800,
+              fontSize: 15,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              padding: "10px 30px",
+              background: ready
+                ? "linear-gradient(90deg,#00eeff,#0090ff)"
+                : "rgba(200,216,240,0.08)",
+              color: ready ? "#06060c" : "rgba(200,216,240,0.3)",
+              border: "none",
+              borderRadius: 8,
+              cursor: ready ? "pointer" : "not-allowed",
+            }}
+          >
+            Confirm
+          </button>
+        </div>
+      </Frame>
+    </Overlay>
+  );
+}
+
 interface LocationRevealProps {
   name: string;
   effect: string;
@@ -1153,6 +1366,111 @@ export function RewardSpin({ tier, value, rewardLabel, onClaim }: RewardSpinProp
           </div>
         </div>
       </Frame>
+    </Overlay>
+  );
+}
+
+interface MayhemEventRevealProps {
+  name: string;
+  effect: string;
+  onDone: () => void;
+}
+
+export function MayhemEventReveal({ name, effect, onDone }: MayhemEventRevealProps) {
+  return (
+    <Overlay>
+      <div
+        style={{
+          width: "min(680px, 92vw)",
+          borderRadius: 18,
+          overflow: "hidden",
+          border: "1px solid rgba(255,40,90,0.4)",
+          boxShadow:
+            "0 0 90px rgba(255,40,90,0.18), 0 0 160px rgba(255,40,90,0.08), 0 24px 48px rgba(0,0,0,0.8)",
+          position: "relative",
+          background:
+            "radial-gradient(ellipse at 50% 0%, rgba(255,40,90,0.16) 0%, rgba(60,0,24,0.1) 48%, transparent 72%), #0b0b12",
+        }}
+      >
+        <div style={{ padding: "26px 32px 16px", textAlign: "center" }}>
+          <p
+            style={{
+              margin: 0,
+              fontFamily: FONT_UI,
+              fontWeight: 700,
+              fontSize: 13,
+              color: "#ff3a6e",
+              letterSpacing: "0.34em",
+              textTransform: "uppercase",
+            }}
+          >
+            {"\u26A0"} MAYHEM {"\u26A0"}
+          </p>
+          <h2
+            style={{
+              margin: "16px 0 0",
+              fontFamily: FONT_DISPLAY,
+              fontWeight: 900,
+              fontSize: 64,
+              color: "#ff7a9e",
+              textShadow: "0 0 30px rgba(255,40,90,0.8)",
+              lineHeight: 1,
+            }}
+          >
+            {name}
+          </h2>
+        </div>
+        <div style={{ padding: "14px 32px 26px" }}>
+          <div
+            style={{
+              padding: "18px 22px",
+              borderRadius: 14,
+              background: "rgba(255,40,90,0.08)",
+              border: "1px solid rgba(255,40,90,0.25)",
+              boxShadow: "inset 0 0 38px rgba(255,40,90,0.06)",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: 16,
+                lineHeight: 1.7,
+                color: "rgba(250,235,242,0.94)",
+              }}
+            >
+              {effect}
+            </p>
+          </div>
+          <div style={{ padding: "16px 0 0", textAlign: "center" }}>
+            <button
+              onClick={onDone}
+              style={{
+                fontFamily: FONT_DISPLAY,
+                fontWeight: 800,
+                fontSize: 15,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                padding: "12px 34px",
+                background: "linear-gradient(90deg,#ff3a6e,#ff1a4a)",
+                color: "#1a0208",
+                border: "none",
+                borderRadius: 12,
+                cursor: "pointer",
+                transition: "transform 0.12s ease, box-shadow 0.12s ease",
+                boxShadow: "0 0 28px rgba(255,40,90,0.5)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      </div>
     </Overlay>
   );
 }

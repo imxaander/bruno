@@ -39,7 +39,7 @@ export interface ServerToClientEvents {
     count: number;
   }) => void;
   "game:effect": (payload: GameEffect) => void;
-  "game:turn": (payload: { gameId: string; playerIndex: number }) => void;
+  "game:turn": (payload: { gameId: string; playerIndex: number; playerId: string }) => void;
   "game:prompt": (payload: GamePrompt) => void;
   "game:ended": (payload: GameEndedPayload) => void;
   error: (payload: ErrorEnvelope) => void;

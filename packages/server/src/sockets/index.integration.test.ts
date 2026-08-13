@@ -52,7 +52,10 @@ beforeAll(async () => {
     cors: { origin: "*" },
   });
   timers = new ManualTimers();
-  rooms = registerSockets(io, { turnManager: new TurnManager(5000, timers.set) });
+  rooms = registerSockets(io, {
+    turnManager: new TurnManager(5000, timers.set),
+    startOptions: { locationId: null, mayhemEventId: null, originId: null },
+  });
   await new Promise<void>((resolve) => httpServer.listen(0, resolve));
   port = (httpServer.address() as AddressInfo).port;
 });
@@ -378,9 +381,9 @@ describe("room lifecycle over the wire", () => {
       if (prompt.kind !== "vault-choice") {
         throw new Error("expected a vault-choice prompt");
       }
-      expect(prompt.offers).toHaveLength(3);
+      expect(prompt.offers).toHaveLength(5);
       expect(prompt.offers.every((offer) => offer.type === "vault-silver")).toBe(true);
-      expect(new Set(prompt.offers.map((offer) => offer.id)).size).toBe(3);
+      expect(new Set(prompt.offers.map((offer) => offer.id)).size).toBe(5);
 
       const room = rooms.getRoom(gameId);
       if (!room?.pendingVault) {
@@ -486,6 +489,7 @@ describe("room lifecycle over the wire", () => {
         received.push(payload.message);
       alice.on("game:log", collector);
       const turnEvent = once(alice, "game:turn");
+      const effectEvent = once(alice, "game:effect");
       alice.emit("game:action", {
         gameId,
         type: "choose-targets",
@@ -496,6 +500,122 @@ describe("room lifecycle over the wire", () => {
       alice.off("game:log", collector);
       expect(received.some((message) => message.includes("hits Bob"))).toBe(true);
       expect(turn.playerIndex).toBe(1);
+      const [effect] = await effectEvent;
+      expect(effect.targetNames).toEqual(["Bob"]);
+
+      alice.disconnect();
+      bob.disconnect();
+    },
+  );
+
+  it(
+    "prompts pick-cards, reveals hands only to the actor, and completes the play",
+    { timeout: 15000 },
+    async () => {
+      const alice = await connect();
+      const bob = await connect();
+      const gameId = await setupGame(alice, bob);
+
+      await engineer(rooms.getRoom(gameId), {
+        pile: makeCard({ id: "red-5", name: "5", type: "number", color: "red", number: 5 }),
+        activeColor: "red",
+        currentTurnIndex: 0,
+        pendingDraw: 0,
+        aliceHand: [
+          makeCard({
+            id: "vault-silver-token-0",
+            name: "Silver Vault",
+            type: "vault-silver",
+            tags: ["wild"],
+          }),
+          makeCard({ id: "red-3", name: "3", type: "number", color: "red", number: 3 }),
+        ],
+      });
+      const room = rooms.getRoom(gameId);
+      if (room) {
+        room.players[1]!.hand = [
+          makeCard({ id: "blue-3", name: "3", type: "number", color: "blue", number: 3 }),
+        ];
+      }
+
+      alice.emit("game:action", { gameId, type: "play", playerId: "PID-a", cardIndex: 0 });
+      const [vaultPrompt] = await once(alice, "game:prompt");
+      if (vaultPrompt.kind !== "vault-choice") {
+        throw new Error("expected a vault-choice prompt");
+      }
+
+      const pending = rooms.getRoom(gameId)?.pendingVault;
+      if (!pending) {
+        throw new Error("expected a pending vault");
+      }
+      pending.offers = [
+        CARDS.find((card) => card.id === "t1-plunder") ??
+          makeCard({ id: "t1-plunder", name: "Plunder I", type: "vault-diamond" }),
+      ];
+
+      alice.emit("game:action", {
+        gameId,
+        type: "vault-choice",
+        playerId: "PID-a",
+        cardId: "t1-plunder",
+      });
+      const [targetPrompt] = await once(alice, "game:prompt");
+      if (targetPrompt.kind !== "pick-players") {
+        throw new Error("expected a pick-players prompt");
+      }
+
+      alice.emit("game:action", {
+        gameId,
+        type: "choose-targets",
+        playerId: "PID-a",
+        targetIds: ["PID-b"],
+      });
+      const [pickPrompt] = await once(alice, "game:prompt");
+      expect(pickPrompt).toMatchObject({
+        gameId,
+        kind: "pick-cards",
+        min: 1,
+        max: 3,
+        sourcePlayerIds: ["PID-b"],
+      });
+
+      const revealedState = once(alice, "game:state");
+      alice.emit("game:state:get", { gameId, playerId: "PID-a" });
+      const [revealedView] = await revealedState;
+      expect(revealedView.revealed).toHaveLength(1);
+      const revealedHand = revealedView.revealed![0]!;
+      expect(revealedHand).toMatchObject({ playerId: "PID-b" });
+      expect(revealedHand.cards.map((card) => card.id)).toContain("blue-3");
+
+      const logEvent = once(alice, "game:log");
+      const turnEvent = once(alice, "game:turn");
+      const effectEvent = once(alice, "game:effect");
+      alice.emit("game:action", {
+        gameId,
+        type: "choose-cards",
+        playerId: "PID-a",
+        cardIds: ["blue-3"],
+      });
+      const [log] = await logEvent;
+      expect(log.message).toContain("plays");
+      const [turn] = await turnEvent;
+      expect(turn.playerIndex).toBe(1);
+      const [effect] = await effectEvent;
+      expect(effect).toMatchObject({ gameId, cardId: "t1-plunder", playerId: "PID-a" });
+      expect(effect.lines.some((line) => line.includes("steals"))).toBe(true);
+
+      const stateA = once(alice, "game:state");
+      alice.emit("game:state:get", { gameId, playerId: "PID-a" });
+      const [viewA] = await stateA;
+      expect(viewA.you.hand).toHaveLength(2);
+      expect(viewA.you.hand.map((card) => card.id)).toContain("blue-3");
+      expect(viewA.currentTurnIndex).toBe(1);
+      assertNoLeaks(viewA);
+
+      const stateB = once(bob, "game:state");
+      bob.emit("game:state:get", { gameId, playerId: "PID-b" });
+      const [viewB] = await stateB;
+      expect(viewB.revealed).toBeUndefined();
 
       alice.disconnect();
       bob.disconnect();

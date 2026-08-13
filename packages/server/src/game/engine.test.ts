@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Card, Color } from "@bruno/shared";
-import { applyDraw, isPlayable, playCard } from "./engine.js";
+import { advanceTurn, applyDraw, isPlayable, playCard } from "./engine.js";
 import { RoomManager, type RoomResult } from "./room-manager.js";
 import type { Room } from "./room.js";
 import { TurnManager } from "./turn-manager.js";
@@ -59,7 +59,13 @@ function startGame(playerCount: number): { manager: RoomManager; room: Room } {
   for (let i = 1; i < playerCount; i += 1) {
     value(manager.joinRoom(room.id, `p${i}`, `P${i}`));
   }
-  value(manager.startGame(room.id, "p0", seeded(1)));
+  value(
+    manager.startGame(room.id, "p0", seeded(1), {
+      locationId: null,
+      mayhemEventId: null,
+      originId: null,
+    }),
+  );
   return { manager, room };
 }
 
@@ -289,6 +295,208 @@ describe("playCard", () => {
       text: "Hits a target for +1.",
     });
     expect(result.value.effect?.lines.length).toBeGreaterThan(0);
+  });
+
+  it("keeps the turn with the actor when the vault resolver requests it", () => {
+    const { room } = startGame(2);
+    room.pendingVault = {
+      cardIndex: 0,
+      playerId: "p0",
+      tier: "vault-silver",
+      offers: [makeCard({ id: "t2-rummage", name: "Rummage", type: "vault-silver" })],
+      chosenCardId: "t2-rummage",
+    };
+    room.players[0]!.hand = [
+      makeCard({ id: "vault-silver-token-0", name: "Silver Vault", type: "vault-silver" }),
+      red5(),
+    ];
+    room.pile = [redSkip()];
+    room.activeColor = "red";
+    room.pendingDraw = 0;
+    room.currentTurnIndex = 0;
+    const result = playCard(room, room.players[0]!, 0, undefined, seeded(9));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(room.currentTurnIndex).toBe(0);
+    expect(result.value.log.join(" ")).toMatch(/another turn/);
+  });
+
+  it("doubles only the +N of a Silver vault effect on loc-volcano (t3-scrap-shot)", () => {
+    const { room } = startGame(2);
+    room.locationId = "loc-volcano";
+    room.pendingVault = {
+      cardIndex: 0,
+      playerId: "p0",
+      tier: "vault-silver",
+      offers: [
+        makeCard({ id: "t3-scrap-shot", name: "Scrap Shot", type: "vault-silver", effect: "+1" }),
+      ],
+      chosenCardId: "t3-scrap-shot",
+    };
+    room.players[0]!.hand = [
+      makeCard({ id: "vault-silver-token-0", name: "Silver Vault", type: "vault-silver" }),
+    ];
+    room.players[1]!.hand = [red5()];
+    setState(room, red5(), "red");
+    const result = playCard(room, room.players[0]!, 0, undefined, seeded(9));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(room.players[1]!.hand).toHaveLength(2);
+    expect(result.value.log.join(" ")).toMatch(/\+2 and discards 1 card/);
+  });
+
+  it("doubles the +N of a Gold vault effect on loc-volcano (t2-scrap-shot)", () => {
+    const { room } = startGame(2);
+    room.locationId = "loc-volcano";
+    room.pendingVault = {
+      cardIndex: 0,
+      playerId: "p0",
+      tier: "vault-gold",
+      offers: [
+        makeCard({ id: "t2-scrap-shot", name: "Scrap Shot", type: "vault-gold", effect: "+3" }),
+      ],
+      chosenCardId: "t2-scrap-shot",
+    };
+    room.players[0]!.hand = [
+      makeCard({ id: "vault-gold-token-0", name: "Gold Vault", type: "vault-gold" }),
+    ];
+    room.players[1]!.hand = [red5(), green5(), redSkip()];
+    setState(room, red5(), "red");
+    const result = playCard(room, room.players[0]!, 0, undefined, seeded(9));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(room.players[1]!.hand).toHaveLength(6);
+    expect(result.value.log.join(" ")).toMatch(/\+6 and discards 3 card/);
+  });
+
+  it("does not double a Diamond vault effect on loc-volcano (t1-meiosis)", () => {
+    const { room } = startGame(2);
+    room.locationId = "loc-volcano";
+    room.pendingVault = {
+      cardIndex: 0,
+      playerId: "p0",
+      tier: "vault-diamond",
+      offers: [
+        makeCard({ id: "t1-meiosis", name: "Meiosis", type: "vault-diamond", effect: "+3" }),
+      ],
+      chosenCardId: "t1-meiosis",
+    };
+    room.players[0]!.hand = [
+      makeCard({ id: "vault-diamond-token-0", name: "Diamond Vault", type: "vault-diamond" }),
+    ];
+    setState(room, red5(), "red");
+    const result = playCard(room, room.players[0]!, 0, undefined, seeded(9));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(room.players[1]!.hand).toHaveLength(11);
+    expect(result.value.log.join(" ")).toMatch(/adds 3 cards/);
+  });
+
+  it("does not double vault effects without loc-volcano (t3-scrap-shot)", () => {
+    const { room } = startGame(2);
+    room.pendingVault = {
+      cardIndex: 0,
+      playerId: "p0",
+      tier: "vault-silver",
+      offers: [
+        makeCard({ id: "t3-scrap-shot", name: "Scrap Shot", type: "vault-silver", effect: "+1" }),
+      ],
+      chosenCardId: "t3-scrap-shot",
+    };
+    room.players[0]!.hand = [
+      makeCard({ id: "vault-silver-token-0", name: "Silver Vault", type: "vault-silver" }),
+    ];
+    room.players[1]!.hand = [red5()];
+    setState(room, red5(), "red");
+    const result = playCard(room, room.players[0]!, 0, undefined, seeded(9));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(room.players[1]!.hand).toHaveLength(1);
+    expect(result.value.log.join(" ")).toMatch(/\+1 and discards 1 card/);
+  });
+});
+
+describe("advanceTurn skip-hopping", () => {
+  it("hops over a player with skippedTurns and decrements the counter", () => {
+    const { room } = startGame(3);
+    room.players[0]!.skippedTurns = 0;
+    room.players[1]!.skippedTurns = 1;
+    room.players[2]!.skippedTurns = 0;
+    room.currentTurnIndex = 0;
+    room.currentDirection = 1;
+
+    advanceTurn(room);
+
+    expect(room.currentTurnIndex).toBe(2);
+    expect(room.players[1]!.skippedTurns).toBe(0);
+  });
+
+  it("skips a player once per skipped turn, including the final one", () => {
+    const { room } = startGame(3);
+    room.players[0]!.skippedTurns = 0;
+    room.players[1]!.skippedTurns = 2;
+    room.players[2]!.skippedTurns = 0;
+    room.currentTurnIndex = 0;
+    room.currentDirection = 1;
+
+    advanceTurn(room);
+    expect(room.currentTurnIndex).toBe(2);
+    expect(room.players[1]!.skippedTurns).toBe(1);
+
+    advanceTurn(room);
+    expect(room.currentTurnIndex).toBe(0);
+    expect(room.players[1]!.skippedTurns).toBe(1);
+
+    advanceTurn(room);
+    expect(room.currentTurnIndex).toBe(2);
+    expect(room.players[1]!.skippedTurns).toBe(0);
+
+    advanceTurn(room);
+    expect(room.currentTurnIndex).toBe(0);
+    expect(room.players[1]!.skippedTurns).toBe(0);
+  });
+
+  it("handles skip-hopping in reverse direction", () => {
+    const { room } = startGame(3);
+    room.players[0]!.skippedTurns = 0;
+    room.players[1]!.skippedTurns = 0;
+    room.players[2]!.skippedTurns = 1;
+    room.currentTurnIndex = 0;
+    room.currentDirection = -1;
+
+    advanceTurn(room);
+
+    expect(room.currentTurnIndex).toBe(1);
+    expect(room.players[2]!.skippedTurns).toBe(0);
+  });
+
+  it("skips a player when a Skip card is played over them", () => {
+    const { room } = startGame(3);
+    room.players[0]!.hand = [redSkip()];
+    setState(room, red5(), "red");
+    const result = playCard(room, room.players[0]!, 0);
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(room.currentTurnIndex).toBe(2);
+  });
+
+  it("stops advancing once every player has been hopped (bounded loop)", () => {
+    const { room } = startGame(3);
+    room.players.forEach((player) => {
+      player.skippedTurns = 5;
+    });
+    room.currentTurnIndex = 0;
+    room.currentDirection = 1;
+
+    advanceTurn(room);
+
+    expect(room.players.every((player) => player.skippedTurns === 4)).toBe(true);
   });
 });
 

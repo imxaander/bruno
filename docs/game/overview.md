@@ -49,18 +49,18 @@ Be the first player to empty your hand and win the game. Winning triggers post-w
 - **Passives change the rules for their owner** ([P] / [sP]).
 - **Enemy targeting** — many effects are aimed at _enemy players_, implying team/ally
   mechanics (Double Trouble, Foedus, Triple Threat).
-- **Chaos sources** — Locations (static), Mayhem (per round), Origins (starting powers).
+- **Chaos sources** — Locations (static), Mayhem (per round, under Hell Gate), Origins (starting powers).
 
 ## What is implemented today vs. designed
 
-| Area                                    | Designed (PDF 1.4)         | Implemented (code)      |
-| --------------------------------------- | -------------------------- | ----------------------- |
-| Number cards 0–9 (4 colors)             | Yes                        | Yes (1× each per color) |
-| Skip / Reverse / +2 / +4                | Yes                        | Yes (with stacking)     |
-| Vault cards (Tier I/II/III)             | Full catalog               | **None**                |
-| Locations                               | 8 base + 10 rank locations | **None**                |
-| Mayhem                                  | 9 events                   | **None**                |
-| Origin Vaults                           | 5 origins                  | **None**                |
-| Fateweaver / Masterchef / Pandora's Box | Full tables                | **None**                |
+| Area                                    | Designed (PDF 1.4)         | Implemented (code)                                   |
+| --------------------------------------- | -------------------------- | ---------------------------------------------------- |
+| Number cards 0–9 (4 colors)             | Yes                        | Yes (1× each per color)                              |
+| Skip / Reverse / +2 / +4                | Yes                        | Yes (with stacking)                                  |
+| Vault cards (Tier I/II/III)             | Full catalog               | 62/90 effect resolvers                               |
+| Locations                               | 8 base + 10 rank locations | Start effects + vault-tier boost; Hell Gate = Mayhem |
+| Mayhem                                  | 9 events                   | All 9 events + per-round roll (Hell Gate only)       |
+| Origin Vaults                           | 5 origins                  | Vault Keeper start effect only                       |
+| Fateweaver / Masterchef / Pandora's Box | Full tables                | **None**                                             |
 
 See [deck-composition.md](./deck-composition.md) and `architecture/current.md` for details.

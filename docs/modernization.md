@@ -80,7 +80,8 @@ verifiable. Work phases in order; never start a later phase with an earlier one 
       `game/locations.md`, `game/origins.md`, `game/special-systems.md`.
 - [ ] Implement effect resolvers for each implemented card; keep `[Tentative]` and unreadable
       cards defined as data but **not** wired to resolvers.
-- [ ] Implement Mayhem roll at round start (`game/mayhem.md`).
+- [x] Implement Mayhem roll at round start (`game/mayhem.md`; wired as the Hell Gate
+      location effect).
 - [ ] Implement Locations application, Origin selection UI, and Fateweaver/Masterchef/
       Pandora's Box tables (`game/special-systems.md`).
 - [ ] Verify: engine unit tests for representative effects; data test asserts all cards with

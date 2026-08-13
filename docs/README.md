@@ -36,11 +36,12 @@ plan for the codebase.
 | `game/rules.md`                   | Core rules: turns, playing, drawing, stacking, winning.      |
 | `game/deck-composition.md`        | What cards are in the deck and in what quantities.           |
 | `game/vault-mechanism.md`         | How vault tokens offer up to 5 random tier effects.          |
+| `game/vault-effects-tracking.md`  | Spreadsheet-ready status of all 90 vault effects.            |
 | `game/cards-tier3-silver.md`      | Tier III (Silver Vault) card catalog.                        |
 | `game/cards-tier2-gold.md`        | Tier II (Gold Vault) card catalog.                           |
 | `game/cards-tier1-diamond.md`     | Tier I (Diamond Vault) card catalog.                         |
 | `game/locations.md`               | Location cards and their effects.                            |
-| `game/mayhem.md`                  | Per-round Mayhem events.                                     |
+| `game/mayhem.md`                  | Mayhem (Hell Gate location) events.                          |
 | `game/origins.md`                 | Origin Vaults (starting powers).                             |
 | `game/special-systems.md`         | Pandora's Box, Masterchef, Fateweaver, artifacts.            |
 | `architecture/current.md`         | How the current code is structured and its known flaws.      |

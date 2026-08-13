@@ -44,6 +44,12 @@ export function toPlayerView(
 ): PlayerView {
   const me = room.getPlayer(playerId);
   const pileTopCard = room.pile.length > 0 ? room.pile[room.pile.length - 1] : undefined;
+  const revealed = (room.reveals.get(playerId) ?? [])
+    .map((reveal) => {
+      const player = room.getPlayer(reveal.playerId);
+      return player ? { playerId: player.id, cards: player.hand.map(toCardView) } : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
   return {
     playerCount: room.playerCount,
     players: room.players.map((player) =>
@@ -52,7 +58,7 @@ export function toPlayerView(
     you: {
       index: room.getPlayerIndex(playerId),
       hand: me ? me.hand.map(toCardView) : [],
-      playable: me ? me.hand.map((card) => isPlayable(card, room)) : [],
+      playable: me ? me.hand.map((card) => isPlayable(card, room, me)) : [],
     },
     pileTop: pileTopCard ? toCardView(pileTopCard) : null,
     deckCount: room.deck.length,
@@ -64,6 +70,7 @@ export function toPlayerView(
     mayhemEventId: room.mayhemEventId,
     status: room.status,
     turnDuration: turnDurationSeconds,
+    revealed: revealed.length > 0 ? revealed : undefined,
   };
 }
 

@@ -16,6 +16,7 @@ import {
   type EngineError,
   type RoomError,
   type RoomEvent,
+  type StartGameOptions,
 } from "../game/room-manager.js";
 import type { TurnManager } from "../game/turn-manager.js";
 
@@ -31,6 +32,7 @@ interface SocketData {
 export interface RegisterSocketsOptions {
   turnManager?: TurnManager;
   rng?: Rng;
+  startOptions?: StartGameOptions;
 }
 
 const ERROR_MESSAGES: Record<RoomError, string> = {
@@ -52,6 +54,9 @@ const ENGINE_ERROR_MESSAGES: Record<EngineError, string> = {
   GAME_NOT_ACTIVE: "The game is not in progress.",
   DRAW_NOT_ALLOWED: "You cannot draw right now — play a card (or choose a color) first.",
   INVALID_ACTION: "That action is not valid.",
+  CANNOT_PAY_CONDITION: "You cannot play that effect — the required cards are not in your hand.",
+  PROMPT_EXPIRED: "That prompt has expired — the effect was auto-resolved.",
+  INVALID_VAULT_CHOICE: "That vault effect is no longer available.",
 };
 
 function emitError(socket: BrunoSocket, code: string, message: string): void {
@@ -116,6 +121,15 @@ export function registerSockets(
             max: event.max,
             allowSelf: event.allowSelf,
           });
+        } else if (event.kind === "pick-cards") {
+          socket.emit("game:prompt", {
+            gameId: event.gameId,
+            kind: "pick-cards",
+            min: event.min,
+            max: event.max,
+            sourcePlayerIds: event.sourcePlayerIds,
+            perPlayer: event.perPlayer,
+          });
         } else {
           socket.emit("game:prompt", { gameId: event.gameId, kind: "choose-color" });
         }
@@ -165,12 +179,14 @@ export function registerSockets(
           tier: event.tier,
           text: event.text,
           lines: event.lines,
+          targetNames: event.targetNames,
         });
         break;
       case "turn":
         io.to(event.gameId).emit("game:turn", {
           gameId: event.gameId,
           playerIndex: event.playerIndex,
+          playerId: event.playerId,
         });
         pushGameState(event.gameId);
         break;
@@ -187,6 +203,7 @@ export function registerSockets(
     eventSink: handleEvent,
     turnManager: options.turnManager,
     rng: options.rng,
+    startOptions: options.startOptions,
   });
 
   const addToRoom = (roomId: string, socket: BrunoSocket): void => {
@@ -335,7 +352,9 @@ export function registerSockets(
       const result = rooms.performAction(parsed.data.gameId, parsed.data.playerId, parsed.data);
       if (!result.ok) {
         emitFailure(socket, result.error);
+        return;
       }
+      pushGameState(parsed.data.gameId);
     });
 
     socket.on("disconnect", () => {

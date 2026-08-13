@@ -60,16 +60,22 @@ The 27 Tier III cards are transcribed into `packages/shared/src/cards/cards.ts` 
 the silver offer pool (`sampleVaultOffers`).
 
 Implemented resolvers: `t3-scrap-shot` (stable — pick a player, +1 and blind-discard 1),
-plus the +N exemplars `t3-mitosis` and `t3-double-edged-sword` (still `draft`). Cards without
-a registered resolver are excluded from the offer pool until resolved (see
-`effects/registry.ts`).
+plus the batch `t3-mitosis`, `t3-double-edged-sword`, `t3-hush`, `t3-trade-sector`,
+`t3-prototype-z`, `t3-scavenge`, `t3-offerings` (all still `draft`), the challenge batch
+`t3-midas-touch`, `t3-flash-flood`, `t3-red-flag`, `t3-green-thumb` (`draft`, auto-resolved
+color challenges), the timed/deferred batch `t3-future-market`, `t3-imploded-clockwork`,
+`t3-green-tide` (`draft`) plus `t3-liquidation`, `t3-all-in` (`[Tentative]` — round timers),
+and the event-passive batch `t3-accumulation`, `t3-investment` (`draft` — see the Wave 5
+section in `vault-effects-tracking.md`). Cards without a registered resolver are excluded
+from the offer pool until resolved (see `effects/registry.ts`).
 
 Deferred resolver inventory (Phase 5c, Track A batch 1):
 
 - Target-picking done in this batch; the rest are deferred with reasons:
-  passives (`[P]`/`[sP]`), reveal/steal/switch, timed or burst draws, skip-for-N rounds,
-  "to play" conditions, allies, win/kill, `[Tentative]`, or unreadable text. Examples:
-  `t3-synchronize` (needs "last vault card" memory), `t3-double-trouble`/`t3-all-in` (ally
-  mechanic / round timer), `t3-sunder` (unreadable), `t3-liquidation` (skip-for-2-rounds).
+  reveal/steal/switch, burst draws, "to play" conditions, allies,
+  win/kill, or unreadable text (the silver `[P]`/`[sP]` passives shipped in Wave 5 —
+  `t3-accumulation`, `t3-investment`). Examples:
+  `t3-synchronize` (needs "last vault card" memory), `t3-double-trouble` (ally mechanic),
+  `t3-sunder` (unreadable).
 
-See `../modernization.md` and the tracking log in `vault-effects-implemented.md`.
+See `../modernization.md` and the tracking log in `vault-effects-tracking.md`.

@@ -6,8 +6,9 @@ import type {
   GamePrompt,
   PlayerView,
 } from "@bruno/shared";
-import { getCard } from "@bruno/shared";
+import { getCard, getMayhemEvent } from "@bruno/shared";
 import { Button } from "../components/Button.js";
+import GameCard from "../components/GameCard.js";
 import { Seat } from "../components/Seat.js";
 import { TurnTimer } from "../components/TurnTimer.js";
 import { TurnIndicator } from "../components/TurnIndicator.js";
@@ -18,11 +19,13 @@ import { TableOval } from "../components/board/TableOval.js";
 import DrawFly, { type DrawFlyTarget } from "../components/board/DrawFly.js";
 import EffectBanner from "../components/EffectBanner.js";
 import {
+  CardPicker,
   ColorPicker,
   TargetPicker,
   VaultPicker,
   LocationReveal,
   getLocationTheme,
+  MayhemEventReveal,
   MayhemReveal,
   type CardColorName,
   type LocationTheme,
@@ -67,10 +70,18 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   } | null>(null);
   const [revealedLocationId, setRevealedLocationId] = useState<string | null>(null);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
+  const [mayhemRevealData, setMayhemRevealData] = useState<{
+    id: string;
+    name: string;
+    effect: string;
+  } | null>(null);
+  const [revealedMayhemId, setRevealedMayhemId] = useState<string | null>(null);
+  const [mayhemModalOpen, setMayhemModalOpen] = useState(false);
   const effectTimer = useRef<number[]>([]);
   const [drawTargets, setDrawTargets] = useState<DrawFlyTarget[]>([]);
   const drawTimer = useRef<number | null>(null);
   const locationModalTimer = useRef<number | null>(null);
+  const mayhemModalTimer = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
@@ -80,6 +91,9 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       }
       if (locationModalTimer.current) {
         window.clearTimeout(locationModalTimer.current);
+      }
+      if (mayhemModalTimer.current) {
+        window.clearTimeout(mayhemModalTimer.current);
       }
     };
   }, []);
@@ -91,11 +105,21 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     const onState = (state: PlayerView) => setView(state);
     const onLog = (payload: { gameId: string; message: string }) =>
       setLog((prev) => [payload.message, ...prev].slice(0, 50));
-    const onTurn = (payload: { gameId: string; playerIndex: number }) => {
+    const onTurn = (payload: { gameId: string; playerIndex: number; playerId: string }) => {
+      if (payload.gameId !== roomId) {
+        return;
+      }
       setView((prev) => (prev ? { ...prev, currentTurnIndex: payload.playerIndex } : prev));
+      // Do NOT clear prompts here — the server manages prompts explicitly via game:prompt.
+      // Clearing on turn changes was killing the +4 color picker (turn advances to next
+      // player while the +4 player still has a pending choose-color prompt).
+    };
+    const onError = (payload: ErrorEnvelope) => {
+      setError(payload.message);
+      // Clear any open prompt when an error arrives — the server rejected the
+      // action, so the client-side prompt is stale and should be dismissed.
       setPrompt(null);
     };
-    const onError = (payload: ErrorEnvelope) => setError(payload.message);
     const onPrompt = (payload: GamePrompt) => {
       if (payload.gameId === roomId) {
         setPrompt(payload);
@@ -185,7 +209,9 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     });
     setLocationModalOpen(true);
     setRevealedLocationId(view.locationId);
-    setLog((prev) => (prev.some((line) => line === message) ? prev : [message, ...prev].slice(0, 50)));
+    setLog((prev) =>
+      prev.some((line) => line === message) ? prev : [message, ...prev].slice(0, 50),
+    );
 
     if (locationModalTimer.current) {
       window.clearTimeout(locationModalTimer.current);
@@ -195,6 +221,30 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       locationModalTimer.current = null;
     }, 5000);
   }, [view?.locationId, revealedLocationId]);
+
+  useEffect(() => {
+    if (view?.locationId !== "loc-hell-gate") {
+      return;
+    }
+    if (!view?.mayhemEventId || view.mayhemEventId === revealedMayhemId) {
+      return;
+    }
+    const event = getMayhemEvent(view.mayhemEventId);
+    if (!event) {
+      return;
+    }
+    setMayhemRevealData({ id: view.mayhemEventId, name: event.name, effect: event.effect });
+    setMayhemModalOpen(true);
+    setRevealedMayhemId(view.mayhemEventId);
+
+    if (mayhemModalTimer.current) {
+      window.clearTimeout(mayhemModalTimer.current);
+    }
+    mayhemModalTimer.current = window.setTimeout(() => {
+      setMayhemModalOpen(false);
+      mayhemModalTimer.current = null;
+    }, 5000);
+  }, [view?.mayhemEventId, revealedMayhemId]);
 
   const playCard = useCallback(
     (index: number) => {
@@ -216,6 +266,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       if (!roomId || !identity.id) {
         return;
       }
+      setPrompt(null);
       socket?.emit("game:action", {
         gameId: roomId,
         type: "choose-color",
@@ -231,6 +282,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       if (!roomId || !identity.id) {
         return;
       }
+      setPrompt(null);
       socket?.emit("game:action", {
         gameId: roomId,
         type: "vault-choice",
@@ -246,11 +298,28 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       if (!roomId || !identity.id) {
         return;
       }
+      setPrompt(null);
       socket?.emit("game:action", {
         gameId: roomId,
         type: "choose-targets",
         playerId: identity.id,
         targetIds,
+      });
+    },
+    [socket, roomId, identity.id],
+  );
+
+  const chooseCards = useCallback(
+    (cardIds: string[]) => {
+      if (!roomId || !identity.id) {
+        return;
+      }
+      setPrompt(null);
+      socket?.emit("game:action", {
+        gameId: roomId,
+        type: "choose-cards",
+        playerId: identity.id,
+        cardIds,
       });
     },
     [socket, roomId, identity.id],
@@ -262,6 +331,13 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     }
     socket?.emit("game:action", { gameId: roomId, type: "draw", playerId: identity.id });
   }, [socket, roomId, identity.id]);
+
+  const leaveGame = useCallback(() => {
+    if (roomId && identity.id) {
+      socket?.emit("lobby:leave", { gameId: roomId, playerId: identity.id });
+    }
+    goLobby();
+  }, [socket, roomId, identity.id, goLobby]);
 
   const turnDuration = view?.turnDuration ?? 7;
   const myTurn = view ? view.currentTurnIndex === view.you.index : false;
@@ -390,7 +466,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         </span>
       </div>
       <button
-        onClick={goLobby}
+        onClick={leaveGame}
         style={{
           padding: "5px 14px",
           fontFamily: "'Rajdhani'",
@@ -416,7 +492,9 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         ? "Pick an effect"
         : prompt?.kind === "pick-players"
           ? "Pick targets"
-          : undefined;
+          : prompt?.kind === "pick-cards"
+            ? "Pick cards"
+            : undefined;
 
   const timerControls = (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -662,13 +740,22 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       ) : null}
       {board}
       <EventHistory events={log} />
-      {effect && !showEffectReveal ? <EffectBanner effect={effect} visible={effectVisible} /> : null}
+      {effect && !showEffectReveal ? (
+        <EffectBanner effect={effect} visible={effectVisible} />
+      ) : null}
       {locationModalOpen && locationRevealData ? (
         <LocationReveal
           name={locationRevealData.name}
           effect={locationRevealData.effect}
           theme={locationRevealData.theme}
           onDone={() => setLocationModalOpen(false)}
+        />
+      ) : null}
+      {mayhemModalOpen && mayhemRevealData ? (
+        <MayhemEventReveal
+          name={mayhemRevealData.name}
+          effect={mayhemRevealData.effect}
+          onDone={() => setMayhemModalOpen(false)}
         />
       ) : null}
       {showEffectReveal && effect ? (
@@ -709,6 +796,75 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           myId={identity.id}
         />
       ) : null}
+      {(view.revealed ?? []).length > 0 && prompt?.kind !== "pick-cards" ? (
+        <div
+          style={{
+            position: "fixed",
+            left: 16,
+            bottom: 16,
+            zIndex: 40,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            maxWidth: 280,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "'Barlow Condensed'",
+              fontWeight: 900,
+              fontSize: 13,
+              letterSpacing: "0.18em",
+              color: "#00eeff",
+              textShadow: "0 0 12px rgba(0,238,255,0.5)",
+            }}
+          >
+            {"\uD83D\uDC41"} REVEALED HANDS
+          </span>
+          {(view.revealed ?? []).map((hand) => {
+            const player = view.players.find((p) => p.id === hand.playerId);
+            return (
+              <div
+                key={hand.playerId}
+                style={{
+                  background: "rgba(11,11,18,0.94)",
+                  border: "1px solid rgba(0,238,255,0.22)",
+                  borderRadius: 10,
+                  padding: 10,
+                  boxShadow: "0 0 24px rgba(0,238,255,0.08)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#00eeff",
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span>{player?.name ?? hand.playerId}</span>
+                  <span style={{ color: "rgba(200,216,240,0.4)" }}>{hand.cards.length} cards</span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 6,
+                    marginTop: 8,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {hand.cards.map((card) => (
+                    <GameCard key={card.id} card={card} size="xs" />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
       {prompt?.kind === "choose-color" ? <ColorPicker onPick={chooseColor} /> : null}
       {prompt?.kind === "vault-choice" && prompt.offers ? (
         <VaultPicker offers={prompt.offers} onPick={chooseVault} />
@@ -730,6 +886,25 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           min={prompt.min}
           max={prompt.max}
           onConfirm={chooseTargets}
+        />
+      ) : null}
+      {prompt?.kind === "pick-cards" ? (
+        <CardPicker
+          sources={prompt.sourcePlayerIds
+            .map((sourceId) => {
+              const revealed = view.revealed?.find((hand) => hand.playerId === sourceId);
+              const publicPlayer = view.players.find((p) => p.id === sourceId);
+              return {
+                playerId: sourceId,
+                playerName: publicPlayer?.name ?? "Player",
+                cards: revealed?.cards ?? [],
+              };
+            })
+            .filter((source) => source.cards.length > 0)}
+          min={prompt.min}
+          max={prompt.max}
+          perPlayer={prompt.perPlayer}
+          onConfirm={chooseCards}
         />
       ) : null}
     </div>

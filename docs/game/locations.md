@@ -2,7 +2,7 @@
 title: Locations
 status: draft
 source: "1.4 BRUNO.pdf p.8, p.11-12"
-updated: 2026-08-09
+updated: 2026-08-13
 tags: [game, locations]
 ---
 
@@ -25,10 +25,11 @@ card on top of the pile (open question, see `rules.md`).
 | `loc-ocean`          | Ocean 🌊          | blue 0–8      | The first vault any player will play is a Diamond Vault.                                             | p.8    | draft  |
 | `loc-abyssal-depths` | Abyssal Depths 🌀 | blue 9        | All vaults are Diamond Vault.                                                                        | p.8    | draft  |
 | `loc-volcano`        | Volcano 🌋        | red 0–9       | Silver and Gold effects are doubled.                                                                 | p.8    | draft  |
-| `loc-hell-gate`      | Hell Gate         | Diamond Vault | (no effect text in PDF)                                                                              | p.8    | draft  |
+| `loc-hell-gate`      | Hell Gate         | Diamond Vault | Mayhem occurs each round.                                                                            | p.8    | stable |
 
-> Hell Gate has no separate effect text; it is bound to "Diamond Vault". Its behavior is an
-> open question.
+> Hell Gate's effect is **Mayhem**: while it is the active location a random Mayhem event
+> occurs at the start of each round (see `mayhem.md`). Its PDF binding reads "Diamond Vault";
+> whether that binding also triggers Diamond-vault behavior is an open question.
 
 ## 2. Rank/companion locations (PDF p.11–12)
 
@@ -54,10 +55,16 @@ nickname in brackets. Only Forest's effect is readable in the PDF.
 ## 3. Open questions
 
 1. What determines the active color/range location during a game (rotation? chosen at start?)?
-2. What does Hell Gate do?
+2. Does Hell Gate's "Diamond Vault" binding trigger Diamond-vault behavior (not just Mayhem)?
 3. Are rank/companion locations part of the same system as color/range locations?
 4. What are the unreadable companion-location effects?
 
 ## 4. Implementation status
 
-No locations are implemented in the current codebase.
+- `loc-volcano`: Silver and Gold vault `+N` effects are doubled (Diamond and non-`+N` parts are
+  not) — see `vault-mechanism.md` §3.1.
+- `loc-hell-gate`: activates Mayhem — a random event at the start of each round (see
+  `mayhem.md`).
+- Start-of-game effects, `effectiveVaultTier` (Ocean first-vault / Abyssal Depths all-vaults
+  upgrade) and `loc-fields` draw are implemented in `packages/server/src/game/systems.ts`.
+- The full location selection/rotation flow (open question 1) is not implemented yet.

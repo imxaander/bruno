@@ -25,7 +25,6 @@ export default function App() {
     setEnded(null);
     setScreen("home");
   }, []);
-  const backToLobby = useCallback(() => setScreen("lobby"), []);
   const goLobby = useCallback((gameId: string, name: string, roomMaxPlayers = 8) => {
     setRoomId(gameId);
     setRoomName(name);
@@ -76,7 +75,7 @@ export default function App() {
         socket={socket}
         identity={identity}
         roomId={roomId}
-        goLobby={backToLobby}
+        goLobby={goRooms}
         onEnded={handleEnded}
       />
     );

@@ -10,7 +10,8 @@ import type {
 import { isVaultTokenCard } from "@bruno/shared";
 import { buildDeck, dealHands, seedPile, type Rng } from "./deck.js";
 import { applyDraw, nextIndex, playCard, type EngineError } from "./engine.js";
-import { sampleVaultOffers, getResolverInputs } from "./effects/index.js";
+import { getResolverInputs, revealHands, sampleVaultOffers } from "./effects/index.js";
+import { countMatchingCards } from "./effects/helpers.js";
 import {
   applyLocationStart,
   applyMayhem,
@@ -18,9 +19,10 @@ import {
   chooseRandomLocation,
   chooseRandomMayhem,
   chooseRandomOrigin,
+  effectiveVaultTier,
 } from "./systems.js";
 import { toLobbyPlayers, toPlayerView, toRoomSummary } from "./player-view.js";
-import { HAND_SIZE, type Player, Room } from "./room.js";
+import { HAND_SIZE, type PendingVault, type Player, Room } from "./room.js";
 import { TurnManager } from "./turn-manager.js";
 export type { EngineError } from "./engine.js";
 
@@ -59,6 +61,16 @@ export type RoomEvent =
       allowSelf?: boolean;
     }
   | {
+      type: "prompt";
+      gameId: string;
+      playerId: string;
+      kind: "pick-cards";
+      min: number;
+      max: number;
+      sourcePlayerIds: string[];
+      perPlayer?: { min: number; max: number };
+    }
+  | {
       type: "effect";
       gameId: string;
       playerId: string;
@@ -79,21 +91,36 @@ export interface ActionOutcome {
   nextPlayerId: string | null;
 }
 
+/**
+ * Lets the caller force (or suppress) the random start-of-game modifiers.
+ * Each field: undefined = random pick, null = none, string = force that card.
+ * `mayhemEventId` is only honored while the location is Hell Gate (mayhem is
+ * Hell Gate's effect); without Hell Gate no mayhem event is rolled.
+ */
+export interface StartGameOptions {
+  locationId?: string | null;
+  mayhemEventId?: string | null;
+  originId?: string | null;
+}
+
 export interface RoomManagerOptions {
   eventSink?: RoomEventSink;
   turnManager?: TurnManager;
   rng?: Rng;
+  startOptions?: StartGameOptions;
 }
 
 export class RoomManager {
   private rooms = new Map<string, Room>();
   private readonly eventSink: RoomEventSink;
   private readonly turnManager: TurnManager;
+  private readonly startOptions: StartGameOptions | undefined;
   private rng: Rng;
 
   constructor(options: RoomManagerOptions = {}) {
     this.eventSink = options.eventSink ?? (() => {});
     this.turnManager = options.turnManager ?? new TurnManager();
+    this.startOptions = options.startOptions;
     this.rng = options.rng ?? Math.random;
   }
 
@@ -147,9 +174,63 @@ export class RoomManager {
     return candidates.slice(0, spec.min);
   }
 
+  private availableCards(room: Room, sourceIds: string[]): Card[] {
+    return room.players.flatMap((player) => (sourceIds.includes(player.id) ? player.hand : []));
+  }
+
+  /** Clears one-shot reveals for everyone but the acting viewer. */
+  private pruneOneShotReveals(room: Room, keepViewerId: string): void {
+    for (const [viewer, reveals] of room.reveals) {
+      if (viewer === keepViewerId) {
+        continue;
+      }
+      const kept = reveals.filter((reveal) => reveal.permanent);
+      if (kept.length > 0) {
+        room.reveals.set(viewer, kept);
+      } else {
+        room.reveals.delete(viewer);
+      }
+    }
+  }
+
+  /** Minimum legal pick on timeout: perPlayer.min from each source, else fill to min. */
+  private autoPickCards(room: Room, pending: PendingVault): string[] {
+    const spec = pending.stealSpec;
+    if (!spec) {
+      return [];
+    }
+    const picked: string[] = [];
+    const perSource = new Map<string, number>();
+    for (const sourceId of pending.targetIds ?? []) {
+      if (picked.length >= spec.min) {
+        break;
+      }
+      const source = room.getPlayer(sourceId);
+      if (!source) {
+        continue;
+      }
+      for (const card of source.hand) {
+        if (picked.length >= spec.min) {
+          break;
+        }
+        const fromHere = perSource.get(sourceId) ?? 0;
+        if (spec.perPlayer && fromHere >= spec.perPlayer.min) {
+          break;
+        }
+        picked.push(card.id);
+        perSource.set(sourceId, fromHere + 1);
+      }
+    }
+    return picked;
+  }
+
   private resolveOpenPrompt(room: Room, player: Player): boolean {
     if (room.pendingWild) {
       const pending = room.pendingWild;
+      if (pending.playerId !== player.id) {
+        // The pending color choice belongs to a different player — don't resolve it.
+        return false;
+      }
       room.pendingWild = undefined;
       const color = this.defaultColor(room, player);
       this.emit({
@@ -162,6 +243,10 @@ export class RoomManager {
     }
     if (room.pendingVault) {
       const pending = room.pendingVault;
+      if (pending.playerId !== player.id) {
+        // The pending vault choice belongs to a different player — don't resolve it.
+        return false;
+      }
       if (!pending.targetSpec) {
         const offer = pending.offers[0];
         if (offer) {
@@ -171,6 +256,11 @@ export class RoomManager {
             pending.targetSpec = spec;
             pending.targetIds = this.defaultTargetIds(room, player, spec);
           }
+          const steal = getResolverInputs(offer.id)?.steal;
+          if (steal) {
+            pending.stealSpec = steal;
+            pending.chosenCardIds = this.autoPickCards(room, pending);
+          }
           this.emit({
             type: "log",
             gameId: room.id,
@@ -179,6 +269,15 @@ export class RoomManager {
           this.completePlay(room, player, pending.cardIndex, undefined);
           return true;
         }
+      } else if (pending.stealSpec) {
+        pending.chosenCardIds = this.autoPickCards(room, pending);
+        this.emit({
+          type: "log",
+          gameId: room.id,
+          message: `${player.name} didn't pick cards — defaulting to ${pending.chosenCardIds.length} card(s).`,
+        });
+        this.completePlay(room, player, pending.cardIndex, undefined);
+        return true;
       } else {
         pending.targetIds = this.defaultTargetIds(room, player, pending.targetSpec);
         this.emit({
@@ -243,6 +342,7 @@ export class RoomManager {
       isHost: true,
       hand: [],
       artifactIds: [],
+      playedEffectIds: [],
     });
     this.rooms.set(room.id, room);
     return { ok: true, value: room };
@@ -282,6 +382,7 @@ export class RoomManager {
       isHost: false,
       hand: [],
       artifactIds: [],
+      playedEffectIds: [],
     });
     return { ok: true, value: room };
   }
@@ -299,6 +400,15 @@ export class RoomManager {
     const oldNext = wasCurrentTurn ? nextIndex(room, 1) : null;
 
     room.players.splice(removedIndex, 1);
+
+    for (const [viewer, reveals] of room.reveals) {
+      const kept = reveals.filter((reveal) => reveal.playerId !== playerId);
+      if (kept.length > 0) {
+        room.reveals.set(viewer, kept);
+      } else {
+        room.reveals.delete(viewer);
+      }
+    }
 
     if (room.status === "ongoing") {
       if (oldNext !== null) {
@@ -340,10 +450,18 @@ export class RoomManager {
     return toLobbyPlayers(room);
   }
 
-  startGame(gameId: string, playerId: string, rng: Rng = Math.random): RoomResult<Room> {
+  startGame(
+    gameId: string,
+    playerId: string,
+    rng: Rng = Math.random,
+    options?: StartGameOptions,
+  ): RoomResult<Room> {
     const room = this.rooms.get(gameId);
     if (!room) {
       return fail("ROOM_NOT_FOUND");
+    }
+    if (room.status !== "prepping") {
+      return fail("GAME_STARTED");
     }
     if (room.hostId !== playerId) {
       return fail("NOT_HOST");
@@ -351,6 +469,7 @@ export class RoomManager {
     if (room.players.length === 0) {
       return fail("NO_PLAYERS");
     }
+    const start = options ?? this.startOptions ?? {};
     room.status = "ongoing";
     this.rng = rng;
     room.deck = buildDeck(rng);
@@ -358,10 +477,19 @@ export class RoomManager {
     room.players.forEach((player, index) => {
       player.hand = hands[index] ?? [];
       player.artifactIds = player.artifactIds ?? [];
-      player.originId = chooseRandomOrigin(rng);
+      player.playedEffectIds = [];
+      player.originId =
+        start.originId === undefined ? chooseRandomOrigin(rng) : (start.originId ?? undefined);
     });
-    room.locationId = chooseRandomLocation(rng);
-    room.mayhemEventId = chooseRandomMayhem(rng);
+    room.locationId =
+      start.locationId === undefined ? chooseRandomLocation(rng) : (start.locationId ?? undefined);
+    room.mayhemEventId =
+      room.locationId === "loc-hell-gate"
+        ? start.mayhemEventId === undefined
+          ? chooseRandomMayhem(rng)
+          : (start.mayhemEventId ?? undefined)
+        : undefined;
+    room.usedMayhemIds = room.mayhemEventId ? [room.mayhemEventId] : [];
 
     const locationLogs = applyLocationStart(room, rng);
     for (const message of locationLogs) {
@@ -469,15 +597,24 @@ export class RoomManager {
     player: Player,
     chosenColor?: Color,
   ): RoomResult<ActionOutcome> {
-    const pending = room.pendingWild;
-    if (!pending || pending.playerId !== player.id) {
-      return fail("INVALID_ACTION");
+    const pendingWild = room.pendingWild;
+    if (pendingWild && pendingWild.playerId === player.id) {
+      if (!chosenColor) {
+        return fail("CHOOSE_COLOR_REQUIRED");
+      }
+      room.pendingWild = undefined;
+      return this.completePlay(room, player, pendingWild.cardIndex, chosenColor);
     }
-    if (!chosenColor) {
-      return fail("CHOOSE_COLOR_REQUIRED");
+    const pendingVault = room.pendingVault;
+    if (pendingVault && pendingVault.playerId === player.id && pendingVault.colorRequired) {
+      if (!chosenColor) {
+        return fail("CHOOSE_COLOR_REQUIRED");
+      }
+      pendingVault.chosenColor = chosenColor;
+      pendingVault.colorRequired = false;
+      return this.completePlay(room, player, pendingVault.cardIndex, chosenColor);
     }
-    room.pendingWild = undefined;
-    return this.completePlay(room, player, pending.cardIndex, chosenColor);
+    return fail("INVALID_ACTION");
   }
 
   private applyPlay(room: Room, player: Player, action: GameAction): RoomResult<ActionOutcome> {
@@ -495,11 +632,13 @@ export class RoomManager {
       return { ok: true, value: { log: [], won: false, nextPlayerId: null } };
     }
     if (card && isVaultTokenCard(card)) {
-      const offers = sampleVaultOffers(card.type, VAULT_OFFER_COUNT, this.rng);
+      const tier = effectiveVaultTier(room, card.type);
+      room.firstVaultPlayed = true;
+      const offers = sampleVaultOffers(tier, VAULT_OFFER_COUNT, this.rng);
       room.pendingVault = {
         cardIndex: action.cardIndex,
         playerId: player.id,
-        tier: card.type,
+        tier,
         offers,
       };
       this.scheduleTurn(room.id);
@@ -522,14 +661,30 @@ export class RoomManager {
   ): RoomResult<ActionOutcome> {
     const pending = room.pendingVault;
     if (!pending || pending.playerId !== player.id) {
-      return fail("INVALID_ACTION");
+      return fail("PROMPT_EXPIRED");
     }
     const offer = pending.offers.find((card) => card.id === chosenCardId);
     if (!offer) {
-      return fail("INVALID_ACTION");
+      return fail("INVALID_VAULT_CHOICE");
     }
     pending.chosenCardId = offer.id;
-    const spec = getResolverInputs(offer.id)?.targets;
+    const inputs = getResolverInputs(offer.id);
+    const cost = inputs?.cost;
+    if (cost && countMatchingCards(player.hand, cost.match) < cost.count) {
+      return fail("CANNOT_PAY_CONDITION");
+    }
+    if (inputs?.color) {
+      pending.colorRequired = true;
+      this.scheduleTurn(room.id);
+      this.emit({
+        type: "prompt",
+        gameId: room.id,
+        playerId: player.id,
+        kind: "choose-color",
+      });
+      return { ok: true, value: { log: [], won: false, nextPlayerId: null } };
+    }
+    const spec = inputs?.targets;
     if (spec) {
       pending.targetSpec = spec;
       this.scheduleTurn(room.id);
@@ -575,6 +730,76 @@ export class RoomManager {
       return fail("INVALID_ACTION");
     }
     pending.targetIds = targetIds;
+    const chosenCardId = pending.chosenCardId;
+    const steal = chosenCardId ? getResolverInputs(chosenCardId)?.steal : undefined;
+    if (steal) {
+      if (this.availableCards(room, targetIds).length === 0) {
+        pending.chosenCardIds = [];
+        return this.completePlay(room, player, pending.cardIndex, undefined);
+      }
+      pending.stealSpec = steal;
+      revealHands(room, player.id, targetIds, false);
+      this.scheduleTurn(room.id);
+      this.emit({
+        type: "prompt",
+        gameId: room.id,
+        playerId: player.id,
+        kind: "pick-cards",
+        min: steal.min,
+        max: steal.max,
+        sourcePlayerIds: targetIds,
+        perPlayer: steal.perPlayer,
+      });
+      return { ok: true, value: { log: [], won: false, nextPlayerId: null } };
+    }
+    return this.completePlay(room, player, pending.cardIndex, undefined);
+  }
+
+  private applyChooseCards(
+    room: Room,
+    player: Player,
+    cardIds: string[] | undefined,
+  ): RoomResult<ActionOutcome> {
+    const pending = room.pendingVault;
+    if (!pending || pending.playerId !== player.id) {
+      return fail("INVALID_ACTION");
+    }
+    const spec = pending.stealSpec;
+    if (!spec) {
+      return fail("INVALID_ACTION");
+    }
+    const sources = pending.targetIds ?? [];
+    const available = this.availableCards(room, sources);
+    const effectiveMin = Math.min(spec.min, available.length);
+    if (!cardIds || cardIds.length < effectiveMin || cardIds.length > spec.max) {
+      return fail("INVALID_ACTION");
+    }
+    if (new Set(cardIds).size !== cardIds.length) {
+      return fail("INVALID_ACTION");
+    }
+    const perSource = new Map<string, number>();
+    for (const id of cardIds) {
+      const holder = room.players.find(
+        (candidate) =>
+          sources.includes(candidate.id) && candidate.hand.some((card) => card.id === id),
+      );
+      if (!holder) {
+        return fail("INVALID_ACTION");
+      }
+      perSource.set(holder.id, (perSource.get(holder.id) ?? 0) + 1);
+    }
+    if (spec.perPlayer) {
+      for (const sourceId of sources) {
+        const source = room.getPlayer(sourceId);
+        const sourceSize = source?.hand.length ?? 0;
+        const minHere = Math.min(spec.perPlayer.min, sourceSize);
+        const count = perSource.get(sourceId) ?? 0;
+        if (count < minHere || count > spec.perPlayer.max) {
+          return fail("INVALID_ACTION");
+        }
+      }
+    }
+    pending.chosenCardIds = cardIds;
     return this.completePlay(room, player, pending.cardIndex, undefined);
   }
 
@@ -594,13 +819,11 @@ export class RoomManager {
     if (playerIndex !== room.currentTurnIndex) {
       return fail("NOT_YOUR_TURN");
     }
+    this.pruneOneShotReveals(room, player.id);
     if (action.type === "play") {
       return this.applyPlay(room, player, action);
     }
     if (action.type === "choose-color") {
-      if (room.pendingVault) {
-        return fail("INVALID_ACTION");
-      }
       return this.applyChooseColor(room, player, action.chosenColor);
     }
     if (action.type === "vault-choice") {
@@ -608,6 +831,9 @@ export class RoomManager {
     }
     if (action.type === "choose-targets") {
       return this.applyChooseTargets(room, player, action.targetIds);
+    }
+    if (action.type === "choose-cards") {
+      return this.applyChooseCards(room, player, action.cardIds);
     }
     if (action.type === "draw") {
       if (room.pendingWild || room.pendingVault) {

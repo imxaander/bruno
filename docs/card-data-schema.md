@@ -150,7 +150,7 @@ test requires a registered resolver for every `stable` card. Implemented resolve
   `t2-vault-hunter` (steal vaults from 1–3 targets), `t1-g-switch` (swap hands),
   `t2-card-a-palooza` (shuffle all hands).
 
-See `game/vault-effects-implemented.md` for the consolidated per-effect tracking log.
+See `game/vault-effects-tracking.md` for the consolidated per-effect tracking log.
 
 Vault tokens sample up to 5 random same-tier catalog offers at play time, restricted to
 cards with a registered resolver (`sampleVaultOffers`); the chosen offer's resolver runs and
@@ -186,6 +186,29 @@ state and emits a `pick-players` prompt; the actor replies with a `choose-target
 (`targetIds`), which is validated (count, distinct, seated, actor excluded unless
 `allowSelf`) and then completes the play, feeding the ids to the resolver's `targets`.
 Cards with no spec run immediately with random fallback targets (existing behavior).
+
+### 4.2 Play-condition cost specs
+
+A resolver that must check a `To play:` condition registers a `cost` spec so the vault
+choice is rejected with `CANNOT_PAY_CONDITION` before the effect runs:
+
+```ts
+interface CostSpec {
+  count: number; // how many matching cards the actor must have
+  match: "draw-plus" | "special" | "any" | Color[]; // what counts as a match
+  label: string; // human-readable cost, e.g. "3 draw [+] cards"
+  mode?: "discard" | "hold"; // default "discard": remove the cards; "hold" only verifies
+}
+
+registerResolver("t3-future-market", futureMarket, {
+  targets: { min: 1, max: 1, allowSelf: true },
+  cost: { count: 6, match: "any", label: "6+ cards", mode: "hold" },
+});
+```
+
+`discard` mode removes exactly `count` matching cards when affordable (and nothing
+otherwise); `hold` mode (Wave 4, e.g. Future Market) only verifies the hand holds the
+required cards. See `game/vault-effects-tracking.md` §Wave 4.
 
 ## 5. Socket payload schemas (Zod)
 

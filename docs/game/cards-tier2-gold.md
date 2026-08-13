@@ -56,14 +56,20 @@ the gold offer pool (`sampleVaultOffers`).
 
 Implemented resolvers: `t2-scrap-shot` (stable — pick a player, +3 and blind-discard 3),
 `t2-card-a-palooza` (stable — shuffle all hands, deal back same counts), `t2-vault-hunter`
-(stable — pick 1-3 players, steal up to 2 vaults in total), plus the +N exemplar `t2-mitosis`
-(still `draft`). Cards without a registered resolver are excluded from the offer pool until
-resolved (see `effects/registry.ts`).
+(stable — pick 1-3 players, steal up to 2 vaults in total), plus the current batch
+`t2-mitosis`, `t2-hush`, `t2-trade-sector`, `t2-augmented-zep-y`, `t2-rummage`, `t2-ruin`,
+`t2-jettison`, `t2-future-sight` (all still `draft`), `t2-force-of-will` (draft — picked
+player plays a + card or draws 5), `t2-twice-than-one`,
+`t2-sacrificial-lamb` (`[Tentative]`), and the event-passive batch `t2-most-wanted`,
+`t2-parasitism`, `t2-cruelty` (draft — see the Wave 5 section in
+`vault-effects-tracking.md`). Cards without a registered resolver are excluded from the offer
+pool until resolved (see `effects/registry.ts`).
 
-Deferred resolver inventory (Phase 5c, Track A batch 1): passives, reveal/steal/switch,
+Deferred resolver inventory (Phase 5c, Track A batch 1): reveal/steal/switch,
 timed or burst draws, skip-for-N rounds, "to play" conditions, allies, `[Tentative]`, or
-unreadable text. Examples: `t2-force-of-will` (`[P]`), `t2-hush`/`t2-midas`/`t2-flood`
-(forced-color markers / skip hooks), `t2-twice-than-one` (`[Tentative]`),
+unreadable text (the gold `[P]`/`[sP]` passives shipped in Wave 5 — `t2-most-wanted`,
+`t2-parasitism`, `t2-cruelty`). Examples: `t2-hush`/`t2-midas`/`t2-flood` (forced-color
+markers / skip hooks), `t2-twice-than-one` (`[Tentative]`),
 `t2-flight-of-icarus` (unreadable), `t2-triple-threat` (ally mechanic).
 
-See `../modernization.md` and the tracking log in `vault-effects-implemented.md`.
+See `../modernization.md` and the tracking log in `vault-effects-tracking.md`.
