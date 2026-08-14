@@ -43,8 +43,22 @@ describe("systems", () => {
   it("applies Fields location start and draws one card per player", () => {
     const rng = seeded(2);
     const room = new Room({ name: "A", hostId: "p1", maxPlayers: 4 });
-    room.players.push({ id: "p1", name: "A", isHost: true, hand: [], artifactIds: [] });
-    room.players.push({ id: "p2", name: "B", isHost: false, hand: [], artifactIds: [] });
+    room.players.push({
+      id: "p1",
+      name: "A",
+      isHost: true,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
+    room.players.push({
+      id: "p2",
+      name: "B",
+      isHost: false,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
 
     room.deck = buildDeck(rng);
     const hands = dealHands(room.deck, room.players.length, 8);
@@ -65,8 +79,22 @@ describe("systems", () => {
   it("returns a log for Scorched Earth without altering hands", () => {
     const rng = seeded(3);
     const room = new Room({ name: "A", hostId: "p1", maxPlayers: 4 });
-    room.players.push({ id: "p1", name: "A", isHost: true, hand: [], artifactIds: [] });
-    room.players.push({ id: "p2", name: "B", isHost: false, hand: [], artifactIds: [] });
+    room.players.push({
+      id: "p1",
+      name: "A",
+      isHost: true,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
+    room.players.push({
+      id: "p2",
+      name: "B",
+      isHost: false,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
 
     room.deck = buildDeck(rng);
     const hands = dealHands(room.deck, room.players.length, 8);
@@ -87,8 +115,22 @@ describe("systems", () => {
   it("produces logs for all documented location cards", () => {
     const rng = seeded(4);
     const room = new Room({ name: "A", hostId: "p1", maxPlayers: 4 });
-    room.players.push({ id: "p1", name: "A", isHost: true, hand: [], artifactIds: [] });
-    room.players.push({ id: "p2", name: "B", isHost: false, hand: [], artifactIds: [] });
+    room.players.push({
+      id: "p1",
+      name: "A",
+      isHost: true,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
+    room.players.push({
+      id: "p2",
+      name: "B",
+      isHost: false,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
     room.deck = buildDeck(rng);
     room.players[0]!.hand = dealHands(room.deck, room.players.length, 8)[0] ?? [];
     room.players[1]!.hand = dealHands(room.deck, room.players.length, 8)[1] ?? [];
@@ -114,8 +156,22 @@ describe("systems", () => {
 
   it("applies Desert location start and skips one random player", () => {
     const room = new Room({ name: "A", hostId: "p1", maxPlayers: 4 });
-    room.players.push({ id: "p1", name: "A", isHost: true, hand: [], artifactIds: [] });
-    room.players.push({ id: "p2", name: "B", isHost: false, hand: [], artifactIds: [] });
+    room.players.push({
+      id: "p1",
+      name: "A",
+      isHost: true,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
+    room.players.push({
+      id: "p2",
+      name: "B",
+      isHost: false,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
 
     room.locationId = "loc-desert";
     const logs = applyLocationStart(room, seeded(5));
@@ -126,8 +182,22 @@ describe("systems", () => {
 
   it("applies mayhem-4 and skips one random player for 1 turn", () => {
     const room = new Room({ name: "A", hostId: "p1", maxPlayers: 4 });
-    room.players.push({ id: "p1", name: "A", isHost: true, hand: [], artifactIds: [] });
-    room.players.push({ id: "p2", name: "B", isHost: false, hand: [], artifactIds: [] });
+    room.players.push({
+      id: "p1",
+      name: "A",
+      isHost: true,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
+    room.players.push({
+      id: "p2",
+      name: "B",
+      isHost: false,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
 
     room.mayhemEventId = "mayhem-4";
     const logs = applyMayhem(room, seeded(6));
@@ -138,9 +208,30 @@ describe("systems", () => {
 
   it("applies mayhem-5 and skips two random distinct players", () => {
     const room = new Room({ name: "A", hostId: "p1", maxPlayers: 4 });
-    room.players.push({ id: "p1", name: "A", isHost: true, hand: [], artifactIds: [] });
-    room.players.push({ id: "p2", name: "B", isHost: false, hand: [], artifactIds: [] });
-    room.players.push({ id: "p3", name: "C", isHost: false, hand: [], artifactIds: [] });
+    room.players.push({
+      id: "p1",
+      name: "A",
+      isHost: true,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
+    room.players.push({
+      id: "p2",
+      name: "B",
+      isHost: false,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
+    room.players.push({
+      id: "p3",
+      name: "C",
+      isHost: false,
+      hand: [],
+      connected: true,
+      artifactIds: [],
+    });
 
     room.mayhemEventId = "mayhem-5";
     const logs = applyMayhem(room, seeded(7));
@@ -156,9 +247,17 @@ describe("systems", () => {
       name: "A",
       isHost: true,
       hand: [makeCard(), makeCard()],
+      connected: true,
       artifactIds: [],
     });
-    room.players.push({ id: "p2", name: "B", isHost: false, hand: [makeCard()], artifactIds: [] });
+    room.players.push({
+      id: "p2",
+      name: "B",
+      isHost: false,
+      hand: [makeCard()],
+      connected: true,
+      artifactIds: [],
+    });
 
     room.mayhemEventId = "mayhem-6";
     const logs = applyMayhem(room, seeded(8));
@@ -194,8 +293,22 @@ describe("systems", () => {
 
 function roomWithPlayers(): Room {
   const room = new Room({ name: "A", hostId: "p1", maxPlayers: 4 });
-  room.players.push({ id: "p1", name: "A", isHost: true, hand: [], artifactIds: [] });
-  room.players.push({ id: "p2", name: "B", isHost: false, hand: [], artifactIds: [] });
+  room.players.push({
+    id: "p1",
+    name: "A",
+    isHost: true,
+    hand: [],
+    connected: true,
+    artifactIds: [],
+  });
+  room.players.push({
+    id: "p2",
+    name: "B",
+    isHost: false,
+    hand: [],
+    connected: true,
+    artifactIds: [],
+  });
   return room;
 }
 

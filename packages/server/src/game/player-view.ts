@@ -76,6 +76,10 @@ export function toPlayerView(
     revealed: revealed.length > 0 ? revealed : undefined,
     investmentOffer: room.investmentPending.has(playerId) || undefined,
     fleetingPileTop: room.fleetingPileTop ? toCardView(room.fleetingPileTop) : undefined,
+    reconnectGraceMs: room.reconnectGrace
+      ? Math.max(0, room.reconnectGrace.until - Date.now())
+      : undefined,
+    connected: me?.connected ?? true,
   };
 }
 

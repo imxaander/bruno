@@ -68,6 +68,46 @@ describe("TurnManager", () => {
     vi.advanceTimersByTime(5000);
     expect(callback).not.toHaveBeenCalled();
   });
+
+  it("pauseTurn returns remaining time and clears the timer", () => {
+    const manager = new TurnManager(5000);
+    const callback = vi.fn();
+    manager.scheduleTurn("r1", callback);
+    vi.advanceTimersByTime(2000);
+    const remaining = manager.pauseTurn("r1");
+    expect(remaining).toBeGreaterThan(0);
+    expect(remaining).toBeLessThanOrEqual(3000);
+    vi.advanceTimersByTime(5000);
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it("resumeTurn restarts with the given remaining time", () => {
+    const manager = new TurnManager(5000);
+    const callback = vi.fn();
+    manager.scheduleTurn("r1", callback);
+    vi.advanceTimersByTime(2000);
+    const remaining = manager.pauseTurn("r1")!;
+    manager.resumeTurn("r1", callback, remaining);
+    vi.advanceTimersByTime(remaining - 1);
+    expect(callback).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it("getRemainingMs returns the correct remaining time", () => {
+    const manager = new TurnManager(5000);
+    const callback = vi.fn();
+    manager.scheduleTurn("r1", callback);
+    vi.advanceTimersByTime(2000);
+    const remaining = manager.getRemainingMs("r1");
+    expect(remaining).toBeGreaterThan(0);
+    expect(remaining).toBeLessThanOrEqual(3000);
+  });
+
+  it("getRemainingMs returns undefined when no turn is active", () => {
+    const manager = new TurnManager(5000);
+    expect(manager.getRemainingMs("r1")).toBeUndefined();
+  });
 });
 
 describe("turn timeout via RoomManager", () => {

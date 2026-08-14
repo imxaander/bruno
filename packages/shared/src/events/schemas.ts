@@ -25,6 +25,12 @@ export const GameActionSchema = z.object({
 });
 export type GameAction = z.infer<typeof GameActionSchema>;
 
+export const RejoinRoomSchema = z.object({
+  gameId: z.string().min(1),
+  playerId: z.string().min(1),
+});
+export type RejoinRoomPayload = z.infer<typeof RejoinRoomSchema>;
+
 export const ErrorEnvelopeSchema = z.object({
   ok: z.literal(false),
   code: z.string(),

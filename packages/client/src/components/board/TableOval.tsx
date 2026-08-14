@@ -11,7 +11,13 @@ interface TableOvalProps {
   direction: 1 | -1;
 }
 
-export function TableOval({ deckCount, pileTop, pileEffect, fleetingPileTop, direction }: TableOvalProps) {
+export function TableOval({
+  deckCount,
+  pileTop,
+  pileEffect,
+  fleetingPileTop,
+  direction,
+}: TableOvalProps) {
   const [vaultHover, setVaultHover] = useState(false);
   const arcPath = direction === 1 ? "M 20 6 A 14 14 0 0 1 34 20" : "M 20 6 A 14 14 0 0 0 6 20";
   const arrowPoints = direction === 1 ? "34,15 38,22 30,22" : "6,15 2,22 10,22";

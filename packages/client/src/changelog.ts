@@ -5,11 +5,23 @@ export interface UpdateEntry {
   bullets: string[];
 }
 
-export const UPDATES_LATEST_VERSION = "0.1.0";
+export const UPDATES_LATEST_VERSION = "0.2.0";
 
 export const UPDATES_STORAGE_KEY = "bruno_updates_seen";
 
 export const CHANGELOG: UpdateEntry[] = [
+  {
+    version: "0.2.0",
+    date: "2026-08-15",
+    title: "Google Sign-In, reconnection & vault updates",
+    bullets: [
+      "Google Sign-In — play with a real account and keep your identity across sessions.",
+      "Reconnection — network drops no longer kick you out. Your seat is held for 60s.",
+      "Fleeting vault cards — tokens from effects like All In now vanish after use.",
+      "Investment vault now offers a choice each round (not auto-draw).",
+      "Vault balance updates: Ruin, Mitosis II, Sacrificial Lamb, Scourge, Midas Touch.",
+    ],
+  },
   {
     version: "0.1.0",
     date: "2026-08-14",

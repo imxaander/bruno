@@ -46,13 +46,13 @@ out of the game (`RoomManager.leaveRoom`) and the client has only a passive LIVE
   - `AuthProvider` (React context) around the app exposing:
     ```ts
     interface AuthContextValue {
-      user: FirebaseUser | null;     // null = not authenticated
-      guest: boolean;                 // true = anonymous/guest session
-      loading: boolean;               // true = Firebase still initializing
-      signInGoogle: () => Promise<void>;   // popup-based Google sign-in
-      signInGuest: () => Promise<void>;    // anonymous sign-in → sets guest=true
+      user: FirebaseUser | null; // null = not authenticated
+      guest: boolean; // true = anonymous/guest session
+      loading: boolean; // true = Firebase still initializing
+      signInGoogle: () => Promise<void>; // popup-based Google sign-in
+      signInGuest: () => Promise<void>; // anonymous sign-in → sets guest=true
       signOut: () => Promise<void>;
-      upgradeGuest: () => Promise<void>;   // link anonymous → Google (keeps handle)
+      upgradeGuest: () => Promise<void>; // link anonymous → Google (keeps handle)
     }
     ```
   - New `src/pages/Auth.tsx` screen:
@@ -99,7 +99,7 @@ out of the game (`RoomManager.leaveRoom`) and the client has only a passive LIVE
   - `game:state:get` already exists and stays the fallback for full reloads.
 - **Client** (`useSocket.ts` + `Game.tsx`):
   - socket.io reconnection options: `reconnectionAttempts: Infinity`, `reconnectionDelay:
-    500`, `reconnectionDelayMax: 3000`; `socket.auth` carries the ID token so the server can
+500`, `reconnectionDelayMax: 3000`; `socket.auth` carries the ID token so the server can
     re-verify on each handshake.
   - `useSocket` surfaces `{ connected, reconnecting }` (listen to `disconnect`,
     `reconnect_attempt`, `reconnect`). While in a game screen, on `reconnect` re-emit
@@ -158,6 +158,7 @@ out of the game (`RoomManager.leaveRoom`) and the client has only a passive LIVE
 ## Env setup
 
 **Client `.env.example`:**
+
 ```env
 VITE_FIREBASE_API_KEY=
 VITE_FIREBASE_AUTH_DOMAIN=
@@ -168,6 +169,7 @@ VITE_FIREBASE_APP_ID=
 ```
 
 **Server `.env.example`:**
+
 ```env
 FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=

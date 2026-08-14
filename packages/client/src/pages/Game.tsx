@@ -44,6 +44,7 @@ interface GameProps {
   roomId: string | null;
   goLobby: () => void;
   onEnded: (payload: GameEndedPayload) => void;
+  reconnecting?: boolean;
 }
 
 // Fixed seat positions for the 8-player ring (clockwise from bottom-left).
@@ -58,7 +59,7 @@ const SEATS_8P: CSSProperties[] = [
   { top: "52%", right: "1%" },
 ];
 
-export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) {
+export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting }: GameProps) {
   const [view, setView] = useState<PlayerView | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -947,6 +948,56 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           selfHand={prompt.selfHand}
           onConfirm={chooseCards}
         />
+      ) : null}
+      {reconnecting ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(6,6,16,0.92)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              background: "#ffaa00",
+              boxShadow: "0 0 16px rgba(255,170,0,0.8)",
+              animation: "neon-pulse 1.5s ease-in-out infinite",
+              marginBottom: 16,
+            }}
+          />
+          <p
+            style={{
+              fontFamily: "'Barlow Condensed'",
+              fontWeight: 800,
+              fontSize: 22,
+              color: "#e8f0ff",
+              letterSpacing: "0.1em",
+              margin: 0,
+            }}
+          >
+            RECONNECTING
+          </p>
+          <p
+            style={{
+              fontFamily: "'Rajdhani'",
+              fontSize: 14,
+              color: "rgba(200,216,240,0.5)",
+              margin: "8px 0 0",
+              letterSpacing: "0.06em",
+            }}
+          >
+            Your seat is held. Rejoining…
+          </p>
+        </div>
       ) : null}
     </div>
   );

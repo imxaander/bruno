@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Card, Color } from "@bruno/shared";
 import { CARDS, isVaultTokenCard } from "@bruno/shared";
 import { RoomManager, type RoomEvent, type RoomResult } from "./room-manager.js";
@@ -1616,5 +1616,162 @@ describe("vault play-condition gating", () => {
     expect(room.players[0]!.hand[0]!.color).toBe("blue");
     expect(room.deck).toHaveLength(deckBefore);
     expect(room.currentTurnIndex).toBe(1);
+  });
+});
+
+describe("disconnectPlayer / rejoinPlayer", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function value<T>(result: RoomResult<T>): T {
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    return result.value;
+  }
+
+  function setup(events: RoomEvent[] = []): { manager: RoomManager; gameId: string } {
+    const manager = new RoomManager({
+      eventSink: (event) => events.push(event),
+      turnManager: new TurnManager(5000, () => ({ cancel: () => {} })),
+    });
+    const room = value(
+      manager.createRoom({ name: "T", playerId: "p0", playerName: "P0", maxPlayers: 8 }),
+    );
+    value(manager.joinRoom(room.id, "p1", "P1"));
+    value(manager.startGame(room.id, "p0", seeded(1)));
+    room.currentTurnIndex = 0;
+    return { manager, gameId: room.id };
+  }
+
+  it("disconnectPlayer marks the player as disconnected", () => {
+    const { manager, gameId } = setup();
+    const room = manager.getRoom(gameId)!;
+
+    manager.disconnectPlayer(gameId, "p0", 500);
+
+    expect(room.getPlayer("p0")?.connected).toBe(false);
+    expect(room.reconnectGrace).toBeDefined();
+  });
+
+  it("disconnectPlayer cancels pendingWild for the disconnected player", () => {
+    const { manager, gameId } = setup();
+    const room = manager.getRoom(gameId)!;
+    room.pendingWild = { cardIndex: 0, playerId: "p0" };
+
+    manager.disconnectPlayer(gameId, "p0", 500);
+
+    expect(room.pendingWild).toBeUndefined();
+  });
+
+  it("disconnectPlayer cancels pendingVault for the disconnected player", () => {
+    const { manager, gameId } = setup();
+    const room = manager.getRoom(gameId)!;
+    room.pendingVault = { cardIndex: 0, playerId: "p0", tier: "vault-silver", offers: [] };
+
+    manager.disconnectPlayer(gameId, "p0", 500);
+
+    expect(room.pendingVault).toBeUndefined();
+  });
+
+  it("rejoinPlayer restores connected state and cancels grace", () => {
+    const { manager, gameId } = setup();
+    const room = manager.getRoom(gameId)!;
+
+    manager.disconnectPlayer(gameId, "p0", 5000);
+    expect(room.getPlayer("p0")?.connected).toBe(false);
+    expect(room.reconnectGrace).toBeDefined();
+
+    const result = manager.rejoinPlayer(gameId, "p0");
+    expect(result.ok).toBe(true);
+    expect(room.getPlayer("p0")?.connected).toBe(true);
+    expect(room.reconnectGrace).toBeUndefined();
+  });
+
+  it("rejoinPlayer returns NOT_IN_ROOM for unknown player", () => {
+    const { manager, gameId } = setup();
+    const result = manager.rejoinPlayer(gameId, "unknown");
+    expect(result.ok).toBe(false);
+    if (result.ok === false) {
+      expect(result.error).toBe("NOT_IN_ROOM");
+    }
+  });
+
+  it("rejoinPlayer returns ROOM_NOT_FOUND for unknown game", () => {
+    const manager = new RoomManager();
+    const result = manager.rejoinPlayer("nope", "p0");
+    expect(result.ok).toBe(false);
+    if (result.ok === false) {
+      expect(result.error).toBe("ROOM_NOT_FOUND");
+    }
+  });
+
+  it("grace expiry removes the disconnected player via leaveRoom logic", () => {
+    const events: RoomEvent[] = [];
+    const manager = new RoomManager({
+      eventSink: (event) => events.push(event),
+      turnManager: new TurnManager(5000, () => ({ cancel: () => {} })),
+    });
+    const room = value(
+      manager.createRoom({ name: "T", playerId: "p0", playerName: "P0", maxPlayers: 8 }),
+    );
+    value(manager.joinRoom(room.id, "p1", "P1"));
+    value(manager.startGame(room.id, "p0", seeded(1)));
+    room.currentTurnIndex = 0;
+
+    manager.disconnectPlayer(room.id, "p0", 100);
+
+    // Before grace expires, player is still in the room
+    expect(room.getPlayer("p0")).toBeDefined();
+    expect(room.getPlayer("p0")?.connected).toBe(false);
+
+    // Advance past the grace period
+    vi.advanceTimersByTime(150);
+
+    // Player should be removed
+    expect(room.getPlayer("p0")).toBeUndefined();
+    expect(room.playerCount).toBe(1);
+  });
+
+  it("reconnect before grace expiry prevents removal", () => {
+    const events: RoomEvent[] = [];
+    const manager = new RoomManager({
+      eventSink: (event) => events.push(event),
+      turnManager: new TurnManager(5000, () => ({ cancel: () => {} })),
+    });
+    const room = value(
+      manager.createRoom({ name: "T", playerId: "p0", playerName: "P0", maxPlayers: 8 }),
+    );
+    value(manager.joinRoom(room.id, "p1", "P1"));
+    value(manager.startGame(room.id, "p0", seeded(1)));
+    room.currentTurnIndex = 0;
+
+    manager.disconnectPlayer(room.id, "p0", 5000);
+    expect(room.getPlayer("p0")?.connected).toBe(false);
+
+    // Reconnect before grace expires
+    const result = manager.rejoinPlayer(room.id, "p0");
+    expect(result.ok).toBe(true);
+
+    // Advance past where grace would have expired
+    vi.advanceTimersByTime(5100);
+
+    // Player should still be in the room (grace was cancelled on reconnect)
+    expect(room.getPlayer("p0")).toBeDefined();
+    expect(room.getPlayer("p0")?.connected).toBe(true);
+  });
+
+  it("rejoinPlayer without active grace returns a normal PlayerView", () => {
+    const { manager, gameId } = setup();
+    const result = manager.rejoinPlayer(gameId, "p0");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.you.hand).toHaveLength(8);
+      expect(result.value.reconnectGraceMs).toBeUndefined();
+    }
   });
 });

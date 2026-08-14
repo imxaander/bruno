@@ -24,6 +24,7 @@ export interface ClientToServerEvents {
   "lobby:leave": (payload: LeaveRoomPayload) => void;
   "game:start": (payload: StartGamePayload) => void;
   "game:action": (payload: GameAction) => void;
+  "game:rejoin": (payload: { gameId: string; playerId: string }) => void;
   "game:state:get": (payload: GetGameStatePayload) => void;
   "vault:catalog:get": () => void;
 }

@@ -487,9 +487,14 @@ describe("wave 1 resolver batch", () => {
 
   it("discards the picked cards and redraws the same amount (t3-scavenge)", () => {
     const { room } = startGame(2);
-    const hand = ["red-skip-0", "blue-skip-1", "green-skip-2", "yellow-skip-3", "red-skip-4", "blue-skip-5"].map(
-      (id) => ({ ...skipCard(), id }),
-    );
+    const hand = [
+      "red-skip-0",
+      "blue-skip-1",
+      "green-skip-2",
+      "yellow-skip-3",
+      "red-skip-4",
+      "blue-skip-5",
+    ].map((id) => ({ ...skipCard(), id }));
     room.players[0]!.hand = hand;
     const picked = hand.slice(0, 3).map((card) => card.id);
     const deckBefore = room.deck.length;
@@ -1274,9 +1279,14 @@ describe("loc-volcano amount multiplier", () => {
 
   it("scales the redraw on loc-volcano (t3-scavenge)", () => {
     const { room } = startGame(2);
-    const hand = ["red-skip-0", "blue-skip-1", "green-skip-2", "yellow-skip-3", "red-skip-4", "blue-skip-5"].map(
-      (id) => ({ ...skipCard(), id }),
-    );
+    const hand = [
+      "red-skip-0",
+      "blue-skip-1",
+      "green-skip-2",
+      "yellow-skip-3",
+      "red-skip-4",
+      "blue-skip-5",
+    ].map((id) => ({ ...skipCard(), id }));
     room.players[0]!.hand = hand;
     const picked = hand.slice(0, 2).map((card) => card.id);
     const deckBefore = room.deck.length;

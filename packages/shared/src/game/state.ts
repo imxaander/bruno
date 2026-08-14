@@ -56,4 +56,8 @@ export interface PlayerView {
   investmentOffer?: boolean;
   /** Fleeting card last played — shown muted on top of the pile (visual only, not in backend pile). */
   fleetingPileTop?: CardView;
+  /** Remaining reconnect grace time in ms (0 = none). Shown in reconnect overlay. */
+  reconnectGraceMs?: number;
+  /** Whether the current player's socket is disconnected. */
+  connected?: boolean;
 }

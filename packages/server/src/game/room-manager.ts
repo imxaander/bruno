@@ -38,6 +38,9 @@ export type RoomError =
 
 export type RoomResult<T> = { ok: true; value: T } | { ok: false; error: RoomError | EngineError };
 
+/** Reconnect grace period in ms. Exported so tests can override it. */
+export const RECONNECT_GRACE_MS = 60_000;
+
 const VAULT_OFFER_COUNT = 3;
 
 function fail<T>(error: RoomError | EngineError): RoomResult<T> {
@@ -404,6 +407,7 @@ export class RoomManager {
       name: input.playerName,
       isHost: true,
       hand: [],
+      connected: true,
       artifactIds: [],
       playedEffectIds: [],
     });
@@ -444,6 +448,7 @@ export class RoomManager {
       name: playerName,
       isHost: false,
       hand: [],
+      connected: true,
       artifactIds: [],
       playedEffectIds: [],
     });
@@ -503,6 +508,117 @@ export class RoomManager {
       this.emitTurn(room);
     }
     return { ok: true, value: room };
+  }
+
+  /**
+   * Mark a player as disconnected. Starts a reconnect grace window and pauses the
+   * turn timer if it is their turn. When grace expires the player is removed via
+   * leaveRoom logic.
+   *
+   * `graceMs` can be overridden by callers (tests use a short value).
+   */
+  disconnectPlayer(gameId: string, playerId: string, graceMs = RECONNECT_GRACE_MS): void {
+    const room = this.rooms.get(gameId);
+    if (!room) {
+      return;
+    }
+    const player = room.getPlayer(playerId);
+    if (!player) {
+      return;
+    }
+    player.connected = false;
+
+    // Cancel any open prompts belonging to this player.
+    if (room.pendingWild?.playerId === playerId) {
+      room.pendingWild = undefined;
+    }
+    if (room.pendingVault?.playerId === playerId) {
+      room.pendingVault = undefined;
+    }
+
+    // Clear any existing grace timer.
+    if (room.reconnectGrace) {
+      clearTimeout(room.reconnectGrace.timer);
+    }
+
+    const isCurrentTurn =
+      room.status === "ongoing" && room.currentTurnIndex === room.getPlayerIndex(playerId);
+    let remainingTurnMs: number | undefined;
+    if (isCurrentTurn) {
+      remainingTurnMs = this.turnManager.pauseTurn(gameId);
+    }
+
+    const until = Date.now() + graceMs;
+    const timer = setTimeout(() => this.onGraceExpired(gameId, playerId), graceMs);
+    room.reconnectGrace = { timer, until };
+
+    // Update the room's deadline so the PlayerView can surface the grace timer.
+    if (isCurrentTurn && remainingTurnMs !== undefined) {
+      room.turnDeadline = Date.now() + remainingTurnMs;
+    }
+  }
+
+  /** Called when the reconnect grace window expires. */
+  private onGraceExpired(gameId: string, playerId: string): void {
+    const room = this.rooms.get(gameId);
+    if (!room) {
+      return;
+    }
+    const player = room.getPlayer(playerId);
+    if (!player || player.connected) {
+      // Player reconnected before grace expired — bail out.
+      return;
+    }
+    // Clear the grace field before calling leaveRoom (which may delete the room).
+    room.reconnectGrace = undefined;
+    this.leaveRoom(gameId, playerId);
+  }
+
+  /**
+   * Re-attach a reconnecting player. Restores connected state, cancels grace,
+   * resumes the turn timer if it was their turn, and returns a fresh PlayerView.
+   *
+   * The caller is responsible for `socket.join(roomId)` and updating the room-socket map.
+   */
+  rejoinPlayer(gameId: string, playerId: string): RoomResult<PlayerView> {
+    const room = this.rooms.get(gameId);
+    if (!room) {
+      return fail("ROOM_NOT_FOUND");
+    }
+    const player = room.getPlayer(playerId);
+    if (!player) {
+      return fail("NOT_IN_ROOM");
+    }
+    if (!room.reconnectGrace) {
+      // No active grace window — this is a normal get-state, not a reconnect.
+      return {
+        ok: true,
+        value: toPlayerView(room, playerId, this.turnManager.durationMs / 1000),
+      };
+    }
+
+    player.connected = true;
+    clearTimeout(room.reconnectGrace.timer);
+    room.reconnectGrace = undefined;
+
+    const isCurrentTurn =
+      room.status === "ongoing" && room.currentTurnIndex === room.getPlayerIndex(playerId);
+    if (isCurrentTurn) {
+      const remaining = room.turnDeadline
+        ? Math.max(0, room.turnDeadline - Date.now())
+        : this.turnManager.durationMs;
+      this.turnManager.resumeTurn(
+        gameId,
+        () => this.onTurnTimeout(gameId),
+        remaining > 0 ? remaining : this.turnManager.durationMs,
+      );
+      room.turnDeadline = Date.now() + remaining;
+    }
+
+    return {
+      ok: true,
+      value: toPlayerView(room, playerId, this.turnManager.durationMs / 1000),
+    };
   }
 
   getLobbyPlayers(gameId: string): LobbyPlayer[] | null {
@@ -923,10 +1039,7 @@ export class RoomManager {
     return this.completePlay(room, player, pending.cardIndex, undefined);
   }
 
-  private applyInvestmentDraw(
-    room: Room,
-    player: Player,
-  ): RoomResult<ActionOutcome> {
+  private applyInvestmentDraw(room: Room, player: Player): RoomResult<ActionOutcome> {
     if (!room.investmentPending.has(player.id)) {
       return fail("INVALID_ACTION");
     }

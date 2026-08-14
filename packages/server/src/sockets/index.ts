@@ -5,6 +5,7 @@ import {
   GetGameStateSchema,
   JoinRoomPayloadSchema,
   LeaveRoomSchema,
+  RejoinRoomSchema,
   StartGameSchema,
   getCard,
   type ClientToServerEvents,
@@ -14,6 +15,7 @@ import {
 import type { Rng } from "../game/deck.js";
 import {
   RoomManager,
+  RECONNECT_GRACE_MS,
   type EngineError,
   type RoomError,
   type RoomEvent,
@@ -21,6 +23,7 @@ import {
 } from "../game/room-manager.js";
 import { registeredResolverIds } from "../game/effects/registry.js";
 import type { TurnManager } from "../game/turn-manager.js";
+import { getAuth } from "../firebase/admin.js";
 
 export type BrunoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -29,6 +32,7 @@ type BrunoSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 interface SocketData {
   playerId?: string;
   roomId?: string;
+  uid?: string; // Firebase UID when authenticated
 }
 
 export interface RegisterSocketsOptions {
@@ -246,9 +250,22 @@ export function registerSockets(
     io.emit("rooms:list:return", rooms.listRooms());
   };
 
-  io.on("connection", (socket) => {
+  io.on("connection", async (socket) => {
     console.log(`[socket] connected: ${socket.id}`);
     const data = socket.data as SocketData;
+
+    // Verify Firebase token if present
+    const serverAuth = getAuth();
+    const socketAuth = socket as typeof socket & { auth?: Record<string, unknown> };
+    if (serverAuth && socketAuth.auth?.token && typeof socketAuth.auth.token === "string") {
+      try {
+        const decoded = await serverAuth.verifyIdToken(socketAuth.auth.token as string);
+        data.uid = decoded.uid;
+        data.playerId = decoded.uid; // Use uid as authoritative playerId
+      } catch {
+        // Invalid token — treat as guest
+      }
+    }
 
     socket.on("rooms:list", () => {
       socket.emit("rooms:list:return", rooms.listRooms());
@@ -260,12 +277,15 @@ export function registerSockets(
         emitError(socket, "INVALID_CREATE", "Invalid create-room payload.");
         return;
       }
-      const result = rooms.createRoom(parsed.data);
+      // Override playerId with authenticated uid when available
+      const playerId = data.uid ?? parsed.data.playerId;
+      const createPayload = { ...parsed.data, playerId };
+      const result = rooms.createRoom(createPayload);
       if (!result.ok) {
         emitFailure(socket, result.error);
         return;
       }
-      data.playerId = parsed.data.playerId;
+      data.playerId = playerId;
       data.roomId = result.value.id;
       socket.join(result.value.id);
       addToRoom(result.value.id, socket);
@@ -285,16 +305,14 @@ export function registerSockets(
         emitError(socket, "INVALID_JOIN", "Invalid join payload.");
         return;
       }
-      const result = rooms.joinRoom(
-        parsed.data.gameId,
-        parsed.data.playerId,
-        parsed.data.playerName,
-      );
+      // Override playerId with authenticated uid when available
+      const playerId = data.uid ?? parsed.data.playerId;
+      const result = rooms.joinRoom(parsed.data.gameId, playerId, parsed.data.playerName);
       if (!result.ok) {
         emitFailure(socket, result.error);
         return;
       }
-      data.playerId = parsed.data.playerId;
+      data.playerId = playerId;
       data.roomId = result.value.id;
       socket.join(result.value.id);
       addToRoom(result.value.id, socket);
@@ -373,6 +391,30 @@ export function registerSockets(
       pushGameState(parsed.data.gameId);
     });
 
+    socket.on("game:rejoin", (payload) => {
+      const parsed = RejoinRoomSchema.safeParse(payload);
+      if (!parsed.success) {
+        emitError(socket, "INVALID_REJOIN", "Invalid rejoin payload.");
+        return;
+      }
+      // Override playerId with authenticated uid when available
+      const playerId = data.uid ?? parsed.data.playerId;
+      const result = rooms.rejoinPlayer(parsed.data.gameId, playerId);
+      if (!result.ok) {
+        emitFailure(socket, result.error);
+        return;
+      }
+      data.roomId = parsed.data.gameId;
+      data.playerId = playerId;
+      socket.join(parsed.data.gameId);
+      addToRoom(parsed.data.gameId, socket);
+      socket.emit("game:state", result.value);
+      io.to(parsed.data.gameId).emit(
+        "lobby:update",
+        rooms.getLobbyPlayers(parsed.data.gameId) ?? [],
+      );
+    });
+
     socket.on("vault:catalog:get", () => {
       const implemented = registeredResolverIds()
         .map((cardId) => getCard(cardId))
@@ -400,10 +442,7 @@ export function registerSockets(
       const roomId = data.roomId;
       const playerId = data.playerId;
       if (roomId && playerId) {
-        const result = rooms.leaveRoom(roomId, playerId);
-        if (result.ok && result.value) {
-          io.to(roomId).emit("lobby:update", rooms.getLobbyPlayers(roomId) ?? []);
-        }
+        rooms.disconnectPlayer(roomId, playerId, RECONNECT_GRACE_MS);
         removeFromRoom(roomId, socket);
         refreshRooms();
       }

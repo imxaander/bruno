@@ -7,6 +7,8 @@ export interface Player {
   name: string;
   isHost: boolean;
   hand: Card[];
+  /** Whether the player's socket is currently connected. */
+  connected: boolean;
   originId?: string;
   artifactIds: string[];
   /** Card ids this player has played this game (Wave 5 passives like Prayers read this). */
@@ -137,6 +139,9 @@ export class Room {
   investmentPending = new Set<string>();
   /** Last fleeting card played — shown muted on top of the pile (visual only, not in backend pile). */
   fleetingPileTop?: Card;
+
+  /** Reconnect grace window for a disconnected player. Grace expires at `until` (epoch-ms). */
+  reconnectGrace?: { timer: NodeJS.Timeout; until: number };
 
   constructor(input: { name: string; hostId: string; maxPlayers: number }) {
     this.id = randomBytes(6).toString("hex");

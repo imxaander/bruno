@@ -838,4 +838,46 @@ describe("room lifecycle over the wire", () => {
     expect(diamond.length).toBeGreaterThan(0);
     alice.disconnect();
   });
+
+  it(
+    "rejoins a disconnected player and restores their game state",
+    { timeout: 15000 },
+    async () => {
+      const alice = await connect();
+      const bob = await connect();
+      const gameId = await setupGame(alice, bob);
+
+      // Get initial state
+      const stateA = once(alice, "game:state");
+      alice.emit("game:state:get", { gameId, playerId: "PID-a" });
+      const [viewA] = await stateA;
+      expect(viewA.connected).toBe(true);
+      expect(viewA.you.hand).toHaveLength(8);
+      assertNoLeaks(viewA);
+
+      // Simulate disconnect
+      alice.disconnect();
+
+      // Reconnect with a new socket
+      const carol = await connect();
+      const rejoinState = once(carol, "game:state");
+      carol.emit("game:rejoin", { gameId, playerId: "PID-a" });
+      const [rejoinedView] = await rejoinState;
+      expect(rejoinedView.connected).toBe(true);
+      expect(rejoinedView.you.hand).toHaveLength(8);
+      assertNoLeaks(rejoinedView);
+
+      bob.disconnect();
+      carol.disconnect();
+    },
+  );
+
+  it("rejects game:rejoin with invalid payload", { timeout: 15000 }, async () => {
+    const alice = await connect();
+    const err = once(alice, "error");
+    alice.emit("game:rejoin", { gameId: "", playerId: "" });
+    const [payload] = await err;
+    expect(payload.code).toBe("INVALID_REJOIN");
+    alice.disconnect();
+  });
 });
