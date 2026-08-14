@@ -74,15 +74,15 @@ contract and `vault-mechanism.md` for how the tokens resolve.
 
 | Card family            | In base deck? | How it enters play                                                                                                                                |
 | ---------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vaults (Tier I/II/III) | **Tokens**    | 9 vault tokens (5 silver / 3 gold / 1 diamond) are shuffled in; playing one offers up to 5 random same-tier effects (implemented resolvers only). |
+| Vaults (Tier I/II/III) | **Tokens**    | 9 vault tokens (5 silver / 3 gold / 1 diamond) are shuffled in; playing one offers up to 3 random same-tier effects (implemented resolvers only). |
 | Locations              | **No**        | Selected/assigned at game start (see `locations.md`).                                                                                             |
 | Mayhem                 | **No**        | Hell Gate's location effect: a random event per round while it is active (see `mayhem.md`).                                                       |
 | Origin Vaults          | **No**        | Chosen before the game starts (see `origins.md`).                                                                                                 |
 
 > Decision (2026-08-10, revised): the 90 catalog vault cards are the **offer pool only** and
 > are never shuffled into the deck. Instead the deck holds 9 vault **tokens** (5/3/1), each
-> worth a choice of up to 5 random effects from its tier (sampled from cards with a
-> registered resolver; when fewer than 5 exist — silver 19, gold 17, diamond 26 — all are
+> worth a choice of up to 3 random effects from its tier (sampled from cards with a
+> registered resolver; when fewer than 3 exist — silver 19, gold 17, diamond 26 — all are
 > offered). The default composition is **119 cards**
 > (110 base + 9 tokens). Tokens are always playable on your turn (wild-like) unless a draw
 > stack is pending; during a pending stack only `+2`/`+4` may be played. Vault tokens drawn

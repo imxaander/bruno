@@ -1,5 +1,6 @@
 import type { GameEffect } from "@bruno/shared";
 import GameCard, { type VaultTier } from "./GameCard.js";
+import { VAULT_ICONS } from "./vaultIcons.js";
 
 const TIER_TO_VAULT: Record<GameEffect["tier"], VaultTier> = {
   "vault-silver": "silver",
@@ -73,7 +74,8 @@ export default function EffectBanner({ effect, visible }: EffectBannerProps) {
             color: accent.color,
           }}
         >
-          {effect.playerName} played a vault card
+          {VAULT_ICONS[effect.cardId] ?? "\u26A1"} &nbsp; {effect.playerName} played a vault card
+          &nbsp; {VAULT_ICONS[effect.cardId] ?? "\u26A1"}
         </p>
         <div style={{ animation: "reveal-in 0.5s cubic-bezier(0.34,1.56,0.64,1) both" }}>
           <GameCard vault={tier} value={effect.name} size="md" lifted />

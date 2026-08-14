@@ -152,7 +152,7 @@ test requires a registered resolver for every `stable` card. Implemented resolve
 
 See `game/vault-effects-tracking.md` for the consolidated per-effect tracking log.
 
-Vault tokens sample up to 5 random same-tier catalog offers at play time, restricted to
+Vault tokens sample up to 3 random same-tier catalog offers at play time, restricted to
 cards with a registered resolver (`sampleVaultOffers`); the chosen offer's resolver runs and
 the token is placed on the pile. See `game/vault-mechanism.md`.
 

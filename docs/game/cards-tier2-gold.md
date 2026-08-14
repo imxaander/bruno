@@ -11,7 +11,7 @@ tags: [game, cards, tier2]
 Gold Vault is the **middle** vault tier (Tier II). Effects are stronger versions of several
 Tier III cards (Hush II, Mitosis II, Scrap Shot II, Trade Sector II) plus unique ones.
 Vault cards are **not** dealt from the deck — they form the **offer pool** for vault tokens
-(3 gold tokens per game, each offering up to 5 random gold effects, sampled from cards
+(3 gold tokens per game, each offering up to 3 random gold effects, sampled from cards
 with a registered resolver). See
 [deck-composition.md](./deck-composition.md) and [vault-mechanism.md](./vault-mechanism.md).
 

@@ -743,12 +743,12 @@ describe("vault token flow", () => {
       playerId: "p0",
       tier: "vault-diamond",
     });
-    expect(room.pendingVault?.offers).toHaveLength(5);
+    expect(room.pendingVault?.offers).toHaveLength(3);
     expect(room.pendingVault?.offers.every((card) => card.type === "vault-diamond")).toBe(true);
     expect(room.pendingVault?.offers.every((card) => getResolver(card.id) !== undefined)).toBe(
       true,
     );
-    expect(new Set(room.pendingVault?.offers.map((card) => card.id)).size).toBe(5);
+    expect(new Set(room.pendingVault?.offers.map((card) => card.id)).size).toBe(3);
     expect(room.currentTurnIndex).toBe(0);
 
     const prompt = events.find((event) => event.type === "prompt");

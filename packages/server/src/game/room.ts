@@ -118,6 +118,15 @@ export class Room {
   pendingDraw = 0;
   pendingWild?: { cardIndex: number; playerId: string };
   pendingVault?: PendingVault;
+  /** Absolute epoch-ms deadline for the current player's turn (public timer). */
+  turnDeadline?: number;
+  /** Vault effect resolved by the current pile-top token (pile hover tooltip). */
+  pileEffect?: {
+    cardId: string;
+    name: string;
+    tier: VaultCardType;
+    text: string;
+  };
   /** viewerId -> hands that viewer may currently inspect (vault reveal effects). */
   reveals = new Map<string, Reveal[]>();
   winnerId?: string;

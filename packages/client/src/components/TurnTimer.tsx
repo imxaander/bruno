@@ -3,9 +3,10 @@ interface TurnTimerProps {
   active: boolean;
   total?: number;
   action?: string;
+  playerName?: string;
 }
 
-export function TurnTimer({ seconds, active, total = 7, action }: TurnTimerProps) {
+export function TurnTimer({ seconds, active, total = 7, action, playerName }: TurnTimerProps) {
   const r = 26;
   const circ = 2 * Math.PI * r;
   const ratio = active ? Math.max(0, Math.min(1, seconds / total)) : 1;
@@ -35,8 +36,8 @@ export function TurnTimer({ seconds, active, total = 7, action }: TurnTimerProps
         </span>
       </div>
       <div className="turn-timer-caption">
-        <p className="turn-timer-label">{active ? "Your Turn" : "Waiting"}</p>
-        <p className="turn-timer-sub">{active ? (action ?? "Play a card") : "Opponent thinking"}</p>
+        <p className="turn-timer-label">{active ? "Your Turn" : (playerName ?? "Waiting")}</p>
+        <p className="turn-timer-sub">{active ? (action ?? "Play a card") : "thinking"}</p>
       </div>
     </div>
   );

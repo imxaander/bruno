@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
-import type { CardView, VaultOffer } from "@bruno/shared";
+import type { CardView, VaultGuideEntry, VaultOffer } from "@bruno/shared";
 import GameCard, { type VaultTier } from "./GameCard.js";
+import { VAULT_ICONS } from "./vaultIcons.js";
+import { CHANGELOG, UPDATES_LATEST_VERSION } from "../changelog.js";
 
 const FONT_DISPLAY = "'Barlow Condensed', sans-serif";
 const FONT_UI = "'Rajdhani', sans-serif";
@@ -456,16 +458,33 @@ export function VaultPicker({ offers, onPick }: VaultPickerProps) {
                   style={{
                     flexShrink: 0,
                     width: 74,
-                    textAlign: "center",
-                    fontFamily: FONT_DISPLAY,
-                    fontWeight: 900,
-                    fontSize: 13,
-                    letterSpacing: "0.1em",
-                    color: tier.text,
-                    textShadow: `0 0 10px ${tier.glow}`,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 4,
                   }}
                 >
-                  {tier.label}
+                  <span
+                    style={{
+                      fontSize: 26,
+                      lineHeight: 1,
+                      filter: `drop-shadow(0 0 10px ${tier.glow})`,
+                    }}
+                  >
+                    {VAULT_ICONS[offer.id] ?? "\u2728"}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: FONT_DISPLAY,
+                      fontWeight: 900,
+                      fontSize: 11,
+                      letterSpacing: "0.1em",
+                      color: tier.text,
+                      textShadow: `0 0 10px ${tier.glow}`,
+                    }}
+                  >
+                    {tier.label}
+                  </span>
                 </span>
                 <span
                   style={{
@@ -1020,6 +1039,7 @@ export function LocationReveal({ name, effect, theme, onDone }: LocationRevealPr
 interface MayhemRevealProps {
   playerName: string;
   cardValue: string;
+  icon?: string;
   tier: VaultTier;
   powerName: string;
   effectText: ReactNode;
@@ -1031,6 +1051,7 @@ interface MayhemRevealProps {
 export function MayhemReveal({
   playerName,
   cardValue,
+  icon,
   tier,
   powerName,
   effectText,
@@ -1068,7 +1089,7 @@ export function MayhemReveal({
               textTransform: "uppercase",
             }}
           >
-            {"\u26A1"} &nbsp; {playerName} PLAYED A VAULT CARD &nbsp; {"\u26A1"}
+            {icon ?? "\u26A1"} &nbsp; {playerName} PLAYED A VAULT CARD &nbsp; {icon ?? "\u26A1"}
           </p>
         </div>
         <div style={{ textAlign: "center", padding: "10px 40px 0" }}>
@@ -1111,6 +1132,9 @@ export function MayhemReveal({
               <p
                 style={{
                   margin: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
                   fontFamily: FONT_DISPLAY,
                   fontWeight: 900,
                   fontSize: 36,
@@ -1120,6 +1144,7 @@ export function MayhemReveal({
                   textShadow: "0 0 20px rgba(0,238,255,0.35)",
                 }}
               >
+                {icon ? <span style={{ fontSize: 44 }}>{icon}</span> : null}
                 {powerName}
               </p>
               <div
@@ -1471,6 +1496,350 @@ export function MayhemEventReveal({ name, effect, onDone }: MayhemEventRevealPro
           </div>
         </div>
       </div>
+    </Overlay>
+  );
+}
+
+interface VaultGuideProps {
+  entries: VaultGuideEntry[];
+  onClose: () => void;
+}
+
+const GUIDE_TIERS: Array<{
+  type: VaultGuideEntry["type"];
+  label: string;
+  border: string;
+  glow: string;
+}> = [
+  {
+    type: "vault-silver",
+    label: "SILVER",
+    border: "rgba(200,220,255,0.45)",
+    glow: "rgba(190,210,255,0.45)",
+  },
+  {
+    type: "vault-gold",
+    label: "GOLD",
+    border: "rgba(255,214,90,0.55)",
+    glow: "rgba(255,200,60,0.5)",
+  },
+  {
+    type: "vault-diamond",
+    label: "DIAMOND",
+    border: "rgba(120,240,255,0.55)",
+    glow: "rgba(0,238,255,0.55)",
+  },
+];
+
+const STATUS_LABEL: Record<VaultGuideEntry["status"], string> = {
+  stable: "Stable",
+  draft: "Draft",
+  tentative: "Tentative",
+};
+
+export function VaultGuide({ entries, onClose }: VaultGuideProps) {
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const hovered = hoverId ? entries.find((entry) => entry.id === hoverId) : undefined;
+
+  return (
+    <Overlay>
+      <Frame
+        title="VAULT GUIDE"
+        subtitle={`${entries.length} implemented vault effects`}
+        width={680}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 20,
+            padding: "18px 24px 24px",
+            maxHeight: "68vh",
+            overflowY: "auto",
+          }}
+        >
+          {GUIDE_TIERS.map((tier) => {
+            const group = entries.filter((entry) => entry.type === tier.type);
+            if (group.length === 0) {
+              return null;
+            }
+            return (
+              <div key={tier.type} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontFamily: FONT_DISPLAY,
+                    fontWeight: 800,
+                    fontSize: 16,
+                    letterSpacing: "0.2em",
+                    color: tier.border,
+                    textShadow: `0 0 12px ${tier.glow}`,
+                  }}
+                >
+                  {tier.label}
+                  <span style={{ color: "rgba(200,216,240,0.35)", marginLeft: 10, fontSize: 12 }}>
+                    {group.length}
+                  </span>
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 10,
+                    padding: 12,
+                    borderRadius: 10,
+                    background: "rgba(16,16,28,0.55)",
+                    border: `1px solid rgba(255,255,255,0.06)`,
+                  }}
+                >
+                  {group.map((entry) => (
+                    <div
+                      key={entry.id}
+                      onMouseEnter={() => setHoverId(entry.id)}
+                      onMouseLeave={() => setHoverId(null)}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 4,
+                        width: 76,
+                        padding: "8px 4px",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        background: hoverId === entry.id ? "rgba(0,238,255,0.08)" : "transparent",
+                        border: `1px solid ${hoverId === entry.id ? tier.border : "transparent"}`,
+                        transition: "background 0.12s ease, border-color 0.12s ease",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 26,
+                          lineHeight: 1,
+                          filter: `drop-shadow(0 0 6px ${tier.glow})`,
+                        }}
+                      >
+                        {VAULT_ICONS[entry.id] ?? "\u2728"}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: FONT_DISPLAY,
+                          fontWeight: 700,
+                          fontSize: 11,
+                          color: "rgba(220,232,250,0.85)",
+                          textAlign: "center",
+                          lineHeight: 1.15,
+                          letterSpacing: "0.02em",
+                        }}
+                      >
+                        {entry.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div
+          style={{
+            padding: "12px 24px",
+            borderTop: "1px solid rgba(0,238,255,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              fontFamily: FONT_DISPLAY,
+              fontWeight: 800,
+              fontSize: 14,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              padding: "8px 26px",
+              background: "transparent",
+              color: "#00eeff",
+              border: "1px solid rgba(0,238,255,0.35)",
+              borderRadius: 8,
+              cursor: "pointer",
+            }}
+          >
+            Close
+          </button>
+        </div>
+      </Frame>
+      {hovered ? (
+        <div
+          style={{
+            position: "fixed",
+            zIndex: 120,
+            width: "min(380px, 70vw)",
+            background: "rgba(9,11,18,0.97)",
+            border: "1px solid rgba(0,238,255,0.25)",
+            borderRadius: 12,
+            boxShadow: "0 0 40px rgba(0,238,255,0.12), 0 16px 40px rgba(0,0,0,0.8)",
+            padding: "14px 18px",
+            pointerEvents: "none",
+            bottom: "50%",
+            left: "50%",
+            transform: "translate(-50%, 0)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 22 }}>{VAULT_ICONS[hovered.id] ?? "\u2728"}</span>
+            <p
+              style={{
+                margin: 0,
+                fontFamily: FONT_DISPLAY,
+                fontWeight: 800,
+                fontSize: 17,
+                color: "#e8f0ff",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {hovered.name}
+            </p>
+          </div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 13,
+              lineHeight: 1.55,
+              color: "rgba(210,222,245,0.88)",
+            }}
+          >
+            {hovered.effect}
+          </p>
+          <p
+            style={{
+              margin: "8px 0 0",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "rgba(200,216,240,0.45)",
+            }}
+          >
+            {STATUS_LABEL[hovered.status]}
+            {hovered.playCondition ? ` \u2014 To play: ${hovered.playCondition}` : ""}
+          </p>
+        </div>
+      ) : null}
+    </Overlay>
+  );
+}
+
+interface UpdatesPanelProps {
+  onClose: () => void;
+}
+
+export function UpdatesPanel({ onClose }: UpdatesPanelProps) {
+  return (
+    <Overlay>
+      <Frame title="WHAT'S NEW" subtitle={`v${UPDATES_LATEST_VERSION}`} width={520}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 18,
+            padding: "18px 24px 8px",
+            maxHeight: "62vh",
+            overflowY: "auto",
+          }}
+        >
+          {CHANGELOG.map((entry) => (
+            <div key={entry.version}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <span
+                  style={{
+                    fontFamily: FONT_DISPLAY,
+                    fontWeight: 800,
+                    fontSize: 17,
+                    color: "#e8f0ff",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  v{entry.version}
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: "0.1em",
+                    color: "rgba(200,216,240,0.4)",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {entry.date}
+                </span>
+              </div>
+              <p
+                style={{
+                  margin: "2px 0 6px",
+                  fontFamily: FONT_DISPLAY,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  color: "rgba(0,238,255,0.85)",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {entry.title}
+              </p>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: 18,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 3,
+                }}
+              >
+                {entry.bullets.map((bullet) => (
+                  <li
+                    key={bullet}
+                    style={{
+                      fontSize: 13,
+                      lineHeight: 1.45,
+                      color: "rgba(210,222,245,0.82)",
+                    }}
+                  >
+                    {bullet}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div
+          style={{
+            padding: "12px 24px",
+            borderTop: "1px solid rgba(0,238,255,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              fontFamily: FONT_DISPLAY,
+              fontWeight: 800,
+              fontSize: 14,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              padding: "8px 26px",
+              background: "transparent",
+              color: "#00eeff",
+              border: "1px solid rgba(0,238,255,0.35)",
+              borderRadius: 8,
+              cursor: "pointer",
+            }}
+          >
+            Got it
+          </button>
+        </div>
+      </Frame>
     </Overlay>
   );
 }

@@ -13,6 +13,7 @@ import type {
   RoomCreateReturn,
   RoomSummary,
   StartGamePayload,
+  VaultCatalogReturn,
 } from "./schemas.js";
 
 export interface ClientToServerEvents {
@@ -23,6 +24,7 @@ export interface ClientToServerEvents {
   "game:start": (payload: StartGamePayload) => void;
   "game:action": (payload: GameAction) => void;
   "game:state:get": (payload: GetGameStatePayload) => void;
+  "vault:catalog:get": () => void;
 }
 
 export interface ServerToClientEvents {
@@ -42,5 +44,6 @@ export interface ServerToClientEvents {
   "game:turn": (payload: { gameId: string; playerIndex: number; playerId: string }) => void;
   "game:prompt": (payload: GamePrompt) => void;
   "game:ended": (payload: GameEndedPayload) => void;
+  "vault:catalog:return": (payload: VaultCatalogReturn) => void;
   error: (payload: ErrorEnvelope) => void;
 }

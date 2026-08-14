@@ -10,7 +10,7 @@ tags: [game, cards, tier3]
 
 Silver Vault is the **lowest** vault tier (Tier III). Effects are relatively modest.
 Vault cards are **not** dealt from the deck — they form the **offer pool** for vault tokens
-(5 silver tokens per game, each offering up to 5 random silver effects, sampled from cards
+(5 silver tokens per game, each offering up to 3 random silver effects, sampled from cards
 with a registered resolver). See
 [deck-composition.md](./deck-composition.md) and [vault-mechanism.md](./vault-mechanism.md).
 

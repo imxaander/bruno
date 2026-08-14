@@ -272,6 +272,12 @@ export function playCard(
           lines: result.log ?? [],
           targets,
         };
+        room.pileEffect = {
+          cardId: effectCard.id,
+          name: effectCard.name,
+          tier: effectCard.type as VaultCardType,
+          text: effectCard.effect ?? "",
+        };
       }
     }
   }

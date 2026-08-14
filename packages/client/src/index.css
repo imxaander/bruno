@@ -479,19 +479,23 @@ body {
 /* ── Event history ────────────────────────────────────────── */
 .event-history {
   position: fixed;
-  top: 52px;
-  bottom: 0;
-  left: 0;
-  width: 220px;
+  right: 16px;
+  bottom: 16px;
+  width: 26vw;
+  min-width: 240px;
+  max-width: 380px;
+  max-height: 30vh;
   z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 14px 14px 18px;
-  background: rgba(7, 7, 12, 0.72);
+  padding: 12px 14px 14px;
+  background: rgba(7, 7, 12, 0.78);
   backdrop-filter: blur(6px);
-  border-right: 1px solid rgba(0, 238, 255, 0.12);
+  border: 1px solid rgba(0, 238, 255, 0.12);
+  border-radius: 12px;
   font-family: var(--bruno-font-ui);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .event-history-title {
@@ -515,9 +519,9 @@ body {
 
 .event-history-line {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: rgba(200, 216, 240, 0.65);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(210, 222, 245, 0.78);
 }
 
 .event-history-empty {

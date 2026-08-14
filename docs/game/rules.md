@@ -100,9 +100,9 @@ next player.
 - The deck holds **vault tokens** (5 silver / 3 gold / 1 diamond) rather than the catalog
   cards. Playing a token is always legal on your turn (wild-like) unless a draw stack is
   pending.
-- Playing a token offers the actor **up to 5 random distinct effects** from that token's tier,
-  sampled from cards with a registered resolver (all of them when fewer than 5 exist — silver
-  3, gold 4, diamond 4); the actor picks exactly one (no decline, no re-roll). The token is
+- Playing a token offers the actor **up to 3 random distinct effects** from that token's tier,
+  sampled from cards with a registered resolver (all of them when fewer than 3 exist — silver
+  19, gold 17, diamond 26); the actor picks exactly one (no decline, no re-roll). The token is
   placed on the pile and the chosen effect resolves. Opening the prompt resets the turn timer
   to a fresh full window; if it expires, the **first** offer is auto-chosen (see
   [Choice guarantee](#7a-choice-guarantee)).

@@ -38,7 +38,7 @@ export type RoomError =
 
 export type RoomResult<T> = { ok: true; value: T } | { ok: false; error: RoomError | EngineError };
 
-const VAULT_OFFER_COUNT = 5;
+const VAULT_OFFER_COUNT = 3;
 
 function fail<T>(error: RoomError | EngineError): RoomResult<T> {
   return { ok: false, error };
@@ -142,6 +142,10 @@ export class RoomManager {
   }
 
   private scheduleTurn(roomId: string): void {
+    const room = this.rooms.get(roomId);
+    if (room && room.status === "ongoing") {
+      room.turnDeadline = Date.now() + this.turnManager.durationMs;
+    }
     this.turnManager.scheduleTurn(roomId, () => this.onTurnTimeout(roomId));
   }
 
@@ -318,8 +322,8 @@ export class RoomManager {
     for (const message of result.value.log) {
       this.emit({ type: "log", gameId: roomId, message });
     }
-    this.emitTurn(room);
     this.scheduleTurn(roomId);
+    this.emitTurn(room);
   }
 
   createRoom(input: {
@@ -436,8 +440,8 @@ export class RoomManager {
     }
     if (room.status === "ongoing") {
       this.turnManager.cancelTurn(gameId);
-      this.emitTurn(room);
       this.scheduleTurn(gameId);
+      this.emitTurn(room);
     }
     return { ok: true, value: room };
   }
@@ -526,8 +530,8 @@ export class RoomManager {
     room.currentDirection = 1;
 
     this.emit({ type: "log", gameId: room.id, message: "The game has started." });
-    this.emitTurn(room);
     this.scheduleTurn(room.id);
+    this.emitTurn(room);
     return { ok: true, value: room };
   }
 
@@ -583,8 +587,8 @@ export class RoomManager {
         value: { log: result.value.log, won: true, nextPlayerId: null },
       };
     }
-    this.emitTurn(room);
     this.scheduleTurn(room.id);
+    this.emitTurn(room);
     const nextPlayer = room.players[room.currentTurnIndex];
     return {
       ok: true,
@@ -854,8 +858,8 @@ export class RoomManager {
       for (const message of result.value.log) {
         this.emit({ type: "log", gameId, message });
       }
-      this.emitTurn(room);
       this.scheduleTurn(room.id);
+      this.emitTurn(room);
       const nextPlayer = room.players[room.currentTurnIndex];
       return {
         ok: true,

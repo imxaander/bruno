@@ -79,6 +79,22 @@ export const GetGameStateSchema = z.object({
 });
 export type GetGameStatePayload = z.infer<typeof GetGameStateSchema>;
 
+/** A vault effect shown in the client vault guide (implemented effects only). */
+export const VaultGuideEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(["vault-silver", "vault-gold", "vault-diamond"]),
+  effect: z.string(),
+  status: z.enum(["stable", "draft", "tentative"]),
+  playCondition: z.string().optional(),
+});
+export type VaultGuideEntry = z.infer<typeof VaultGuideEntrySchema>;
+
+export const VaultCatalogReturnSchema = z.object({
+  implemented: z.array(VaultGuideEntrySchema),
+});
+export type VaultCatalogReturn = z.infer<typeof VaultCatalogReturnSchema>;
+
 export const VaultOfferSchema = z.object({
   id: z.string(),
   name: z.string(),

@@ -10,7 +10,7 @@ tags: [game, cards, tier1]
 
 Diamond Vault is the **highest** vault tier (Tier I). Effects are the most powerful and often
 win-altering. Vault cards are **not** dealt from the deck — they form the **offer pool** for
-vault tokens (1 diamond token per game, each offering up to 5 random diamond effects,
+vault tokens (1 diamond token per game, each offering up to 3 random diamond effects,
 sampled from cards with a registered resolver). See
 [deck-composition.md](./deck-composition.md) and [vault-mechanism.md](./vault-mechanism.md).
 

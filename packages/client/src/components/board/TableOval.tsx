@@ -1,13 +1,17 @@
-import type { CardView } from "@bruno/shared";
+import { useState } from "react";
+import type { CardView, PileEffect } from "@bruno/shared";
+import { VAULT_ICONS } from "../vaultIcons.js";
 import GameCard from "../GameCard.js";
 
 interface TableOvalProps {
   deckCount: number;
   pileTop: CardView | null;
+  pileEffect?: PileEffect;
   direction: 1 | -1;
 }
 
-export function TableOval({ deckCount, pileTop, direction }: TableOvalProps) {
+export function TableOval({ deckCount, pileTop, pileEffect, direction }: TableOvalProps) {
+  const [vaultHover, setVaultHover] = useState(false);
   const arcPath = direction === 1 ? "M 20 6 A 14 14 0 0 1 34 20" : "M 20 6 A 14 14 0 0 0 6 20";
   const arrowPoints = direction === 1 ? "34,15 38,22 30,22" : "6,15 2,22 10,22";
 
@@ -110,7 +114,11 @@ export function TableOval({ deckCount, pileTop, direction }: TableOvalProps) {
         </span>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
+      <div
+        style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}
+        onMouseEnter={() => pileEffect && setVaultHover(true)}
+        onMouseLeave={() => setVaultHover(false)}
+      >
         <div style={{ position: "relative" }}>
           {pileTop ? (
             <>
@@ -123,14 +131,69 @@ export function TableOval({ deckCount, pileTop, direction }: TableOvalProps) {
                 card={pileTop}
                 size="lg"
                 style={{
-                  boxShadow:
-                    "0 0 52px rgba(0,110,255,1), 0 0 100px rgba(0,110,255,0.6), 0 0 160px rgba(0,110,255,0.22), 0 8px 24px rgba(0,0,0,0.9)",
+                  boxShadow: pileEffect
+                    ? "0 0 52px rgba(0,238,255,1), 0 0 100px rgba(0,238,255,0.6), 0 0 160px rgba(0,238,255,0.22), 0 8px 24px rgba(0,0,0,0.9)"
+                    : "0 0 52px rgba(0,110,255,1), 0 0 100px rgba(0,110,255,0.6), 0 0 160px rgba(0,110,255,0.22), 0 8px 24px rgba(0,0,0,0.9)",
                 }}
               />
             </>
           ) : (
             <GameCard faceDown size="lg" />
           )}
+          {vaultHover && pileEffect ? (
+            <div
+              style={{
+                position: "absolute",
+                bottom: "102%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: 260,
+                zIndex: 40,
+                background: "rgba(9,11,18,0.97)",
+                border: "1px solid rgba(0,238,255,0.3)",
+                borderRadius: 10,
+                boxShadow: "0 0 32px rgba(0,238,255,0.15), 0 14px 34px rgba(0,0,0,0.85)",
+                padding: "12px 14px",
+                pointerEvents: "none",
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 6px",
+                  fontFamily: "'Rajdhani'",
+                  fontWeight: 800,
+                  fontSize: 15,
+                  color: "#9ff0ff",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {VAULT_ICONS[pileEffect.cardId] ?? ""} {pileEffect.tier.replace("vault-", "")} Vault
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontFamily: "'Rajdhani'",
+                  fontWeight: 700,
+                  fontSize: 15,
+                  color: "#e8f0ff",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {pileEffect.name}
+              </p>
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  fontSize: 12.5,
+                  lineHeight: 1.5,
+                  color: "rgba(210,222,245,0.88)",
+                }}
+              >
+                {pileEffect.text}
+              </p>
+            </div>
+          ) : null}
         </div>
         <span
           style={{

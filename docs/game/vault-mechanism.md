@@ -33,10 +33,10 @@ the next player must still match that color (a token does not clear the active c
 ## 2. Playing a vault
 
 1. The player plays a vault token (their turn).
-2. The server samples **up to 5 random distinct implemented** catalog cards of that token's
+2. The server samples **up to 3 random distinct implemented** catalog cards of that token's
    tier (`sampleVaultOffers`): the pool is filtered to cards with a registered resolver
    (see `vault-effects-tracking.md` §Full table), so only effects that actually run can be offered.
-   When fewer than 5 implemented cards exist for a tier, **all** of them are offered:
+   When fewer than 3 implemented cards exist for a tier, **all** of them are offered:
    silver 19, gold 17, diamond 26 today.
 3. A `vault-choice` prompt is emitted to the actor with the sampled offers (id, name, tier,
    effect text). The token is **not** committed to the pile until the choice is made; the

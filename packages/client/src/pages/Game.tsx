@@ -5,6 +5,7 @@ import type {
   GameEndedPayload,
   GamePrompt,
   PlayerView,
+  VaultGuideEntry,
 } from "@bruno/shared";
 import { getCard, getMayhemEvent } from "@bruno/shared";
 import { Button } from "../components/Button.js";
@@ -15,14 +16,17 @@ import { TurnIndicator } from "../components/TurnIndicator.js";
 import { EventHistory } from "../components/EventHistory.js";
 import { TableStatus } from "../components/TableStatus.js";
 import { PlayerHand } from "../components/board/PlayerHand.js";
+import { RevealedHands } from "../components/board/RevealedHands.js";
 import { TableOval } from "../components/board/TableOval.js";
 import DrawFly, { type DrawFlyTarget } from "../components/board/DrawFly.js";
 import EffectBanner from "../components/EffectBanner.js";
+import { VAULT_ICONS } from "../components/vaultIcons.js";
 import {
   CardPicker,
   ColorPicker,
   TargetPicker,
   VaultPicker,
+  VaultGuide,
   LocationReveal,
   getLocationTheme,
   MayhemEventReveal,
@@ -77,6 +81,8 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   } | null>(null);
   const [revealedMayhemId, setRevealedMayhemId] = useState<string | null>(null);
   const [mayhemModalOpen, setMayhemModalOpen] = useState(false);
+  const [vaultGuideOpen, setVaultGuideOpen] = useState(false);
+  const [vaultCatalog, setVaultCatalog] = useState<VaultGuideEntry[] | null>(null);
   const effectTimer = useRef<number[]>([]);
   const [drawTargets, setDrawTargets] = useState<DrawFlyTarget[]>([]);
   const drawTimer = useRef<number | null>(null);
@@ -136,6 +142,12 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         setEffect(payload);
         setShowEffectReveal(true);
         setEffectVisible(true);
+        setLog((prev) =>
+          [
+            `${VAULT_ICONS[payload.cardId] ?? ""} ${payload.playerName} activated ${payload.name}`,
+            ...prev,
+          ].slice(0, 50),
+        );
         effectTimer.current.forEach(window.clearTimeout);
         effectTimer.current = [
           window.setTimeout(() => {
@@ -168,6 +180,8 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         return next;
       });
     };
+    const onCatalog = (payload: { implemented: VaultGuideEntry[] }) =>
+      setVaultCatalog(payload.implemented);
     socket.on("game:state", onState);
     socket.on("game:log", onLog);
     socket.on("game:draw", onDraw);
@@ -176,6 +190,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     socket.on("game:prompt", onPrompt);
     socket.on("game:ended", onEndedEvent);
     socket.on("game:effect", onEffect);
+    socket.on("vault:catalog:return", onCatalog);
     if (roomId && identity.id) {
       socket.emit("game:state:get", { gameId: roomId, playerId: identity.id });
     }
@@ -188,6 +203,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       socket.off("game:prompt", onPrompt);
       socket.off("game:ended", onEndedEvent);
       socket.off("game:effect", onEffect);
+      socket.off("vault:catalog:return", onCatalog);
     };
   }, [socket, roomId, identity.id, onEnded]);
 
@@ -343,19 +359,26 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   const myTurn = view ? view.currentTurnIndex === view.you.index : false;
   const canDraw = view != null && myTurn && !prompt;
 
-  useEffect(() => {
-    setRemaining(turnDuration);
-  }, [turnDuration, view?.currentTurnIndex, prompt]);
+  const turnPlayerName = view ? view.players[view.currentTurnIndex]?.name : undefined;
 
   useEffect(() => {
-    if (!myTurn) {
+    if (view?.turnDeadline) {
+      setRemaining(Math.max(0, Math.ceil((view.turnDeadline - Date.now()) / 1000)));
+    } else {
+      setRemaining(turnDuration);
+    }
+  }, [turnDuration, view?.currentTurnIndex, prompt, view?.turnDeadline]);
+
+  useEffect(() => {
+    const deadline = view?.turnDeadline;
+    if (!deadline) {
       return;
     }
     const id = window.setInterval(() => {
-      setRemaining((value) => Math.max(0, value - 1));
-    }, 1000);
+      setRemaining(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
+    }, 250);
     return () => window.clearInterval(id);
-  }, [myTurn, view?.currentTurnIndex]);
+  }, [view?.turnDeadline, view?.currentTurnIndex]);
 
   if (!view) {
     return (
@@ -466,6 +489,28 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         </span>
       </div>
       <button
+        onClick={() => {
+          if (!vaultCatalog && socket) {
+            socket.emit("vault:catalog:get");
+          }
+          setVaultGuideOpen(true);
+        }}
+        style={{
+          padding: "5px 14px",
+          fontFamily: "'Rajdhani'",
+          fontWeight: 600,
+          fontSize: 12,
+          background: "transparent",
+          color: "rgba(0,238,255,0.7)",
+          border: "1px solid rgba(0,238,255,0.3)",
+          borderRadius: 5,
+          cursor: "pointer",
+          letterSpacing: "0.08em",
+        }}
+      >
+        VAULTS
+      </button>
+      <button
         onClick={leaveGame}
         style={{
           padding: "5px 14px",
@@ -503,6 +548,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         active={myTurn}
         total={turnDuration}
         action={promptAction}
+        playerName={turnPlayerName}
       />
       {myTurn ? (
         <Button
@@ -602,6 +648,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         <TableOval
           deckCount={view.deckCount}
           pileTop={view.pileTop}
+          pileEffect={view.pileEffect}
           direction={view.currentDirection}
         />
       </div>
@@ -695,6 +742,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         <TableOval
           deckCount={view.deckCount}
           pileTop={view.pileTop}
+          pileEffect={view.pileEffect}
           direction={view.currentDirection}
         />
         <div style={{ position: "absolute", right: 60, top: "50%", transform: "translateY(-50%)" }}>
@@ -758,10 +806,14 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           onDone={() => setMayhemModalOpen(false)}
         />
       ) : null}
+      {vaultGuideOpen && vaultCatalog ? (
+        <VaultGuide entries={vaultCatalog} onClose={() => setVaultGuideOpen(false)} />
+      ) : null}
       {showEffectReveal && effect ? (
         <MayhemReveal
           playerName={effect.playerName}
           cardValue={effect.name}
+          icon={VAULT_ICONS[effect.cardId]}
           tier={
             effect.tier === "vault-silver"
               ? "silver"
@@ -797,73 +849,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         />
       ) : null}
       {(view.revealed ?? []).length > 0 && prompt?.kind !== "pick-cards" ? (
-        <div
-          style={{
-            position: "fixed",
-            left: 16,
-            bottom: 16,
-            zIndex: 40,
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-            maxWidth: 280,
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "'Barlow Condensed'",
-              fontWeight: 900,
-              fontSize: 13,
-              letterSpacing: "0.18em",
-              color: "#00eeff",
-              textShadow: "0 0 12px rgba(0,238,255,0.5)",
-            }}
-          >
-            {"\uD83D\uDC41"} REVEALED HANDS
-          </span>
-          {(view.revealed ?? []).map((hand) => {
-            const player = view.players.find((p) => p.id === hand.playerId);
-            return (
-              <div
-                key={hand.playerId}
-                style={{
-                  background: "rgba(11,11,18,0.94)",
-                  border: "1px solid rgba(0,238,255,0.22)",
-                  borderRadius: 10,
-                  padding: 10,
-                  boxShadow: "0 0 24px rgba(0,238,255,0.08)",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "#00eeff",
-                    fontWeight: 700,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    display: "flex",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span>{player?.name ?? hand.playerId}</span>
-                  <span style={{ color: "rgba(200,216,240,0.4)" }}>{hand.cards.length} cards</span>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 6,
-                    marginTop: 8,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {hand.cards.map((card) => (
-                    <GameCard key={card.id} card={card} size="xs" />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <RevealedHands revealed={view.revealed ?? []} players={view.players} />
       ) : null}
       {prompt?.kind === "choose-color" ? <ColorPicker onPick={chooseColor} /> : null}
       {prompt?.kind === "vault-choice" && prompt.offers ? (

@@ -6,6 +6,7 @@ import {
   JoinRoomPayloadSchema,
   LeaveRoomSchema,
   StartGameSchema,
+  getCard,
   type ClientToServerEvents,
   type ServerToClientEvents,
   type VaultOffer,
@@ -18,6 +19,7 @@ import {
   type RoomEvent,
   type StartGameOptions,
 } from "../game/room-manager.js";
+import { registeredResolverIds } from "../game/effects/registry.js";
 import type { TurnManager } from "../game/turn-manager.js";
 
 export type BrunoServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -355,6 +357,28 @@ export function registerSockets(
         return;
       }
       pushGameState(parsed.data.gameId);
+    });
+
+    socket.on("vault:catalog:get", () => {
+      const implemented = registeredResolverIds()
+        .map((cardId) => getCard(cardId))
+        .filter(
+          (card): card is NonNullable<typeof card> =>
+            card !== undefined &&
+            (card.type === "vault-silver" ||
+              card.type === "vault-gold" ||
+              card.type === "vault-diamond"),
+        )
+        .map((card) => ({
+          id: card.id,
+          name: card.name,
+          type: card.type as VaultOffer["type"],
+          effect: card.effect,
+          status: card.status,
+          playCondition: card.playCondition,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      socket.emit("vault:catalog:return", { implemented });
     });
 
     socket.on("disconnect", () => {

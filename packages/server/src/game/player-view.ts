@@ -70,6 +70,8 @@ export function toPlayerView(
     mayhemEventId: room.mayhemEventId,
     status: room.status,
     turnDuration: turnDurationSeconds,
+    turnDeadline: room.turnDeadline,
+    pileEffect: room.pileEffect,
     revealed: revealed.length > 0 ? revealed : undefined,
   };
 }

@@ -381,9 +381,9 @@ describe("room lifecycle over the wire", () => {
       if (prompt.kind !== "vault-choice") {
         throw new Error("expected a vault-choice prompt");
       }
-      expect(prompt.offers).toHaveLength(5);
+      expect(prompt.offers).toHaveLength(3);
       expect(prompt.offers.every((offer) => offer.type === "vault-silver")).toBe(true);
-      expect(new Set(prompt.offers.map((offer) => offer.id)).size).toBe(5);
+      expect(new Set(prompt.offers.map((offer) => offer.id)).size).toBe(3);
 
       const room = rooms.getRoom(gameId);
       if (!room?.pendingVault) {
@@ -744,4 +744,25 @@ describe("room lifecycle over the wire", () => {
       bob.disconnect();
     },
   );
+
+  it("returns the implemented vault catalog", { timeout: 15000 }, async () => {
+    const alice = await connect();
+    const catalog = once(alice, "vault:catalog:return");
+    alice.emit("vault:catalog:get");
+    const [payload] = await catalog;
+    expect(payload.implemented.length).toBeGreaterThan(0);
+    for (const entry of payload.implemented) {
+      expect(entry.id).toMatch(/^t[1-3]-/);
+      expect(["vault-silver", "vault-gold", "vault-diamond"]).toContain(entry.type);
+      expect(entry.name.length).toBeGreaterThan(0);
+      expect(entry.effect.length).toBeGreaterThan(0);
+    }
+    const silver = payload.implemented.filter((e) => e.type === "vault-silver");
+    const gold = payload.implemented.filter((e) => e.type === "vault-gold");
+    const diamond = payload.implemented.filter((e) => e.type === "vault-diamond");
+    expect(silver.length).toBeGreaterThan(0);
+    expect(gold.length).toBeGreaterThan(0);
+    expect(diamond.length).toBeGreaterThan(0);
+    alice.disconnect();
+  });
 });

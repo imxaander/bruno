@@ -145,7 +145,7 @@ export default function GameCard({
     faceDark = isDarkType(card.type);
     if (faceVault) {
       const full = getCard(card.id);
-      faceValue = full ? full.name : "";
+      faceValue = full ? full.name : card.id.startsWith("vault-") ? "VAULT" : "";
     } else if (card.color) {
       faceColor = card.color;
       faceValue = typeFaceValue(card.type, card.number);

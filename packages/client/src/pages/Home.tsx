@@ -1,17 +1,49 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import GameCard from "../components/GameCard.js";
 import { Button } from "../components/Button.js";
+import { UpdatesPanel, VaultGuide } from "../components/modals.js";
+import { hasUnseenUpdates, markUpdatesSeen } from "../changelog.js";
+import type { BrunoSocket } from "../socket/client.js";
 import type { PlayerIdentity } from "../socket/useSocket.js";
+import type { VaultGuideEntry } from "@bruno/shared";
 
 interface HomeProps {
   identity: PlayerIdentity;
+  socket: BrunoSocket | null;
   onPlay: (name: string) => void;
 }
 
-export function Home({ identity, onPlay }: HomeProps) {
+export function Home({ identity, socket, onPlay }: HomeProps) {
   const [name, setName] = useState(identity.name);
   const [focused, setFocused] = useState(false);
+  const [vaultGuideOpen, setVaultGuideOpen] = useState(false);
+  const [vaultCatalog, setVaultCatalog] = useState<VaultGuideEntry[] | null>(null);
+  const [updatesOpen, setUpdatesOpen] = useState(hasUnseenUpdates);
   const canPlay = name.trim().length > 0;
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+    const onCatalog = (payload: { implemented: VaultGuideEntry[] }) =>
+      setVaultCatalog(payload.implemented);
+    socket.on("vault:catalog:return", onCatalog);
+    return () => {
+      socket.off("vault:catalog:return", onCatalog);
+    };
+  }, [socket]);
+
+  const openVaultGuide = () => {
+    if (!vaultCatalog && socket) {
+      socket.emit("vault:catalog:get");
+    }
+    setVaultGuideOpen(true);
+  };
+
+  const closeUpdates = () => {
+    markUpdatesSeen();
+    setUpdatesOpen(false);
+  };
 
   return (
     <div
@@ -261,6 +293,64 @@ export function Home({ identity, onPlay }: HomeProps) {
           PLAY
         </Button>
 
+        <button
+          onClick={openVaultGuide}
+          style={{
+            background: "transparent",
+            border: "1px solid rgba(0,238,255,0.3)",
+            borderRadius: 8,
+            padding: "10px 28px",
+            fontFamily: "'Rajdhani'",
+            fontWeight: 700,
+            fontSize: 14,
+            letterSpacing: "0.24em",
+            color: "rgba(0,238,255,0.7)",
+            cursor: "pointer",
+            transition: "color 0.14s, border-color 0.14s, box-shadow 0.14s",
+          }}
+          onMouseEnter={(event) => {
+            event.currentTarget.style.color = "#00eeff";
+            event.currentTarget.style.borderColor = "rgba(0,238,255,0.7)";
+            event.currentTarget.style.boxShadow = "0 0 20px rgba(0,238,255,0.25)";
+          }}
+          onMouseLeave={(event) => {
+            event.currentTarget.style.color = "rgba(0,238,255,0.7)";
+            event.currentTarget.style.borderColor = "rgba(0,238,255,0.3)";
+            event.currentTarget.style.boxShadow = "none";
+          }}
+        >
+          {"\u25C8"} VAULT GUIDE
+        </button>
+
+        <button
+          onClick={() => setUpdatesOpen(true)}
+          style={{
+            background: "transparent",
+            border: "1px solid rgba(200,216,240,0.25)",
+            borderRadius: 8,
+            padding: "10px 28px",
+            fontFamily: "'Rajdhani'",
+            fontWeight: 700,
+            fontSize: 14,
+            letterSpacing: "0.24em",
+            color: "rgba(200,216,240,0.6)",
+            cursor: "pointer",
+            transition: "color 0.14s, border-color 0.14s, box-shadow 0.14s",
+          }}
+          onMouseEnter={(event) => {
+            event.currentTarget.style.color = "#c8d8f0";
+            event.currentTarget.style.borderColor = "rgba(200,216,240,0.6)";
+            event.currentTarget.style.boxShadow = "0 0 20px rgba(200,216,240,0.2)";
+          }}
+          onMouseLeave={(event) => {
+            event.currentTarget.style.color = "rgba(200,216,240,0.6)";
+            event.currentTarget.style.borderColor = "rgba(200,216,240,0.25)";
+            event.currentTarget.style.boxShadow = "none";
+          }}
+        >
+          {"\u2728"} WHAT'S NEW
+        </button>
+
         <p
           style={{
             fontFamily: "'Rajdhani'",
@@ -273,6 +363,10 @@ export function Home({ identity, onPlay }: HomeProps) {
           1 – 8 PLAYERS &nbsp;·&nbsp; REAL-TIME &nbsp;·&nbsp; VAULT POWERS
         </p>
       </div>
+      {vaultGuideOpen && vaultCatalog ? (
+        <VaultGuide entries={vaultCatalog} onClose={() => setVaultGuideOpen(false)} />
+      ) : null}
+      {updatesOpen ? <UpdatesPanel onClose={closeUpdates} /> : null}
     </div>
   );
 }

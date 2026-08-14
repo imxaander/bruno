@@ -24,6 +24,14 @@ export interface RevealedHand {
   cards: CardView[];
 }
 
+/** The vault effect resolved by the current pile-top token (pile hover tooltip). */
+export interface PileEffect {
+  cardId: string;
+  name: string;
+  tier: "vault-silver" | "vault-gold" | "vault-diamond";
+  text: string;
+}
+
 export interface PlayerView {
   playerCount: number;
   players: PublicPlayer[];
@@ -38,5 +46,9 @@ export interface PlayerView {
   mayhemEventId?: string;
   status: GameStatus;
   turnDuration: number;
+  /** Absolute epoch-ms deadline for the current player's turn (public timer). */
+  turnDeadline?: number;
+  /** Vault effect resolved by the current pile-top token, if any. */
+  pileEffect?: PileEffect;
   revealed?: RevealedHand[];
 }

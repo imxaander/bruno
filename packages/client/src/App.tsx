@@ -51,7 +51,7 @@ export default function App() {
   );
 
   if (screen === "home") {
-    return <Home identity={identity} onPlay={handlePlay} />;
+    return <Home identity={identity} socket={socket} onPlay={handlePlay} />;
   }
   if (screen === "rooms") {
     return <Rooms socket={socket} identity={identity} goLobby={goLobby} />;
