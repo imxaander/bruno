@@ -541,6 +541,49 @@ describe("RoomManager", () => {
     expect(room.currentTurnIndex).toBe(1);
   });
 
+  it("keeps the vault prompt open when the defaulted offer is unaffordable (t2-ruin)", () => {
+    const events: RoomEvent[] = [];
+    const timers: Array<() => void> = [];
+    const manager = new RoomManager({
+      eventSink: (event) => events.push(event),
+      turnManager: new TurnManager(5000, (callback) => {
+        timers.push(callback);
+        return { cancel: () => {} };
+      }),
+    });
+    const room = value(
+      manager.createRoom({ name: "A", playerId: "p1", playerName: "A", maxPlayers: 8 }),
+    );
+    value(manager.joinRoom(room.id, "p2", "B"));
+    value(manager.startGame(room.id, "p1", seeded(9)));
+    room.pendingDraw = 0;
+    room.currentTurnIndex = 0;
+    room.activeColor = "red";
+    room.players[0]!.hand = [vaultToken()];
+    room.pendingVault = {
+      cardIndex: 0,
+      playerId: "p1",
+      tier: "vault-silver",
+      offers: [CARDS.find((card) => card.id === "t2-ruin")!],
+    };
+
+    timers[0]!();
+
+    expect(room.pendingVault).toBeDefined();
+    expect(room.pendingVault?.chosenCardId).toBeUndefined();
+    expect(room.pile.some((card) => card.id === "vault-silver-token-0")).toBe(false);
+    expect(events).toContainEqual({
+      type: "alert",
+      gameId: room.id,
+      playerId: "p1",
+      message: "You need 7 red or yellow cards to play Ruin.",
+    });
+    expect(events.some((event) => event.type === "prompt" && event.kind === "vault-choice")).toBe(
+      true,
+    );
+    expect(timers.length).toBe(2);
+  });
+
   it("auto-fills default targets when pick-players times out", () => {
     const events: RoomEvent[] = [];
     const timers: Array<() => void> = [];
@@ -1329,6 +1372,133 @@ describe("vault card picking", () => {
     value(manager.leaveRoom(room.id, "p3"));
     expect(room.reveals.get("p1")).toBeUndefined();
   });
+
+  it("prompts pick-cards from the actor's own hand for a selfPick effect (t3-scavenge)", () => {
+    const events: RoomEvent[] = [];
+    const manager = createManager(events);
+    const room = setupCardGame(manager, 2);
+    room.players[0]!.hand = [
+      vaultToken(),
+      makeCard({ id: "red-1", name: "1", type: "number", color: "red", number: 1 }),
+      makeCard({ id: "red-2", name: "2", type: "number", color: "red", number: 2 }),
+      makeCard({ id: "blue-3", name: "3", type: "number", color: "blue", number: 3 }),
+    ];
+
+    seededVault(manager, room, "t3-scavenge");
+    chooseVaultEffect(manager, room, "t3-scavenge");
+
+    expect(room.pendingVault?.selfPickSpec).toEqual({ min: 1, max: 5 });
+    expect(events).toContainEqual({
+      type: "prompt",
+      gameId: room.id,
+      playerId: "p1",
+      kind: "pick-cards",
+      min: 1,
+      max: 3,
+      sourcePlayerIds: ["p1"],
+      selfHand: true,
+      excludedCardId: "vault-silver-token-0",
+    });
+    expect(room.reveals.get("p1")).toBeUndefined();
+    expect(room.currentTurnIndex).toBe(0);
+  });
+
+  it("completes the play once the actor picks own-hand cards to discard (t3-scavenge)", () => {
+    const events: RoomEvent[] = [];
+    const manager = createManager(events);
+    const room = setupCardGame(manager, 2);
+    room.players[0]!.hand = [
+      vaultToken(),
+      makeCard({ id: "red-1", name: "1", type: "number", color: "red", number: 1 }),
+      makeCard({ id: "red-2", name: "2", type: "number", color: "red", number: 2 }),
+      makeCard({ id: "blue-3", name: "3", type: "number", color: "blue", number: 3 }),
+    ];
+    const deckBefore = room.deck.length;
+
+    seededVault(manager, room, "t3-scavenge");
+    chooseVaultEffect(manager, room, "t3-scavenge");
+
+    const result = manager.performAction(room.id, "p1", {
+      gameId: room.id,
+      type: "choose-cards",
+      playerId: "p1",
+      cardIds: ["red-1", "blue-3"],
+    });
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(room.pendingVault).toBeUndefined();
+    const hand = room.players[0]!.hand.map((card) => card.id);
+    expect(hand).not.toContain("red-1");
+    expect(hand).not.toContain("blue-3");
+    expect(room.players[0]!.hand).toHaveLength(3);
+    expect(room.deck).toHaveLength(deckBefore - 2);
+    expect(room.currentTurnIndex).toBe(1);
+    expect(
+      events.some((event) => event.type === "log" && event.message.includes("discards 2 card")),
+    ).toBe(true);
+  });
+
+  it("rejects choose-cards for ids outside the actor's own hand (t3-scavenge)", () => {
+    const manager = createManager();
+    const room = setupCardGame(manager, 2);
+    room.players[0]!.hand = [
+      vaultToken(),
+      makeCard({ id: "red-1", name: "1", type: "number", color: "red", number: 1 }),
+      makeCard({ id: "red-2", name: "2", type: "number", color: "red", number: 2 }),
+    ];
+    room.players[1]!.hand = [
+      makeCard({ id: "green-9", name: "9", type: "number", color: "green", number: 9 }),
+    ];
+
+    seededVault(manager, room, "t3-scavenge");
+    chooseVaultEffect(manager, room, "t3-scavenge");
+
+    const result = manager.performAction(room.id, "p1", {
+      gameId: room.id,
+      type: "choose-cards",
+      playerId: "p1",
+      cardIds: ["green-9"],
+    });
+    if (result.ok) {
+      throw new Error("expected picking a card outside the own hand to fail");
+    }
+    expect(result.error).toBe("INVALID_ACTION");
+    expect(room.pendingVault).toBeDefined();
+  });
+
+  it("auto-picks the minimum from the own hand when pick-cards times out (t3-scavenge)", () => {
+    const events: RoomEvent[] = [];
+    const timers: Array<() => void> = [];
+    const manager = new RoomManager({
+      eventSink: (event) => events.push(event),
+      turnManager: new TurnManager(5000, (callback) => {
+        timers.push(callback);
+        return { cancel: () => {} };
+      }),
+    });
+    const room = setupCardGame(manager, 2);
+    room.players[0]!.hand = [
+      vaultToken(),
+      makeCard({ id: "red-1", name: "1", type: "number", color: "red", number: 1 }),
+      makeCard({ id: "red-2", name: "2", type: "number", color: "red", number: 2 }),
+      makeCard({ id: "blue-3", name: "3", type: "number", color: "blue", number: 3 }),
+    ];
+    const deckBefore = room.deck.length;
+
+    seededVault(manager, room, "t3-scavenge");
+    chooseVaultEffect(manager, room, "t3-scavenge");
+
+    timers.pop()!();
+
+    expect(room.pendingVault).toBeUndefined();
+    expect(room.players[0]!.hand).toHaveLength(3);
+    expect(room.deck).toHaveLength(deckBefore - 1);
+    expect(room.currentTurnIndex).toBe(1);
+    expect(
+      events.some((event) => event.type === "log" && event.message.includes("didn't pick cards")),
+    ).toBe(true);
+  });
 });
 
 describe("vault play-condition gating", () => {
@@ -1351,8 +1521,9 @@ describe("vault play-condition gating", () => {
     return room;
   }
 
-  it("rejects vault-choice when the actor cannot afford the play condition (t3-offerings)", () => {
-    const manager = createManager();
+  it("alerts and re-prompts the vault choice when the actor cannot afford the play condition (t3-offerings)", () => {
+    const events: RoomEvent[] = [];
+    const manager = createManager(events);
     const room = setupGame(manager, 3);
 
     seededVault(manager, room, "t3-offerings", { min: 1, max: 1, allowSelf: true });
@@ -1362,11 +1533,23 @@ describe("vault play-condition gating", () => {
       playerId: "p1",
       cardId: "t3-offerings",
     });
-    if (result.ok) {
-      throw new Error("expected an unaffordable play condition to fail");
-    }
-    expect(result.error).toBe("CANNOT_PAY_CONDITION");
+    expect(result.ok).toBe(true);
+    expect(events).toContainEqual({
+      type: "alert",
+      gameId: room.id,
+      playerId: "p1",
+      message: "You need 3 draw [+] cards to play Offerings.",
+    });
+    expect(
+      events.some(
+        (event) =>
+          event.type === "prompt" &&
+          event.kind === "vault-choice" &&
+          event.offers.some((card) => card.id === "t3-offerings"),
+      ),
+    ).toBe(true);
     expect(room.pendingVault).toBeDefined();
+    expect(room.pendingVault?.chosenCardId).toBeUndefined();
     expect(room.players[0]!.hand).toHaveLength(1);
   });
 

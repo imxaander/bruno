@@ -44,6 +44,8 @@ export interface ResolverInputs {
   color?: boolean;
   /** Set when the resolver needs the actor to pick cards from revealed hands. */
   steal?: StealInput;
+  /** Set when the resolver needs the actor to pick cards from their own hand (e.g. Scavenge). */
+  selfPick?: { min: number; max: number };
 }
 
 const resolvers = new Map<string, EffectResolver>();

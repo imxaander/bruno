@@ -432,6 +432,79 @@ describe("room lifecycle over the wire", () => {
   );
 
   it(
+    "alerts and re-prompts when an unaffordable play-condition offer is picked (t2-ruin)",
+    { timeout: 15000 },
+    async () => {
+      const alice = await connect();
+      const bob = await connect();
+      const gameId = await setupGame(alice, bob);
+
+      await engineer(rooms.getRoom(gameId), {
+        pile: makeCard({ id: "red-5", name: "5", type: "number", color: "red", number: 5 }),
+        activeColor: "red",
+        currentTurnIndex: 0,
+        pendingDraw: 0,
+        aliceHand: [
+          makeCard({
+            id: "vault-silver-token-0",
+            name: "Silver Vault",
+            type: "vault-silver",
+            tags: ["wild"],
+          }),
+          makeCard({ id: "red-3", name: "3", type: "number", color: "red", number: 3 }),
+        ],
+      });
+
+      alice.emit("game:action", { gameId, type: "play", playerId: "PID-a", cardIndex: 0 });
+      const [vaultPrompt] = await once(alice, "game:prompt");
+      if (vaultPrompt.kind !== "vault-choice") {
+        throw new Error("expected a vault-choice prompt");
+      }
+
+      const room = rooms.getRoom(gameId);
+      if (!room?.pendingVault) {
+        throw new Error("expected a pending vault");
+      }
+      room.pendingVault.offers = [CARDS.find((card) => card.id === "t2-ruin")!];
+
+      const alertEvent = once(alice, "game:alert");
+      const rePrompt = once(alice, "game:prompt");
+      alice.emit("game:action", {
+        gameId,
+        type: "vault-choice",
+        playerId: "PID-a",
+        cardId: "t2-ruin",
+      });
+      const [alert] = await alertEvent;
+      expect(alert).toEqual({
+        gameId,
+        message: "You need 7 red or yellow cards to play Ruin.",
+      });
+      const [reEmitted] = await rePrompt;
+      expect(reEmitted).toMatchObject({ gameId, kind: "vault-choice" });
+      expect(room.pendingVault?.chosenCardId).toBeUndefined();
+      expect(room.players[0]!.hand).toHaveLength(2);
+
+      room.pendingVault.offers = [CARDS.find((card) => card.id === "t3-mitosis")!];
+      const logEvent = once(alice, "game:log");
+      const turnEvent = once(alice, "game:turn");
+      alice.emit("game:action", {
+        gameId,
+        type: "vault-choice",
+        playerId: "PID-a",
+        cardId: "t3-mitosis",
+      });
+      const [log] = await logEvent;
+      expect(log.message).toContain("plays");
+      const [turn] = await turnEvent;
+      expect(turn.playerIndex).toBe(1);
+
+      alice.disconnect();
+      bob.disconnect();
+    },
+  );
+
+  it(
     "prompts the actor to pick targets after choosing a target-taking vault effect",
     { timeout: 15000 },
     async () => {

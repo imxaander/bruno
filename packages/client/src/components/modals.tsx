@@ -515,6 +515,17 @@ export function VaultPicker({ offers, onPick }: VaultPickerProps) {
                   >
                     {offer.effect}
                   </span>
+                  {offer.playCondition ? (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        lineHeight: 1.3,
+                        color: "rgba(255,184,77,0.9)",
+                      }}
+                    >
+                      {offer.playCondition}
+                    </span>
+                  ) : null}
                 </span>
               </button>
             );
@@ -686,10 +697,11 @@ interface CardPickerProps {
   min: number;
   max: number;
   perPlayer?: { min: number; max: number };
+  selfHand?: boolean;
   onConfirm: (cardIds: string[]) => void;
 }
 
-export function CardPicker({ sources, min, max, perPlayer, onConfirm }: CardPickerProps) {
+export function CardPicker({ sources, min, max, perPlayer, selfHand, onConfirm }: CardPickerProps) {
   const [selected, setSelected] = useState<string[]>([]);
   const totalAvailable = sources.reduce((sum, source) => sum + source.cards.length, 0);
   const effectiveMin = Math.min(min, totalAvailable);
@@ -722,8 +734,9 @@ export function CardPicker({ sources, min, max, perPlayer, onConfirm }: CardPick
     });
   };
 
-  const subtitle =
-    perPlayer && perPlayer.min === perPlayer.max
+  const subtitle = selfHand
+    ? `Pick ${min}${max > min ? `\u2013${max}` : ""} card${max === 1 ? "" : "s"} from your hand`
+    : perPlayer && perPlayer.min === perPlayer.max
       ? `Pick exactly ${perPlayer.min} from each player`
       : perPlayer
         ? `Pick ${min}\u2013${max} total, ${perPlayer.min}\u2013${perPlayer.max} from each`
@@ -732,8 +745,8 @@ export function CardPicker({ sources, min, max, perPlayer, onConfirm }: CardPick
   return (
     <Overlay>
       <Frame
-        title="PICK CARDS"
-        subtitle={`${subtitle} \u2014 hands are revealed to you`}
+        title={selfHand ? "DISCARD CARDS" : "PICK CARDS"}
+        subtitle={`${subtitle}${selfHand ? "" : " \u2014 hands are revealed to you"}`}
         width={720}
       >
         <div
@@ -880,7 +893,7 @@ export function CardPicker({ sources, min, max, perPlayer, onConfirm }: CardPick
               cursor: ready ? "pointer" : "not-allowed",
             }}
           >
-            Confirm
+            {selfHand ? "Discard" : "Confirm"}
           </button>
         </div>
       </Frame>

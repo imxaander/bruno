@@ -378,26 +378,25 @@ function scavenge(context: EffectContext): EffectResult {
   if (!actor) {
     return { applied: false };
   }
-  const max = Math.min(5, actor.hand.length);
-  if (max <= 0) {
+  const picked = context.picked ?? [];
+  if (picked.length === 0) {
     return { applied: true, log: [`${actor.name} has no cards to discard.`] };
   }
-  const count = 1 + Math.floor(context.random() * max);
-  const discarded = takeRandom(actor.hand, count, context.random).length;
+  const { taken } = applyPicked(context, "discard");
   const drawn = addCards(
     context.game,
     actor,
-    discarded * (context.amountMultiplier ?? 1),
+    taken.length * (context.amountMultiplier ?? 1),
     context.random,
   );
   const name = actorName(context);
   return {
     applied: true,
-    log: [`${name} discards ${discarded} card(s) and draws ${drawn}.`],
+    log: [`${name} discards ${taken.length} card(s) and draws ${drawn}.`],
   };
 }
 
-registerResolver("t3-scavenge", scavenge);
+registerResolver("t3-scavenge", scavenge, { selfPick: { min: 1, max: 5 } });
 
 /** "Discard your hand. Draw 1 for each card discarded. It's your turn again." */
 function rummage(context: EffectContext): EffectResult {

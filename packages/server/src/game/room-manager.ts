@@ -46,6 +46,7 @@ function fail<T>(error: RoomError | EngineError): RoomResult<T> {
 
 export type RoomEvent =
   | { type: "log"; gameId: string; message: string }
+  | { type: "alert"; gameId: string; playerId: string; message: string }
   | { type: "draw"; gameId: string; playerId: string; playerName: string; count: number }
   | { type: "turn"; gameId: string; playerIndex: number; playerId: string }
   | { type: "ended"; gameId: string; winnerId: string; winnerName: string }
@@ -69,6 +70,8 @@ export type RoomEvent =
       max: number;
       sourcePlayerIds: string[];
       perPlayer?: { min: number; max: number };
+      selfHand?: boolean;
+      excludedCardId?: string;
     }
   | {
       type: "effect";
@@ -138,6 +141,16 @@ export class RoomManager {
       gameId: room.id,
       playerIndex: room.currentTurnIndex,
       playerId: player.id,
+    });
+  }
+
+  private emitVaultPrompt(room: Room, player: Player, offers: Card[]): void {
+    this.emit({
+      type: "prompt",
+      gameId: room.id,
+      playerId: player.id,
+      kind: "vault-choice",
+      offers,
     });
   }
 
@@ -228,6 +241,16 @@ export class RoomManager {
     return picked;
   }
 
+  /** Minimum legal pick from the actor's own hand on timeout: `min` cards (all if fewer). */
+  private autoPickSelf(room: Room, player: Player, spec: { min: number; max: number }): string[] {
+    const pending = room.pendingVault;
+    const excluded =
+      pending?.cardIndex !== undefined ? player.hand[pending.cardIndex]?.id : undefined;
+    const candidates = player.hand.filter((card) => card.id !== excluded);
+    const count = Math.min(spec.min, candidates.length);
+    return candidates.slice(0, count).map((card) => card.id);
+  }
+
   private resolveOpenPrompt(room: Room, player: Player): boolean {
     if (room.pendingWild) {
       const pending = room.pendingWild;
@@ -251,9 +274,21 @@ export class RoomManager {
         // The pending vault choice belongs to a different player — don't resolve it.
         return false;
       }
-      if (!pending.targetSpec) {
+      if (!pending.chosenCardId) {
         const offer = pending.offers[0];
         if (offer) {
+          const cost = getResolverInputs(offer.id)?.cost;
+          if (cost && countMatchingCards(player.hand, cost.match) < cost.count) {
+            this.emit({
+              type: "alert",
+              gameId: room.id,
+              playerId: player.id,
+              message: `You need ${cost.label} to play ${offer.name}.`,
+            });
+            this.emitVaultPrompt(room, player, pending.offers);
+            this.scheduleTurn(room.id);
+            return true;
+          }
           pending.chosenCardId = offer.id;
           const spec = getResolverInputs(offer.id)?.targets;
           if (spec) {
@@ -265,6 +300,11 @@ export class RoomManager {
             pending.stealSpec = steal;
             pending.chosenCardIds = this.autoPickCards(room, pending);
           }
+          const selfPick = getResolverInputs(offer.id)?.selfPick;
+          if (selfPick) {
+            pending.selfPickSpec = selfPick;
+            pending.chosenCardIds = this.autoPickSelf(room, player, selfPick);
+          }
           this.emit({
             type: "log",
             gameId: room.id,
@@ -273,6 +313,16 @@ export class RoomManager {
           this.completePlay(room, player, pending.cardIndex, undefined);
           return true;
         }
+      } else if (pending.colorRequired) {
+        pending.colorRequired = false;
+        const color = this.defaultColor(room, player);
+        this.emit({
+          type: "log",
+          gameId: room.id,
+          message: `${player.name} didn't choose a color — defaulting to ${color}.`,
+        });
+        this.completePlay(room, player, pending.cardIndex, color);
+        return true;
       } else if (pending.stealSpec) {
         pending.chosenCardIds = this.autoPickCards(room, pending);
         this.emit({
@@ -282,7 +332,16 @@ export class RoomManager {
         });
         this.completePlay(room, player, pending.cardIndex, undefined);
         return true;
-      } else {
+      } else if (pending.selfPickSpec) {
+        pending.chosenCardIds = this.autoPickSelf(room, player, pending.selfPickSpec);
+        this.emit({
+          type: "log",
+          gameId: room.id,
+          message: `${player.name} didn't pick cards — defaulting to ${pending.chosenCardIds.length} card(s).`,
+        });
+        this.completePlay(room, player, pending.cardIndex, undefined);
+        return true;
+      } else if (pending.targetSpec) {
         pending.targetIds = this.defaultTargetIds(room, player, pending.targetSpec);
         this.emit({
           type: "log",
@@ -675,7 +734,15 @@ export class RoomManager {
     const inputs = getResolverInputs(offer.id);
     const cost = inputs?.cost;
     if (cost && countMatchingCards(player.hand, cost.match) < cost.count) {
-      return fail("CANNOT_PAY_CONDITION");
+      pending.chosenCardId = undefined;
+      this.emit({
+        type: "alert",
+        gameId: room.id,
+        playerId: player.id,
+        message: `You need ${cost.label} to play ${offer.name}.`,
+      });
+      this.emitVaultPrompt(room, player, pending.offers);
+      return { ok: true, value: { log: [], won: false, nextPlayerId: null } };
     }
     if (inputs?.color) {
       pending.colorRequired = true;
@@ -685,6 +752,29 @@ export class RoomManager {
         gameId: room.id,
         playerId: player.id,
         kind: "choose-color",
+      });
+      return { ok: true, value: { log: [], won: false, nextPlayerId: null } };
+    }
+    const selfPick = inputs?.selfPick;
+    if (selfPick) {
+      pending.selfPickSpec = selfPick;
+      const excluded = player.hand[pending.cardIndex]?.id;
+      const max = Math.min(selfPick.max, player.hand.length - (excluded ? 1 : 0));
+      if (max <= 0) {
+        pending.chosenCardIds = [];
+        return this.completePlay(room, player, pending.cardIndex, undefined);
+      }
+      this.scheduleTurn(room.id);
+      this.emit({
+        type: "prompt",
+        gameId: room.id,
+        playerId: player.id,
+        kind: "pick-cards",
+        min: selfPick.min,
+        max,
+        sourcePlayerIds: [player.id],
+        selfHand: true,
+        excludedCardId: excluded,
       });
       return { ok: true, value: { log: [], won: false, nextPlayerId: null } };
     }
@@ -767,6 +857,32 @@ export class RoomManager {
     const pending = room.pendingVault;
     if (!pending || pending.playerId !== player.id) {
       return fail("INVALID_ACTION");
+    }
+    const selfPick = pending.selfPickSpec;
+    if (selfPick) {
+      if (!cardIds || cardIds.length === 0) {
+        return fail("INVALID_ACTION");
+      }
+      if (new Set(cardIds).size !== cardIds.length) {
+        return fail("INVALID_ACTION");
+      }
+      const excluded = player.hand[pending.cardIndex]?.id;
+      const max = Math.min(selfPick.max, player.hand.length - (excluded ? 1 : 0));
+      const effectiveMin = Math.min(selfPick.min, max);
+      if (cardIds.length > max || cardIds.length < effectiveMin) {
+        return fail("INVALID_ACTION");
+      }
+      const handIds = new Set(player.hand.map((card) => card.id));
+      if (excluded) {
+        handIds.delete(excluded);
+      }
+      for (const id of cardIds) {
+        if (!handIds.has(id)) {
+          return fail("INVALID_ACTION");
+        }
+      }
+      pending.chosenCardIds = cardIds;
+      return this.completePlay(room, player, pending.cardIndex, undefined);
     }
     const spec = pending.stealSpec;
     if (!spec) {

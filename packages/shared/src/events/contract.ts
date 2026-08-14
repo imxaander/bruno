@@ -3,6 +3,7 @@ import type {
   CreateRoomPayload,
   ErrorEnvelope,
   GameAction,
+  GameAlert,
   GameEffect,
   GameEndedPayload,
   GamePrompt,
@@ -43,6 +44,7 @@ export interface ServerToClientEvents {
   "game:effect": (payload: GameEffect) => void;
   "game:turn": (payload: { gameId: string; playerIndex: number; playerId: string }) => void;
   "game:prompt": (payload: GamePrompt) => void;
+  "game:alert": (payload: GameAlert) => void;
   "game:ended": (payload: GameEndedPayload) => void;
   "vault:catalog:return": (payload: VaultCatalogReturn) => void;
   error: (payload: ErrorEnvelope) => void;

@@ -20,6 +20,7 @@ import { RevealedHands } from "../components/board/RevealedHands.js";
 import { TableOval } from "../components/board/TableOval.js";
 import DrawFly, { type DrawFlyTarget } from "../components/board/DrawFly.js";
 import EffectBanner from "../components/EffectBanner.js";
+import GameAlert from "../components/GameAlert.js";
 import { VAULT_ICONS } from "../components/vaultIcons.js";
 import {
   CardPicker,
@@ -61,6 +62,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
   const [view, setView] = useState<PlayerView | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [alert, setAlert] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<GamePrompt | null>(null);
   const [remaining, setRemaining] = useState(0);
   const [effect, setEffect] = useState<GameEffect | null>(null);
@@ -131,6 +133,11 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         setPrompt(payload);
       }
     };
+    const onAlert = (payload: { gameId: string; message: string }) => {
+      if (payload.gameId === roomId) {
+        setAlert(payload.message);
+      }
+    };
     const onEndedEvent = (payload: GameEndedPayload) => {
       if (payload.gameId === roomId) {
         setPrompt(null);
@@ -188,6 +195,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     socket.on("game:turn", onTurn);
     socket.on("error", onError);
     socket.on("game:prompt", onPrompt);
+    socket.on("game:alert", onAlert);
     socket.on("game:ended", onEndedEvent);
     socket.on("game:effect", onEffect);
     socket.on("vault:catalog:return", onCatalog);
@@ -201,6 +209,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       socket.off("game:turn", onTurn);
       socket.off("error", onError);
       socket.off("game:prompt", onPrompt);
+      socket.off("game:alert", onAlert);
       socket.off("game:ended", onEndedEvent);
       socket.off("game:effect", onEffect);
       socket.off("vault:catalog:return", onCatalog);
@@ -791,6 +800,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       {effect && !showEffectReveal ? (
         <EffectBanner effect={effect} visible={effectVisible} />
       ) : null}
+      <GameAlert message={alert} onDismiss={() => setAlert(null)} />
       {locationModalOpen && locationRevealData ? (
         <LocationReveal
           name={locationRevealData.name}
@@ -876,20 +886,33 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
       ) : null}
       {prompt?.kind === "pick-cards" ? (
         <CardPicker
-          sources={prompt.sourcePlayerIds
-            .map((sourceId) => {
-              const revealed = view.revealed?.find((hand) => hand.playerId === sourceId);
-              const publicPlayer = view.players.find((p) => p.id === sourceId);
-              return {
-                playerId: sourceId,
-                playerName: publicPlayer?.name ?? "Player",
-                cards: revealed?.cards ?? [],
-              };
-            })
-            .filter((source) => source.cards.length > 0)}
+          sources={
+            prompt.selfHand
+              ? [
+                  {
+                    playerId: identity.id,
+                    playerName: "Your hand",
+                    cards: (view?.you.hand ?? []).filter(
+                      (card) => card.id !== prompt.excludedCardId,
+                    ),
+                  },
+                ]
+              : prompt.sourcePlayerIds
+                  .map((sourceId) => {
+                    const revealed = view.revealed?.find((hand) => hand.playerId === sourceId);
+                    const publicPlayer = view.players.find((p) => p.id === sourceId);
+                    return {
+                      playerId: sourceId,
+                      playerName: publicPlayer?.name ?? "Player",
+                      cards: revealed?.cards ?? [],
+                    };
+                  })
+                  .filter((source) => source.cards.length > 0)
+          }
           min={prompt.min}
           max={prompt.max}
           perPlayer={prompt.perPlayer}
+          selfHand={prompt.selfHand}
           onConfirm={chooseCards}
         />
       ) : null}

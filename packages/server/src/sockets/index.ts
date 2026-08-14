@@ -113,6 +113,7 @@ export function registerSockets(
               name: card.name,
               type: card.type as VaultOffer["type"],
               effect: card.effect,
+              playCondition: card.playCondition,
             })),
           });
         } else if (event.kind === "pick-players") {
@@ -131,6 +132,8 @@ export function registerSockets(
             max: event.max,
             sourcePlayerIds: event.sourcePlayerIds,
             perPlayer: event.perPlayer,
+            selfHand: event.selfHand,
+            excludedCardId: event.excludedCardId,
           });
         } else {
           socket.emit("game:prompt", { gameId: event.gameId, kind: "choose-color" });
@@ -163,6 +166,17 @@ export function registerSockets(
       case "log":
         io.to(event.gameId).emit("game:log", { gameId: event.gameId, message: event.message });
         break;
+      case "alert": {
+        const sockets = roomSockets.get(event.gameId);
+        if (sockets) {
+          for (const socket of sockets) {
+            if (socket.data.playerId === event.playerId) {
+              socket.emit("game:alert", { gameId: event.gameId, message: event.message });
+            }
+          }
+        }
+        break;
+      }
       case "draw":
         io.to(event.gameId).emit("game:draw", {
           gameId: event.gameId,

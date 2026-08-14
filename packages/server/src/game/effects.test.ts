@@ -485,18 +485,28 @@ describe("wave 1 resolver batch", () => {
     expect(effect.log?.join(" ")).toMatch(/draws/);
   });
 
-  it("discards 1-5 cards and redraws the same amount (t3-scavenge)", () => {
+  it("discards the picked cards and redraws the same amount (t3-scavenge)", () => {
     const { room } = startGame(2);
-    room.players[0]!.hand = Array.from({ length: 6 }, () => skipCard());
+    const hand = ["red-skip-0", "blue-skip-1", "green-skip-2", "yellow-skip-3", "red-skip-4", "blue-skip-5"].map(
+      (id) => ({ ...skipCard(), id }),
+    );
+    room.players[0]!.hand = hand;
+    const picked = hand.slice(0, 3).map((card) => card.id);
     const deckBefore = room.deck.length;
-    const effect = getResolver("t3-scavenge")!({ game: room, actor: "p0", random: seeded(2) });
+    const effect = getResolver("t3-scavenge")!({
+      game: room,
+      actor: "p0",
+      picked,
+      random: seeded(2),
+    });
     expect(effect.applied).toBe(true);
     const log = effect.log?.join(" ") ?? "";
-    expect(log).toMatch(/discards \d+ card\(s\) and draws \d+/);
-    const discarded = Number(log.match(/discards (\d+)/)?.[1] ?? 0);
-    expect(discarded).toBeGreaterThan(0);
+    expect(log).toMatch(/discards 3 card\(s\) and draws 3/);
     expect(room.players[0]!.hand).toHaveLength(6);
-    expect(room.deck).toHaveLength(deckBefore - discarded);
+    for (const id of picked) {
+      expect(room.players[0]!.hand.map((card) => card.id)).not.toContain(id);
+    }
+    expect(room.deck).toHaveLength(deckBefore - 3);
   });
 
   it("redraws the whole hand and keeps the turn (t2-rummage)", () => {
@@ -1259,20 +1269,24 @@ describe("loc-volcano amount multiplier", () => {
 
   it("scales the redraw on loc-volcano (t3-scavenge)", () => {
     const { room } = startGame(2);
-    room.players[0]!.hand = Array.from({ length: 6 }, () => skipCard());
+    const hand = ["red-skip-0", "blue-skip-1", "green-skip-2", "yellow-skip-3", "red-skip-4", "blue-skip-5"].map(
+      (id) => ({ ...skipCard(), id }),
+    );
+    room.players[0]!.hand = hand;
+    const picked = hand.slice(0, 2).map((card) => card.id);
     const deckBefore = room.deck.length;
     const effect = getResolver("t3-scavenge")!({
       game: room,
       actor: "p0",
+      picked,
       amountMultiplier: 2,
       random: seeded(2),
     });
     expect(effect.applied).toBe(true);
     const log = effect.log?.join(" ") ?? "";
-    const discarded = Number(log.match(/discards (\d+)/)?.[1] ?? 0);
-    expect(discarded).toBeGreaterThan(0);
-    expect(room.players[0]!.hand).toHaveLength(6 + discarded);
-    expect(room.deck).toHaveLength(deckBefore - 2 * discarded);
+    expect(log).toMatch(/discards 2 card/);
+    expect(room.players[0]!.hand).toHaveLength(8);
+    expect(room.deck).toHaveLength(deckBefore - 4);
   });
 
   it("doubles the redraw on loc-volcano (t2-rummage)", () => {

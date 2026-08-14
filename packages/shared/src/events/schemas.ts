@@ -100,8 +100,17 @@ export const VaultOfferSchema = z.object({
   name: z.string(),
   type: z.enum(["vault-silver", "vault-gold", "vault-diamond"]),
   effect: z.string(),
+  playCondition: z.string().optional(),
 });
 export type VaultOffer = z.infer<typeof VaultOfferSchema>;
+
+/** A short, non-blocking in-game notification shown to a single player (e.g. "you need 7
+ * red or yellow cards to play Ruin" when a play-condition offer is not affordable). */
+export const GameAlertSchema = z.object({
+  gameId: z.string().min(1),
+  message: z.string().min(1),
+});
+export type GameAlert = z.infer<typeof GameAlertSchema>;
 
 export const PickPlayersPromptSchema = z.object({
   min: z.number().int().min(1),
@@ -121,6 +130,10 @@ export const PickCardsPromptSchema = z.object({
       max: z.number().int().min(1),
     })
     .optional(),
+  /** True when the actor picks from their own hand (e.g. Scavenge) instead of revealed hands. */
+  selfHand: z.boolean().optional(),
+  /** Card to hide from a selfHand prompt (e.g. the vault token being played). */
+  excludedCardId: z.string().optional(),
 });
 export type PickCardsPrompt = z.infer<typeof PickCardsPromptSchema>;
 
@@ -153,6 +166,8 @@ export const GamePromptSchema = z.discriminatedUnion("kind", [
         max: z.number().int().min(1),
       })
       .optional(),
+    selfHand: z.boolean().optional(),
+    excludedCardId: z.string().optional(),
   }),
 ]);
 export type GamePrompt = z.infer<typeof GamePromptSchema>;

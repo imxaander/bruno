@@ -34,6 +34,8 @@ export interface PendingVault {
   colorRequired?: boolean;
   /** Set once the actor must pick cards from revealed target hands (Wave 2). */
   stealSpec?: StealInput;
+  /** Set once the actor must pick cards from their own hand (e.g. Scavenge). */
+  selfPickSpec?: { min: number; max: number };
   /** Card ids picked via the pick-cards sub-prompt, passed to the resolver. */
   chosenCardIds?: string[];
 }
