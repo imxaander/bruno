@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import type { GameEndedPayload } from "@bruno/shared";
 import { useSocket } from "./socket/useSocket.js";
-import { AuthProvider } from "./firebase/AuthProvider.js";
+import { AuthProvider, useAuth } from "./firebase/AuthProvider.js";
+import { ProfileModal } from "./firebase/ProfileModal.js";
 import { AfterGame } from "./pages/AfterGame.js";
 import { Game } from "./pages/Game.js";
 import { Home } from "./pages/Home.js";
@@ -10,13 +11,15 @@ import { Rooms } from "./pages/Rooms.js";
 
 type Screen = "home" | "rooms" | "lobby" | "game" | "aftergame";
 
-export default function App() {
+function AppContent() {
   const { socket, identity, saveIdentity, setRoomId: setSocketRoomId, reconnecting } = useSocket();
+  const { profile, rank, user } = useAuth();
   const [screen, setScreen] = useState<Screen>("home");
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomName, setRoomName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(8);
   const [ended, setEnded] = useState<GameEndedPayload | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const goRooms = useCallback(() => {
     setEnded(null);
@@ -64,6 +67,10 @@ export default function App() {
     [identity.id, saveIdentity, goRooms],
   );
 
+  const profileProps = profile && rank
+    ? { profile, rank, email: user?.email ?? null, onClose: () => setProfileOpen(false) }
+    : null;
+
   const content = (() => {
     if (screen === "home") {
       return (
@@ -71,7 +78,16 @@ export default function App() {
       );
     }
     if (screen === "rooms") {
-      return <Rooms socket={socket} identity={identity} goLobby={goLobby} />;
+      return (
+        <Rooms
+          socket={socket}
+          identity={identity}
+          goLobby={goLobby}
+          profileIcon={profile?.icon}
+          profileRank={rank?.name}
+          onProfileClick={() => setProfileOpen(true)}
+        />
+      );
     }
     if (screen === "lobby") {
       return (
@@ -83,6 +99,9 @@ export default function App() {
           maxPlayers={maxPlayers}
           goRooms={goRooms}
           goGame={goGame}
+          profileIcon={profile?.icon}
+          profileRank={rank?.name}
+          onProfileClick={() => setProfileOpen(true)}
         />
       );
     }
@@ -95,6 +114,9 @@ export default function App() {
           goLobby={goRooms}
           onEnded={handleEnded}
           reconnecting={reconnecting}
+          profileIcon={profile?.icon}
+          profileRank={rank?.name}
+          onProfileClick={() => setProfileOpen(true)}
         />
       );
     }
@@ -109,5 +131,18 @@ export default function App() {
     );
   })();
 
-  return <AuthProvider>{content}</AuthProvider>;
+  return (
+    <>
+      {content}
+      {profileOpen && profileProps ? <ProfileModal {...profileProps} /> : null}
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
 }

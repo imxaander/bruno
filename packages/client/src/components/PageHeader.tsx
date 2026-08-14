@@ -1,8 +1,12 @@
 interface PageHeaderProps {
   label?: string;
+  profileIcon?: string;
+  profileRank?: string;
+  onProfileClick?: () => void;
 }
 
-export function PageHeader({ label }: PageHeaderProps) {
+export function PageHeader({ label, profileIcon, profileRank, onProfileClick }: PageHeaderProps) {
+  const hasProfile = !!onProfileClick;
   return (
     <div
       style={{
@@ -37,28 +41,67 @@ export function PageHeader({ label }: PageHeaderProps) {
         </>
       ) : null}
       <div style={{ flex: 1 }} />
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div
+      {hasProfile ? (
+        <button
+          onClick={onProfileClick}
           style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: "#00e676",
-            boxShadow: "0 0 8px rgba(0,230,118,0.8)",
-            animation: "neon-pulse 2s ease-in-out infinite",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "rgba(0,238,255,0.06)",
+            border: "1px solid rgba(0,238,255,0.2)",
+            borderRadius: 20,
+            padding: "4px 12px 4px 6px",
+            cursor: "pointer",
+            transition: "background 0.14s, border-color 0.14s",
           }}
-        />
-        <span
-          style={{
-            fontSize: 12,
-            color: "rgba(0,230,118,0.8)",
-            letterSpacing: "0.1em",
-            fontWeight: 600,
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(0,238,255,0.12)";
+            e.currentTarget.style.borderColor = "rgba(0,238,255,0.4)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(0,238,255,0.06)";
+            e.currentTarget.style.borderColor = "rgba(0,238,255,0.2)";
           }}
         >
-          LIVE
-        </span>
-      </div>
+          <span style={{ fontSize: 18 }}>{profileIcon || "🎮"}</span>
+          {profileRank ? (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "rgba(0,238,255,0.7)",
+                letterSpacing: "0.04em",
+              }}
+            >
+              {profileRank}
+            </span>
+          ) : null}
+        </button>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: "#00e676",
+              boxShadow: "0 0 8px rgba(0,230,118,0.8)",
+              animation: "neon-pulse 2s ease-in-out infinite",
+            }}
+          />
+          <span
+            style={{
+              fontSize: 12,
+              color: "rgba(0,230,118,0.8)",
+              letterSpacing: "0.1em",
+              fontWeight: 600,
+            }}
+          >
+            LIVE
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -25,9 +25,11 @@ interface SeatProps {
   self?: boolean;
   compact?: boolean;
   showSeat?: boolean;
+  rankIcon?: string;
+  rankName?: string;
 }
 
-export function Seat({ player, self = false, compact = false, showSeat = false }: SeatProps) {
+export function Seat({ player, self = false, compact = false, showSeat = false, rankIcon, rankName }: SeatProps) {
   const avatarColor = hashColor(player.id);
   const active = player.isTurn;
   const avatarSize = compact ? 36 : 44;
@@ -59,6 +61,25 @@ export function Seat({ player, self = false, compact = false, showSeat = false }
             {player.name.charAt(0).toUpperCase()}
           </span>
         </div>
+        {rankIcon ? (
+          <span
+            style={{
+              position: "absolute",
+              bottom: -4,
+              right: -4,
+              fontSize: 12,
+              background: "rgba(8,8,14,0.85)",
+              borderRadius: "50%",
+              width: 18,
+              height: 18,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {rankIcon}
+          </span>
+        ) : null}
         {active ? <span className="seat-active-ring" /> : null}
       </div>
       <span className={`seat-name${active ? " seat-name-active" : ""}`}>{player.name}</span>

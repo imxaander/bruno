@@ -17,6 +17,8 @@ export interface PublicPlayer {
   isHost: boolean;
   isTurn: boolean;
   handCount: number;
+  rankIcon?: string;
+  rankName?: string;
 }
 
 /** A hand this viewer is entitled to see (vault reveal effects). */

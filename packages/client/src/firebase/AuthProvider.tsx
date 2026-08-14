@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import type { User } from "firebase/auth";
+import type { PlayerProfile, RankTier } from "@bruno/shared";
+import { getRankTier } from "@bruno/shared";
 import {
   auth,
   signInGoogle as sdkSignInGoogle,
@@ -8,12 +10,15 @@ import {
   upgradeGuestToGoogle,
   onAuthChange,
 } from "./client.js";
+import { getProfile, createDefaultProfile } from "./profiles.js";
 
 interface AuthContextValue {
   user: User | null;
   guest: boolean;
   loading: boolean;
   displayName: string;
+  profile: PlayerProfile | null;
+  rank: RankTier | null;
   signInGoogle: () => Promise<void>;
   signInGuest: () => Promise<void>;
   firebaseSignOut: () => Promise<void>;
@@ -39,6 +44,17 @@ function computeDisplayName(user: User): string {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<PlayerProfile | null>(null);
+
+  const loadOrCreateProfile = useCallback(async (u: User) => {
+    let prof = await getProfile(u.uid);
+    if (!prof) {
+      prof = createDefaultProfile(u.uid, computeDisplayName(u));
+      // Save it to Firestore (non-blocking — don't await on render)
+      import("./profiles.js").then((m) => m.saveProfile(prof!));
+    }
+    setProfile(prof);
+  }, []);
 
   useEffect(() => {
     if (!auth) {
@@ -48,12 +64,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthChange((u) => {
       if (u) {
         setUser(u);
+        loadOrCreateProfile(u);
         setLoading(false);
       } else {
-        // Auto-sign in anonymously if Firebase is configured
         sdkSignInGuest()
           .then((u) => {
-            if (u) setUser(u);
+            if (u) {
+              setUser(u);
+              loadOrCreateProfile(u);
+            }
             setLoading(false);
           })
           .catch(() => {
@@ -62,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
     return unsubscribe;
-  }, []);
+  }, [loadOrCreateProfile]);
 
   const handleSignInGoogle = useCallback(async () => {
     const u = await sdkSignInGoogle();
@@ -86,18 +105,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthContextValue>(() => {
     const isAvailable = auth !== null;
+    const rank = profile ? getRankTier(profile.points) : null;
     return {
       user,
       guest: isAvailable ? (user?.isAnonymous ?? true) : true,
       loading,
       displayName: user ? computeDisplayName(user) : "",
+      profile,
+      rank,
       signInGoogle: handleSignInGoogle,
       signInGuest: handleSignInGuest,
       firebaseSignOut: handleSignOut,
       upgradeGuest: handleUpgradeGuest,
       available: isAvailable,
     };
-  }, [user, loading, handleSignInGoogle, handleSignInGuest, handleSignOut, handleUpgradeGuest]);
+  }, [user, loading, profile, handleSignInGoogle, handleSignInGuest, handleSignOut, handleUpgradeGuest]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

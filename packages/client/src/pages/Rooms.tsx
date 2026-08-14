@@ -11,6 +11,9 @@ interface RoomsProps {
   socket: BrunoSocket | null;
   identity: PlayerIdentity;
   goLobby: (gameId: string, gameName: string, maxPlayers?: number) => void;
+  profileIcon?: string;
+  profileRank?: string;
+  onProfileClick?: () => void;
 }
 
 const MAX_PLAYERS = 8;
@@ -19,7 +22,7 @@ function statusOf(room: RoomSummary): StatusType {
   return room.playerCount >= room.maxPlayers ? "full" : "open";
 }
 
-export function Rooms({ socket, identity, goLobby }: RoomsProps) {
+export function Rooms({ socket, identity, goLobby, profileIcon, profileRank, onProfileClick }: RoomsProps) {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [roomName, setRoomName] = useState("");
@@ -84,7 +87,7 @@ export function Rooms({ socket, identity, goLobby }: RoomsProps) {
         flexDirection: "column",
       }}
     >
-      <PageHeader label="Game Rooms" />
+      <PageHeader label="Game Rooms" profileIcon={profileIcon} profileRank={profileRank} onProfileClick={onProfileClick} />
 
       {error ? (
         <div

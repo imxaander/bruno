@@ -14,6 +14,9 @@ interface LobbyProps {
   maxPlayers: number;
   goRooms: () => void;
   goGame: (gameId: string) => void;
+  profileIcon?: string;
+  profileRank?: string;
+  onProfileClick?: () => void;
 }
 
 const SEAT_COUNT = 8;
@@ -169,6 +172,9 @@ export function Lobby({
   maxPlayers,
   goRooms,
   goGame,
+  profileIcon,
+  profileRank,
+  onProfileClick,
 }: LobbyProps) {
   const [players, setPlayers] = useState<LobbyPlayer[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -240,7 +246,7 @@ export function Lobby({
         flexDirection: "column",
       }}
     >
-      <PageHeader label="Lobby" />
+      <PageHeader label="Lobby" profileIcon={profileIcon} profileRank={profileRank} onProfileClick={onProfileClick} />
 
       {error ? (
         <div

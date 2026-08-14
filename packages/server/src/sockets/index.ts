@@ -24,6 +24,7 @@ import {
 import { registeredResolverIds } from "../game/effects/registry.js";
 import type { TurnManager } from "../game/turn-manager.js";
 import { getAuth } from "../firebase/admin.js";
+import { applyGameEndScores } from "../firebase/profileScoring.js";
 
 export type BrunoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -82,6 +83,7 @@ export function registerSockets(
   options: RegisterSocketsOptions = {},
 ): RoomManager {
   const roomSockets = new Map<string, Set<BrunoSocket>>();
+  const socketDataByPlayer = new Map<string, SocketData>(); // playerId -> SocketData
   let rooms: RoomManager;
 
   const pushGameState = (gameId: string): void => {
@@ -156,6 +158,19 @@ export function registerSockets(
           handCount: player.hand.length,
         }))
       : [];
+
+    // Calculate and apply rank point changes
+    if (room) {
+      const scoringPlayers = room.players.map((player) => ({
+        uid: socketDataByPlayer.get(player.id)?.uid ?? null,
+        isWinner: player.id === event.winnerId,
+        cardsRemaining: player.hand.length,
+        vaultCardsUsed: player.playedEffectIds?.filter((id) => id.startsWith("t")).length ?? 0,
+        currentPoints: 0, // Will be read from Firestore in applyGameEndScores
+      }));
+      applyGameEndScores(scoringPlayers).catch(() => {});
+    }
+
     io.to(event.gameId).emit("game:ended", {
       gameId: event.gameId,
       winner: event.winnerId ? { id: event.winnerId, name: event.winnerName } : null,
@@ -233,6 +248,9 @@ export function registerSockets(
       roomSockets.set(roomId, sockets);
     }
     sockets.add(socket);
+    if (socket.data.playerId) {
+      socketDataByPlayer.set(socket.data.playerId, socket.data);
+    }
   };
 
   const removeFromRoom = (roomId: string, socket: BrunoSocket): void => {
@@ -241,6 +259,9 @@ export function registerSockets(
       return;
     }
     sockets.delete(socket);
+    if (socket.data.playerId) {
+      socketDataByPlayer.delete(socket.data.playerId);
+    }
     if (sockets.size === 0) {
       roomSockets.delete(roomId);
     }
