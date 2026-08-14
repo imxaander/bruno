@@ -7,10 +7,11 @@ interface TableOvalProps {
   deckCount: number;
   pileTop: CardView | null;
   pileEffect?: PileEffect;
+  fleetingPileTop?: CardView;
   direction: 1 | -1;
 }
 
-export function TableOval({ deckCount, pileTop, pileEffect, direction }: TableOvalProps) {
+export function TableOval({ deckCount, pileTop, pileEffect, fleetingPileTop, direction }: TableOvalProps) {
   const [vaultHover, setVaultHover] = useState(false);
   const arcPath = direction === 1 ? "M 20 6 A 14 14 0 0 1 34 20" : "M 20 6 A 14 14 0 0 0 6 20";
   const arrowPoints = direction === 1 ? "34,15 38,22 30,22" : "6,15 2,22 10,22";
@@ -120,7 +121,17 @@ export function TableOval({ deckCount, pileTop, pileEffect, direction }: TableOv
         onMouseLeave={() => setVaultHover(false)}
       >
         <div style={{ position: "relative" }}>
-          {pileTop ? (
+          {/* Show fleeting card muted on top, or the real pileTop underneath */}
+          {fleetingPileTop ? (
+            <GameCard
+              card={fleetingPileTop}
+              size="lg"
+              style={{
+                opacity: 0.5,
+                filter: "grayscale(0.5)",
+              }}
+            />
+          ) : pileTop ? (
             <>
               <GameCard
                 card={pileTop}

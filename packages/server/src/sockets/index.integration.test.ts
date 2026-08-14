@@ -478,7 +478,7 @@ describe("room lifecycle over the wire", () => {
       const [alert] = await alertEvent;
       expect(alert).toEqual({
         gameId,
-        message: "You need 7 red or yellow cards to play Ruin.",
+        message: "You need 5 red cards to play Ruin.",
       });
       const [reEmitted] = await rePrompt;
       expect(reEmitted).toMatchObject({ gameId, kind: "vault-choice" });

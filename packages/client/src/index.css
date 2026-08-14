@@ -509,6 +509,13 @@ body {
   flex-shrink: 0;
 }
 
+.event-history-header {
+  transition: color 0.14s;
+}
+.event-history-header:hover .event-history-title {
+  color: rgba(0, 238, 255, 0.95);
+}
+
 .event-history-list {
   flex: 1;
   overflow-y: auto;

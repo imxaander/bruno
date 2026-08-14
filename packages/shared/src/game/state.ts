@@ -1,4 +1,4 @@
-import type { CardType, Color } from "../cards/types.js";
+import type { CardTag, CardType, Color } from "../cards/types.js";
 
 export type GameStatus = "prepping" | "ongoing" | "concluding";
 
@@ -8,6 +8,7 @@ export interface CardView {
   color?: Color;
   number?: number;
   type: CardType;
+  tags?: CardTag[];
 }
 
 export interface PublicPlayer {
@@ -53,4 +54,6 @@ export interface PlayerView {
   revealed?: RevealedHand[];
   /** Player id who has a pending Investment draw offer this round (only visible to that player). */
   investmentOffer?: boolean;
+  /** Fleeting card last played — shown muted on top of the pile (visual only, not in backend pile). */
+  fleetingPileTop?: CardView;
 }

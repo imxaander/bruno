@@ -134,6 +134,7 @@ export default function GameCard({
   style,
 }: GameCardProps) {
   const d = DIMS[size];
+  const isFleeting = card?.tags?.includes("fleeting") ?? false;
 
   let faceColor = color;
   let faceValue = value;
@@ -223,14 +224,16 @@ export default function GameCard({
 
   if (faceVault) {
     const vs = VAULT[faceVault];
-    return (
+    const cardInner = (
       <div
         style={{
           ...base,
           background: vs.bg,
-          border: vs.border,
+          border: isFleeting ? "2px solid rgba(255,100,255,0.6)" : vs.border,
           boxShadow: `${vs.glow}, 0 10px 28px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.25)`,
           transform: lifted ? "translateY(-10px) scale(1.05)" : undefined,
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <div
@@ -290,6 +293,46 @@ export default function GameCard({
         >
           {vs.tier}
         </span>
+        {isFleeting ? (
+          <span
+            style={{
+              position: "absolute",
+              bottom: 2,
+              right: 4,
+              fontSize: 8,
+              color: "rgba(255,100,255,0.8)",
+              fontFamily: "'Rajdhani'",
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              zIndex: 2,
+            }}
+          >
+            fleeting
+          </span>
+        ) : null}
+      </div>
+    );
+
+    if (!isFleeting) return cardInner;
+
+    return (
+      <div
+        style={{
+          position: "relative",
+          width: d.w,
+          height: d.h,
+          flexShrink: 0,
+          opacity: dimmed ? 0.26 : 1,
+          filter: dimmed ? "saturate(0.25)" : undefined,
+          cursor: dimmed ? "default" : "pointer",
+          userSelect: "none",
+          transform: lifted ? "translateY(-10px) scale(1.05)" : undefined,
+          transition: "transform 0.12s ease, box-shadow 0.12s ease",
+          ...style,
+        }}
+      >
+        <div style={{ position: "relative", zIndex: 1 }}>{cardInner}</div>
       </div>
     );
   }

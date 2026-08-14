@@ -16,6 +16,7 @@ export function toCardView(card: Card): CardView {
     color: card.color,
     number: card.number,
     image: card.image,
+    tags: card.tags,
   };
 }
 
@@ -74,6 +75,7 @@ export function toPlayerView(
     pileEffect: room.pileEffect,
     revealed: revealed.length > 0 ? revealed : undefined,
     investmentOffer: room.investmentPending.has(playerId) || undefined,
+    fleetingPileTop: room.fleetingPileTop ? toCardView(room.fleetingPileTop) : undefined,
   };
 }
 

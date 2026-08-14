@@ -688,6 +688,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           deckCount={view.deckCount}
           pileTop={view.pileTop}
           pileEffect={view.pileEffect}
+          fleetingPileTop={view.fleetingPileTop}
           direction={view.currentDirection}
         />
       </div>
@@ -782,6 +783,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
           deckCount={view.deckCount}
           pileTop={view.pileTop}
           pileEffect={view.pileEffect}
+          fleetingPileTop={view.fleetingPileTop}
           direction={view.currentDirection}
         />
         <div style={{ position: "absolute", right: 60, top: "50%", transform: "translateY(-50%)" }}>

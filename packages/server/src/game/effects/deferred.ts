@@ -78,7 +78,7 @@ function settleReturnCards(
   ];
 }
 
-/** t3-all-in: +15 to the actor, then discard all of their vault tokens. */
+/** t3-all-in: +20 to the actor, then discard all of their vault tokens. */
 function settleAllIn(
   room: Room,
   item: Extract<DeferredEffect, { kind: "all-in" }>,
@@ -88,7 +88,7 @@ function settleAllIn(
   if (!actor) {
     return [];
   }
-  const added = addCards(room, actor, 15, rng);
+  const added = addCards(room, actor, 20, rng);
   const vaultsBefore = countVaultTokens(actor);
   actor.hand = actor.hand.filter((card) => !isVaultTokenCard(card));
   const discarded = vaultsBefore - countVaultTokens(actor);

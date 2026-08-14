@@ -142,7 +142,7 @@ function handlePassive(
         : { logs: [] };
     case "parasitism":
       return event.kind === "card-played"
-        ? handleParasitism(room, passive, event.card, event.playerId)
+        ? handleParasitism(room, passive, event.card, event.playerId, rng)
         : { logs: [] };
     case "cruelty":
       return handleCruelty(room, passive);
@@ -244,12 +244,13 @@ function handleMostWanted(
   };
 }
 
-/** t2-parasitism: "whenever they play a green card, discard a card from your hand." */
+/** t2-parasitism: "whenever they play a green card, discard a random card from your hand." */
 function handleParasitism(
   room: Room,
   passive: Extract<PassiveState, { kind: "parasitism" }>,
   card: Card,
   playerId: string,
+  rng: Rng,
 ): HandlerResult {
   if (playerId !== passive.targetId || card.color !== "green") {
     return { logs: [] };
@@ -258,15 +259,12 @@ function handleParasitism(
   if (!owner || owner.hand.length === 0) {
     return { logs: [] };
   }
-  const discard = discardByPriority(owner.hand);
-  if (!discard) {
-    return { logs: [] };
-  }
-  owner.hand.splice(owner.hand.indexOf(discard), 1);
+  const idx = Math.floor(rng() * owner.hand.length);
+  const [discarded] = owner.hand.splice(idx, 1);
   const target = room.getPlayer(passive.targetId);
   return {
     logs: [
-      `${target?.name ?? "??"} plays a green card — ${owner.name} discards a card (Parasitism).`,
+      `${target?.name ?? "??"} plays a green card — ${owner.name} discards ${discarded?.name ?? "a card"} (Parasitism).`,
     ],
   };
 }
@@ -462,7 +460,7 @@ export function advanceScourge(
   );
   let addedOthers = 0;
   for (const enemy of otherEnemies) {
-    addedOthers += addCards(room, enemy, 2, rng);
+    addedOthers += addCards(room, enemy, 1, rng);
   }
   if (otherEnemies.length > 0) {
     logs.push(`...and ${otherEnemies.length} other enemy player(s) draw ${addedOthers} (Scourge).`);

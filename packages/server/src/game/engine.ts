@@ -158,8 +158,14 @@ export function playCard(
   const actorIndex = room.getPlayerIndex(player.id);
   const roundBefore = room.round;
   const umf = hasPassive(room, "ultimate-machine-form", player.id);
+  const isFleeting = card.tags.includes("fleeting");
   player.hand.splice(cardIndex, 1);
-  room.pile.push(card);
+  if (isFleeting) {
+    room.fleetingPileTop = card;
+  } else {
+    room.pile.push(card);
+    room.fleetingPileTop = undefined;
+  }
   room.pileLog.push({ round: room.round, playerId: player.id, card });
   const log: string[] = [];
   let effect: PlayOutcome["effect"] | undefined;

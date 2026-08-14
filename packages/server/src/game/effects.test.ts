@@ -652,9 +652,9 @@ describe("wave 1 play-condition resolver batch", () => {
     expect(room.players[0]!.hand).toHaveLength(2);
   });
 
-  it("discards 7 red/yellow cards, gains a Gold Vault and +3s 2 enemies (t2-ruin)", () => {
+  it("discards 5 red cards, gains a Gold Vault and +2s 2 enemies (t2-ruin)", () => {
     const { room } = startGame(4);
-    room.players[0]!.hand = Array.from({ length: 7 }, (_, i) => redCard(`red-7-${i}`));
+    room.players[0]!.hand = Array.from({ length: 5 }, (_, i) => redCard(`red-7-${i}`));
     room.players[1]!.hand = [skipCard()];
     room.players[2]!.hand = [skipCard()];
     const deckBefore = room.deck.length;
@@ -668,14 +668,14 @@ describe("wave 1 play-condition resolver batch", () => {
     expect(effect.applied).toBe(true);
     expect(room.players[0]!.hand.filter((card) => card.color === "red")).toHaveLength(0);
     expect(room.players[0]!.hand.filter((card) => card.type === "vault-gold")).toHaveLength(1);
-    expect(room.players[1]!.hand).toHaveLength(4);
-    expect(room.players[2]!.hand).toHaveLength(4);
+    expect(room.players[1]!.hand).toHaveLength(3);
+    expect(room.players[2]!.hand).toHaveLength(3);
     expect(room.players[3]!.hand).toHaveLength(8);
-    expect(room.deck).toHaveLength(deckBefore - 6);
-    expect(effect.log?.join(" ")).toMatch(/discards 7 red or yellow/);
+    expect(room.deck).toHaveLength(deckBefore - 4);
+    expect(effect.log?.join(" ")).toMatch(/discards 5 red/);
   });
 
-  it("stays unapplied when the actor cannot discard 7 red/yellow cards (t2-ruin)", () => {
+  it("stays unapplied when the actor cannot discard 5 red cards (t2-ruin)", () => {
     const { room } = startGame(2);
     room.players[0]!.hand = Array.from({ length: 3 }, (_, i) => redCard(`red-7-${i}`));
 
@@ -684,9 +684,14 @@ describe("wave 1 play-condition resolver batch", () => {
     expect(room.players[0]!.hand).toHaveLength(3);
   });
 
-  it("discards 2 special cards and draws 10 (t2-sacrificial-lamb)", () => {
+  it("discards 4 special cards and draws 10 (t2-sacrificial-lamb)", () => {
     const { room } = startGame(2);
-    room.players[0]!.hand = [skipCard(), drawPlusCard("red-draw2-0", "red")];
+    room.players[0]!.hand = [
+      skipCard(),
+      drawPlusCard("red-draw2-0", "red"),
+      makeCard({ id: "s1", name: "Reverse", type: "reverse", color: "blue" }),
+      makeCard({ id: "s2", name: "Draw 4", type: "draw4", color: "red" }),
+    ];
     const deckBefore = room.deck.length;
 
     const effect = getResolver("t2-sacrificial-lamb")!({
@@ -697,7 +702,7 @@ describe("wave 1 play-condition resolver batch", () => {
     expect(effect.applied).toBe(true);
     expect(room.players[0]!.hand).toHaveLength(10);
     expect(room.deck).toHaveLength(deckBefore - 10);
-    expect(effect.log?.join(" ")).toMatch(/discards 2 special cards and draws 10/);
+    expect(effect.log?.join(" ")).toMatch(/discards 4 special cards and draws 10/);
   });
 
   it("stays unapplied when the actor has fewer than 2 special cards (t2-sacrificial-lamb)", () => {
@@ -1319,6 +1324,8 @@ describe("loc-volcano amount multiplier", () => {
         source: "test",
         status: "stable",
       },
+      makeCard({ id: "s1", name: "Reverse", type: "reverse", color: "blue" }),
+      makeCard({ id: "s2", name: "Draw 4", type: "draw4", color: "red" }),
     ];
     const deckBefore = room.deck.length;
     const effect = getResolver("t2-sacrificial-lamb")!({
@@ -1360,7 +1367,7 @@ describe("wave 3 resolver batch (challenge)", () => {
     expect(getResolverInputs("t2-force-of-will")).toEqual({ targets: { min: 1, max: 1 } });
   });
 
-  it("makes each player play a yellow card or draw 4, including the actor (t3-midas-touch)", () => {
+  it("makes each other player play a yellow card or draw 4 (t3-midas-touch)", () => {
     const { room } = startGame(3);
     room.players[0]!.hand = [makeColorCard("y0", "yellow"), makeColorCard("r0", "red")];
     room.players[1]!.hand = [makeColorCard("y1", "yellow")];
@@ -1374,14 +1381,14 @@ describe("wave 3 resolver batch (challenge)", () => {
       random: seeded(9),
     });
     expect(effect.applied).toBe(true);
-    expect(room.players[0]!.hand).toHaveLength(before[0]! - 1);
+    expect(room.players[0]!.hand).toHaveLength(before[0]!);
     expect(room.players[1]!.hand).toHaveLength(before[1]! - 1);
     expect(room.players[2]!.hand).toHaveLength(before[2]! + 4);
     expect(room.deck).toHaveLength(deckBefore - 4);
-    expect(room.pile).toHaveLength(3);
+    expect(room.pile).toHaveLength(2);
     expect(room.activeColor).toBe("yellow");
     expect(effect.log?.join(" ")).toMatch(
-      /2 player\(s\) played a yellow card, 1 could not and drew 4/,
+      /1 player\(s\) played a yellow card, 1 could not and drew 4/,
     );
   });
 
@@ -1696,8 +1703,8 @@ describe("wave 4 resolver batch (timed / deferred)", () => {
     expect(room.deferred).toHaveLength(0);
     const tokensNow = room.players[0]!.hand.filter((card) => isVaultTokenCard(card)).length;
     expect(tokensNow).toBe(0);
-    expect(room.players[0]!.hand).toHaveLength(handBefore + 15 - 2);
-    expect(logs.join(" ")).toMatch(/\+15 and 2 Vault token\(s\) discarded/);
+    expect(room.players[0]!.hand).toHaveLength(handBefore + 20 - 2);
+    expect(logs.join(" ")).toMatch(/\+20 and 2 Vault token\(s\) discarded/);
   });
 
   it("settles green tide after 15 rounds, drawing a third of each hand (t3-green-tide)", () => {
@@ -1863,22 +1870,19 @@ describe("wave 5 event-driven passives", () => {
     expect(room.players[1]!.hand).toHaveLength(p0Before);
   });
 
-  it("discards the owner's highest-priority card when the target plays green (t2-parasitism)", () => {
+  it("discards a random card from the owner when the target plays green (t2-parasitism)", () => {
     const { room } = startGame(3);
     room.players[0]!.hand = [
       makeCard({ id: "v", name: "Vault", type: "vault-silver", color: "blue" }),
       makeCard({ id: "n9", name: "9", type: "number", color: "green", number: 9 }),
       makeCard({ id: "n1", name: "1", type: "number", color: "green", number: 1 }),
     ];
-    const ownerIds = room.players[0]!.hand.map((card) => card.id);
     addPassive(room, { kind: "parasitism", ownerId: "p0", targetId: "p1" });
     const green = makeCard({ id: "g", name: "5", type: "number", color: "green", number: 5 });
 
+    const handBefore = room.players[0]!.hand.length;
     emitGameEvent(room, { kind: "card-played", playerId: "p1", card: green }, seeded(1));
-    expect(room.players[0]!.hand.some((card) => card.id === "n9")).toBe(false);
-    expect(room.players[0]!.hand.map((card) => card.id).sort()).toEqual(
-      ownerIds.filter((id) => id !== "n9").sort(),
-    );
+    expect(room.players[0]!.hand).toHaveLength(handBefore - 1);
 
     emitGameEvent(
       room,
@@ -1887,7 +1891,6 @@ describe("wave 5 event-driven passives", () => {
     );
     const afterRed = room.players[0]!.hand.length;
     emitGameEvent(room, { kind: "card-played", playerId: "p1", card: green }, seeded(1));
-    expect(room.players[0]!.hand.some((card) => card.id === "n1")).toBe(false);
     expect(room.players[0]!.hand).toHaveLength(afterRed - 1);
   });
 
@@ -2080,7 +2083,7 @@ describe("wave 5 event-driven passives", () => {
     expect(result.logs.join(" ")).toMatch(/5 stacks.*draw 20|draw 20/);
   });
 
-  it("spreads the infection and +1s the infectee, +2s others (t1-scourge)", () => {
+  it("spreads the infection and +1s the infectee, +1s others (t1-scourge)", () => {
     const { room } = startGame(4);
     room.players[1]!.hand = [makeColorCard("a", "red")];
     const p2Before = room.players[2]!.hand.length;
@@ -2089,8 +2092,8 @@ describe("wave 5 event-driven passives", () => {
     const passive = findOwnerPassive(room, "scourge", "p0")!;
     const result = advanceScourge(room, passive, seeded(9));
     expect(room.players[1]!.hand).toHaveLength(2);
-    expect(room.players[2]!.hand).toHaveLength(p2Before + 2);
-    expect(room.players[3]!.hand).toHaveLength(p3Before + 2);
+    expect(room.players[2]!.hand).toHaveLength(p2Before + 1);
+    expect(room.players[3]!.hand).toHaveLength(p3Before + 1);
     expect(passive.infecteeId).toBe("p2");
     expect(result.logs.join(" ")).toMatch(/spreads to P2/);
   });

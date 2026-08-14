@@ -1748,6 +1748,22 @@ interface UpdatesPanelProps {
 }
 
 export function UpdatesPanel({ onClose }: UpdatesPanelProps) {
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(CHANGELOG.slice(0, 1).map((e) => e.version)),
+  );
+
+  const toggle = (version: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(version)) {
+        next.delete(version);
+      } else {
+        next.add(version);
+      }
+      return next;
+    });
+  };
+
   return (
     <Overlay>
       <Frame title="WHAT'S NEW" subtitle={`v${UPDATES_LATEST_VERSION}`} width={520}>
@@ -1755,74 +1771,114 @@ export function UpdatesPanel({ onClose }: UpdatesPanelProps) {
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 18,
+            gap: 10,
             padding: "18px 24px 8px",
             maxHeight: "62vh",
             overflowY: "auto",
           }}
         >
-          {CHANGELOG.map((entry) => (
-            <div key={entry.version}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                <span
+          {CHANGELOG.map((entry) => {
+            const isOpen = expanded.has(entry.version);
+            return (
+              <div
+                key={entry.version}
+                style={{
+                  borderRadius: 10,
+                  background: isOpen ? "rgba(16,16,28,0.7)" : "rgba(16,16,28,0.35)",
+                  border: `1px solid ${isOpen ? "rgba(0,238,255,0.12)" : "rgba(255,255,255,0.04)"}`,
+                  transition: "background 0.15s, border-color 0.15s",
+                }}
+              >
+                <button
+                  onClick={() => toggle(entry.version)}
                   style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
                     fontFamily: FONT_DISPLAY,
-                    fontWeight: 800,
-                    fontSize: 17,
-                    color: "#e8f0ff",
-                    letterSpacing: "0.04em",
+                    textAlign: "left",
                   }}
                 >
-                  v{entry.version}
-                </span>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: "0.1em",
-                    color: "rgba(200,216,240,0.4)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {entry.date}
-                </span>
-              </div>
-              <p
-                style={{
-                  margin: "2px 0 6px",
-                  fontFamily: FONT_DISPLAY,
-                  fontWeight: 700,
-                  fontSize: 14,
-                  color: "rgba(0,238,255,0.85)",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {entry.title}
-              </p>
-              <ul
-                style={{
-                  margin: 0,
-                  paddingLeft: 18,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 3,
-                }}
-              >
-                {entry.bullets.map((bullet) => (
-                  <li
-                    key={bullet}
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                    <span
+                      style={{
+                        fontWeight: 800,
+                        fontSize: 15,
+                        color: "#e8f0ff",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      v{entry.version}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        letterSpacing: "0.1em",
+                        color: "rgba(200,216,240,0.35)",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {entry.date}
+                    </span>
+                  </div>
+                  <span
                     style={{
-                      fontSize: 13,
-                      lineHeight: 1.45,
-                      color: "rgba(210,222,245,0.82)",
+                      fontSize: 12,
+                      color: "rgba(0,238,255,0.5)",
+                      transition: "transform 0.15s",
+                      transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
                     }}
                   >
-                    {bullet}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                    ▼
+                  </span>
+                </button>
+                {isOpen ? (
+                  <div style={{ padding: "0 16px 14px" }}>
+                    <p
+                      style={{
+                        margin: "0 0 8px",
+                        fontFamily: FONT_DISPLAY,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        color: "rgba(0,238,255,0.75)",
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      {entry.title}
+                    </p>
+                    <ul
+                      style={{
+                        margin: 0,
+                        paddingLeft: 18,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 3,
+                      }}
+                    >
+                      {entry.bullets.map((bullet) => (
+                        <li
+                          key={bullet}
+                          style={{
+                            fontSize: 13,
+                            lineHeight: 1.45,
+                            color: "rgba(210,222,245,0.82)",
+                          }}
+                        >
+                          {bullet}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
         <div
           style={{

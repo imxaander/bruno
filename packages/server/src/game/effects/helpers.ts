@@ -19,6 +19,7 @@ export function grantVaultTokens(
   tier: VaultCardType,
   count: number,
   rng: Rng,
+  options?: { fleeting?: boolean },
 ): Card[] {
   const tierName = tier === "vault-silver" ? "Silver" : tier === "vault-gold" ? "Gold" : "Diamond";
   const tokens: Card[] = [];
@@ -27,7 +28,7 @@ export function grantVaultTokens(
       id: `${tier}-token-${tokenCounter++}`,
       name: `${tierName} Vault`,
       type: tier,
-      tags: ["wild"],
+      tags: options?.fleeting ? ["wild", "fleeting"] : ["wild"],
       effect: `Play: choose one of 5 random ${tierName} Vault effects.`,
       source: "design (vault mechanism)",
       status: "stable",

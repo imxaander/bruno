@@ -2,15 +2,15 @@
 
 Status: **PLANNED** (design only — no code changes yet).
 
-Add real player accounts (Firebase Auth) and make the game survive transient network drops
-(graceful seat hold + socket reconnection). Today a disconnect splices the player out of the
-game (`RoomManager.leaveRoom`) and the client has only a passive LIVE/OFF dot
+Add real player accounts (Firebase Auth with Google Sign-In) and make the game survive transient
+network drops (graceful seat hold + socket reconnection). Today a disconnect splices the player
+out of the game (`RoomManager.leaveRoom`) and the client has only a passive LIVE/OFF dot
 (`Game.tsx:405`), so a blip mid-game is a loss.
 
 ## Why this is two halves
 
-- **Accounts** are an identity layer: a stable, cross-device player id that outlives the
-  browser tab. It also unlocks server-side persistence later (stats, profiles, matchmaking).
+- **Accounts** are an identity layer: a stable, cross-device player id that outlives the browser
+  tab. It also unlocks server-side persistence later (stats, profiles, matchmaking).
 - **Reconnection** is a session-resilience layer: keep the seat + hand while the transport is
   down, then restore the socket → seat binding on the wire. It does not strictly require
   accounts, but accounts make it robust (a stable `uid` is the natural seat key, and token
@@ -18,49 +18,75 @@ game (`RoomManager.leaveRoom`) and the client has only a passive LIVE/OFF dot
 
 ## Scope
 
-### A. Firebase account integration
+### A. Firebase account integration + Google Sign-In
 
-- **Auth provider**: Firebase Auth (email/password + Google sign-in, plus an **anonymous
-  guest** fast-path so the "enter a handle and play" flow still works with one click). Guests
-  can later upgrade to a real account and keep their handle.
+- **Auth providers**: Firebase Auth with **Google Sign-In** (primary) + **anonymous guest**
+  fast-path so the "enter a handle and play" flow still works with one click. Guests can later
+  upgrade to a real account and keep their handle.
 - **Identity flow**:
   - Today: `useSocket.ts` mints a random `PID…` id in `localStorage` (`bruno_player_info`),
     sent in every room payload as `playerId`.
   - Target: `playerId` becomes the Firebase `uid` for authenticated players, still random
     `PID…` for guests. `uid` is stable across devices, so `game:state:get` after reconnect
     addresses the same seat.
-- **Client**:
-  - `npm install firebase` in `@bruno/client`; `src/firebase/client.ts` initializes the app
-    (config via `import.meta.env.VITE_FIREBASE_*`).
-  - `AuthProvider` (React context) around the app exposing
-    `{ user, guest, loading, signInEmail, signInGoogle, signUpEmail, signOut, upgradeGuest }`.
-  - New `src/pages/Auth.tsx` screen (or an auth panel on Home): email/password + Google
-    buttons, guest mode default. `saveIdentity` keeps writing the anonymous `PID` until a
-    real user exists.
-  - On auth change: obtain an ID token, attach to the socket (`socket.auth = { token }`),
-    and store `{ uid, name }` in `bruno_player_info` so the handle pre-fills.
-- **Server**:
-  - `npm install firebase-admin` in `@bruno/server`; `src/firebase/admin.ts` initializes
-    with service-account env vars (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`,
-    `FIREBASE_PRIVATE_KEY`).
-  - Socket middleware in `sockets/index.ts`: if `socket.auth.token` is present, verify via
-    `admin.auth().verifyIdToken(token)` → set `socket.data.uid = uid`. Guests (no token) pass
-    through unchanged. Never trust a client-sent `playerId` for authenticated users — derive
-    it from the verified `uid` (map `uid` → the room's seat).
-  - New `AccountGetSchema`-style helper not needed; keep payloads as-is but treat `playerId`
-    as authoritative only for guests.
-- **Env/docs**:
-  - Add `.env.example` (client `VITE_FIREBASE_*`, server `FIREBASE_*`), extend `config.ts`,
-    document setup in `docs/development.md` + `docs/architecture/current.md`.
-  - CI/smoke: auth is optional at runtime — the game remains fully playable as a guest, so
-    existing tests keep passing without Firebase credentials.
+- **Firebase project setup** (once, by the operator):
+  1. Create a Firebase project at <https://console.firebase.google.com>.
+  2. Enable **Authentication** → **Sign-in method** → **Google** (enable it, set the support
+     email to the project default).
+  3. Register a **web app** → copy config (`apiKey`, `authDomain`, `projectId`, etc.) → put
+     in `.env` as `VITE_FIREBASE_*` vars.
+  4. Create a **service account** (Project Settings → Service accounts → Generate new private
+     key) → put `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` in server
+     env vars.
+  5. In the Google Cloud Console, add the Vite dev origin (`http://localhost:5173`) and the
+     production origin to the OAuth consent screen's authorized JavaScript origins.
+- **Client** (`@bruno/client`):
+  - `npm install firebase` — initialize in `src/firebase/client.ts` with
+    `import.meta.env.VITE_FIREBASE_*` vars.
+  - `AuthProvider` (React context) around the app exposing:
+    ```ts
+    interface AuthContextValue {
+      user: FirebaseUser | null;     // null = not authenticated
+      guest: boolean;                 // true = anonymous/guest session
+      loading: boolean;               // true = Firebase still initializing
+      signInGoogle: () => Promise<void>;   // popup-based Google sign-in
+      signInGuest: () => Promise<void>;    // anonymous sign-in → sets guest=true
+      signOut: () => Promise<void>;
+      upgradeGuest: () => Promise<void>;   // link anonymous → Google (keeps handle)
+    }
+    ```
+  - New `src/pages/Auth.tsx` screen:
+    - **Google Sign-In** button (primary CTA, styled like the PLAY button).
+    - **"Play as Guest"** button (secondary, anonymous auth — mints a `uid` but no profile).
+    - On auth success: obtain an ID token (`user.getIdToken()`), attach to the socket via
+      `socket.auth = { token }`, store `{ uid, displayName }` in `bruno_player_info` so the
+      handle pre-fills.
+  - On the **Home page**, replace the manual handle input with an auth-aware flow:
+    - If `user` (Google signed in): show their display name as the handle, auto-allow PLAY.
+    - If `guest`: show the guest handle (e.g., `Guest-xxxx`), allow PLAY.
+    - If `loading`: show a spinner.
+    - Add a small **"Sign in"** / **"Sign out"** link depending on state.
+- **Server** (`@bruno/server`):
+  - `npm install firebase-admin` — initialize in `src/firebase/admin.ts` with service-account
+    env vars. Graceful degradation: if env vars are missing, skip admin init and treat all
+    players as guests (game remains fully playable without Firebase).
+  - Socket middleware in `sockets/index.ts`:
+    - On `connection`, if `socket.auth.token` is present, verify via
+      `admin.auth().verifyIdToken(token)` → set `socket.data.uid = decoded.uid`.
+    - Guests (no token) pass through unchanged.
+    - Never trust a client-sent `playerId` for authenticated users — derive it from the
+      verified `uid` (map `uid` → the room's seat). For room joins/creates, use `uid` as the
+      authoritative `playerId`.
+  - No new endpoints needed — existing room/game payloads work as-is; just swap `playerId`
+    from random `PID…` to `uid` for authenticated users.
 
 ### B. Reconnection once disconnected
 
 - **Seat hold instead of instant leave** (`room-manager.ts` + `sockets/index.ts`):
   - `RoomPlayer` gains `connected: boolean` (default `true`). On `disconnect`, do **not**
     splice the player out. Mark `connected = false`, cancel their prompt, keep the hand,
-    keep the seat, and start a **grace timer** (default 60s, `TURN_DURATION_MS`-agnostic).
+    keep the seat, and start a **grace timer** (default 60s, configurable via
+    `RECONNECT_GRACE_MS`).
   - Grace expiry → today's behavior: `leaveRoom` (drop the seat, host handover, re-arm turn).
   - While disconnected and it is their turn: **pause the turn timer** (freeze `turnDeadline`)
     so the game does not silently auto-draw them mid-reconnect; on rejoin, resume the same
@@ -73,11 +99,12 @@ game (`RoomManager.leaveRoom`) and the client has only a passive LIVE/OFF dot
   - `game:state:get` already exists and stays the fallback for full reloads.
 - **Client** (`useSocket.ts` + `Game.tsx`):
   - socket.io reconnection options: `reconnectionAttempts: Infinity`, `reconnectionDelay:
-500`, `reconnectionDelayMax: 3000`; `socket.auth` carries the ID token so the server can
+    500`, `reconnectionDelayMax: 3000`; `socket.auth` carries the ID token so the server can
     re-verify on each handshake.
-  - `useSocket` surfaces `{ connected, reconnecting }` (listen to `disconnect`, `reconnect_attempt`,
-    `reconnect`). While in a game screen, on `reconnect` re-emit `game:rejoin` with the
-    current `roomId`/`playerId`; refetch full state via `game:state:get` on any reload.
+  - `useSocket` surfaces `{ connected, reconnecting }` (listen to `disconnect`,
+    `reconnect_attempt`, `reconnect`). While in a game screen, on `reconnect` re-emit
+    `game:rejoin` with the current `roomId`/`playerId`; refetch full state via
+    `game:state:get` on any reload.
   - `Game.tsx`: replace the bare LIVE/OFF dot with a **reconnect overlay** — "Reconnecting…
     keep your seat (N s grace left)" with a live dot; hide when `connected`. On grace expiry
     the server drops the seat and the next `error`/state push routes to Lobby (existing
@@ -98,6 +125,8 @@ game (`RoomManager.leaveRoom`) and the client has only a passive LIVE/OFF dot
   remaining unauthenticated `PID` strangers — one code path for seat keys.
 - **playerId semantics**: for verified users `playerId` in payloads is ignored on the server
   (authoritative uid); for guests it is still accepted. Documented in the socket contract.
+- **Google Sign-In flow**: popup-based (`signInWithPopup`) rather than redirect — keeps the
+  SPA state intact, no need to re-establish the socket after the auth roundtrip.
 
 ## Contract changes (`@bruno/shared`)
 
@@ -126,29 +155,43 @@ game (`RoomManager.leaveRoom`) and the client has only a passive LIVE/OFF dot
 - `changelog.ts`: add a `0.1.1` entry ("Accounts + reconnection") so the updates panel
   announces the change (the cookie-like validation from the UX batch gates it).
 
-## Firebase setup (once, by the operator)
+## Env setup
 
-1. Create a Firebase project; enable **Authentication** (Email/Password + Google).
-2. Register a web app → copy `VITE_FIREBASE_API_KEY/AUTH_DOMAIN/PROJECT_ID/…` to `.env`.
-3. Create a service account (IAM → Service accounts → Generate key) → put
-   `FIREBASE_*` in server env (or `GOOGLE_APPLICATION_CREDENTIALS`).
-4. Document in `docs/development.md`.
+**Client `.env.example`:**
+```env
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+```
+
+**Server `.env.example`:**
+```env
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+```
+
+If none of the `FIREBASE_*` server vars are set, the server skips Firebase Admin SDK init and
+all players are treated as guests (random `PID…` ids). The game is fully playable without any
+Firebase configuration.
 
 ## Verification
 
-- **Accounts**: manual — guest play works with no env; email/Google sign-in reaches a game;
+- **Accounts**: manual — guest play works with no env; Google sign-in reaches a game;
   sign-out returns to Home; handle persists across reloads.
 - **Reconnection**: integration test — create/start a room, force a socket disconnect
   (client `disconnect()`), assert the seat + hand survive and `PlayerView.connected === false`,
   re-emit `game:rejoin`, assert state returns and turn timer resumes; grace expiry test
   asserts the seat is dropped after `RECONNECT_GRACE_MS`.
-- **Regression**: `npm.cmd run typecheck`, `npm.cmd test` (all existing suite incl. the 235
-  server tests — reconnection must not change non-disconnect paths), `npm.cmd run build`,
-  `npm.cmd run format`.
+- **Regression**: `npm run typecheck`, `npm test` (all existing suite — reconnection must not
+  change non-disconnect paths), `npm run build`, `npm run format`.
 
 ## Rollout
 
 1. **B1a** reconnection groundwork (room/manager/turn/tests) — shippable standalone, no Firebase.
 2. **B1b** client reconnect overlay + rejoin + integration tests.
 3. **B2a** Firebase Auth (client + server middleware + docs).
-4. **B2b** guest = anonymous upgrade path + auth UI + changelog entry.
+4. **B2b** Google Sign-In UI + guest upgrade path + changelog entry.

@@ -135,6 +135,8 @@ export class Room {
   winnerName?: string;
   /** Player ids with a pending Investment draw offer this round (cleared when accepted or round advances). */
   investmentPending = new Set<string>();
+  /** Last fleeting card played — shown muted on top of the pile (visual only, not in backend pile). */
+  fleetingPileTop?: Card;
 
   constructor(input: { name: string; hostId: string; maxPlayers: number }) {
     this.id = randomBytes(6).toString("hex");

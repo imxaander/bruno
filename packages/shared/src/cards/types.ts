@@ -17,7 +17,7 @@ export type CardType =
   | "origin"
   | "artifact";
 
-export type CardTag = "passive" | "special-passive" | "tentative" | "new" | "wild";
+export type CardTag = "passive" | "special-passive" | "tentative" | "new" | "wild" | "fleeting";
 
 export type CardStatus = "stable" | "draft" | "tentative";
 

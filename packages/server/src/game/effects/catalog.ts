@@ -131,7 +131,7 @@ function plusToTarget(amount: number): (context: EffectContext) => EffectResult 
 
 registerResolver("t1-meiosis", plusToAllEnemies(3));
 registerResolver("t3-mitosis", plusToTwoPlayers(1));
-registerResolver("t2-mitosis", plusToTwoPlayers(2));
+registerResolver("t2-mitosis", plusToTwoPlayers(3));
 registerResolver("t1-suicide", plusSelfAndEnemy(12, 12));
 registerResolver("t3-double-edged-sword", plusSelfAndEnemy(1, 4));
 registerResolver("t1-damnation", plusSelfAndEnemy(1, 23));
@@ -432,7 +432,9 @@ function gainVaults(
   if (!actor) {
     return { applied: false };
   }
-  const tokens = grantVaultTokens(context.game, actor, tier, count, context.random);
+  const tokens = grantVaultTokens(context.game, actor, tier, count, context.random, {
+    fleeting: true,
+  });
   const name = actorName(context);
   return {
     applied: true,
@@ -502,7 +504,7 @@ function offerings(context: EffectContext): EffectResult {
   if (paid < cost.count) {
     return { applied: false, log: [`${actor.name} cannot discard 3 draw [+] cards.`] };
   }
-  grantVaultTokens(context.game, actor, "vault-silver", 1, context.random);
+  grantVaultTokens(context.game, actor, "vault-silver", 1, context.random, { fleeting: true });
   const picked = context.targets?.[0];
   const target = picked
     ? context.game.getPlayer(picked)
@@ -530,20 +532,20 @@ registerResolver("t3-offerings", offerings, {
   cost: { count: 3, match: "draw-plus", label: "3 draw [+] cards" },
 });
 
-/** "Get a Gold Vault and +3 2 enemy players." */
+/** "Get a Gold Vault and +2 2 enemy players." */
 function ruin(context: EffectContext): EffectResult {
   const actor = actorPlayer(context);
   if (!actor) {
     return { applied: false };
   }
-  const cost: CostSpec = { count: 7, match: ["red", "yellow"], label: "7 red or yellow cards" };
+  const cost: CostSpec = { count: 5, match: ["red"], label: "5 red cards" };
   const paid = payCost(actor, cost);
   if (paid < cost.count) {
-    return { applied: false, log: [`${actor.name} cannot discard 7 red or yellow cards.`] };
+    return { applied: false, log: [`${actor.name} cannot discard 5 red cards.`] };
   }
-  grantVaultTokens(context.game, actor, "vault-gold", 1, context.random);
+  grantVaultTokens(context.game, actor, "vault-gold", 1, context.random, { fleeting: true });
   const targets = resolveTargets(context.game, context.actor, context.targets, 2, context.random);
-  const scaled = 3 * (context.amountMultiplier ?? 1);
+  const scaled = 2 * (context.amountMultiplier ?? 1);
   let added = 0;
   for (const target of targets) {
     added += addCards(context.game, target, scaled, context.random);
@@ -552,7 +554,7 @@ function ruin(context: EffectContext): EffectResult {
   return {
     applied: true,
     log: [
-      `${name} discards 7 red or yellow cards.`,
+      `${name} discards 5 red cards.`,
       `${name} gains a Gold Vault token.`,
       `${name} adds ${scaled} card${scaled === 1 ? "" : "s"} to ${targets.length} enemy player(s) (${added}).`,
     ],
@@ -561,27 +563,27 @@ function ruin(context: EffectContext): EffectResult {
 
 registerResolver("t2-ruin", ruin, {
   targets: { min: 2, max: 2 },
-  cost: { count: 7, match: ["red", "yellow"], label: "7 red or yellow cards" },
+  cost: { count: 5, match: ["red"], label: "5 red cards" },
 });
 
-/** "Discard 2 special cards to draw 10." */
+/** "Discard 4 special cards to draw 10." */
 function sacrificialLamb(context: EffectContext): EffectResult {
   const actor = actorPlayer(context);
   if (!actor) {
     return { applied: false };
   }
-  const cost: CostSpec = { count: 2, match: "special", label: "2 special cards" };
+  const cost: CostSpec = { count: 4, match: "special", label: "4 special cards" };
   const paid = payCost(actor, cost);
   if (paid < cost.count) {
-    return { applied: false, log: [`${actor.name} cannot discard 2 special cards.`] };
+    return { applied: false, log: [`${actor.name} cannot discard 4 special cards.`] };
   }
   const drawn = addCards(context.game, actor, 10 * (context.amountMultiplier ?? 1), context.random);
   const name = actorName(context);
-  return { applied: true, log: [`${name} discards 2 special cards and draws ${drawn}.`] };
+  return { applied: true, log: [`${name} discards 4 special cards and draws ${drawn}.`] };
 }
 
 registerResolver("t2-sacrificial-lamb", sacrificialLamb, {
-  cost: { count: 2, match: "special", label: "2 special cards" },
+  cost: { count: 4, match: "special", label: "4 special cards" },
 });
 
 /** "Pick a color, discard all of those cards with the same color." (self-hand) */
@@ -886,7 +888,7 @@ function colorChallenge(
   };
 }
 
-registerResolver("t3-midas-touch", colorChallenge("yellow", 4, true));
+registerResolver("t3-midas-touch", colorChallenge("yellow", 4, false));
 registerResolver("t3-flash-flood", colorChallenge("blue", 4, false));
 registerResolver("t3-red-flag", colorChallenge("red", 4, false));
 registerResolver("t3-green-thumb", colorChallenge("green", 4, false));
@@ -1024,7 +1026,9 @@ function allIn(context: EffectContext): EffectResult {
   if (!actor) {
     return { applied: false };
   }
-  const tokens = grantVaultTokens(context.game, actor, "vault-diamond", 2, context.random);
+  const tokens = grantVaultTokens(context.game, actor, "vault-diamond", 2, context.random, {
+    fleeting: true,
+  });
   scheduleDeferred(context.game, {
     kind: "all-in",
     triggerRound: (context.roundPlayed ?? context.game.round) + 3,

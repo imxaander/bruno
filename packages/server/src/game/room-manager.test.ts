@@ -576,7 +576,7 @@ describe("RoomManager", () => {
       type: "alert",
       gameId: room.id,
       playerId: "p1",
-      message: "You need 7 red or yellow cards to play Ruin.",
+      message: "You need 5 red cards to play Ruin.",
     });
     expect(events.some((event) => event.type === "prompt" && event.kind === "vault-choice")).toBe(
       true,
