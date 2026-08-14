@@ -1,5 +1,6 @@
 import type { Server, Socket } from "socket.io";
 import {
+  AuthVerifySchema,
   CreateRoomPayloadSchema,
   GameActionSchema,
   GetGameStateSchema,
@@ -7,8 +8,12 @@ import {
   LeaveRoomSchema,
   RejoinRoomSchema,
   StartGameSchema,
+  calculatePointChanges,
   getCard,
+  getRankTier,
   type ClientToServerEvents,
+  type PlayerView,
+  type PointChange,
   type ServerToClientEvents,
   type VaultOffer,
 } from "@bruno/shared";
@@ -24,6 +29,7 @@ import {
 import { registeredResolverIds } from "../game/effects/registry.js";
 import type { TurnManager } from "../game/turn-manager.js";
 import { getAuth } from "../firebase/admin.js";
+import { getDb } from "../firebase/firestore.js";
 import { applyGameEndScores } from "../firebase/profileScoring.js";
 
 export type BrunoServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -86,11 +92,62 @@ export function registerSockets(
   const socketDataByPlayer = new Map<string, SocketData>(); // playerId -> SocketData
   let rooms: RoomManager;
 
-  const pushGameState = (gameId: string): void => {
+  // playerId -> { icon, name } ranks, cached briefly per room to avoid a Firestore
+  // read on every state push. Freshness of ~30s is fine (ranks only change after games).
+  type PlayerRanks = Record<string, { icon: string; name: string }>;
+  const rankCache = new Map<string, { at: number; ranks: PlayerRanks }>();
+  const RANK_TTL_MS = 30_000;
+
+  const withRanks = (view: PlayerView, ranks: PlayerRanks): PlayerView => {
+    if (Object.keys(ranks).length === 0) {
+      return view;
+    }
+    return {
+      ...view,
+      players: view.players.map((player) => {
+        const rank = ranks[player.id];
+        return rank ? { ...player, rankIcon: rank.icon, rankName: rank.name } : player;
+      }),
+    };
+  };
+
+  const fetchRanks = async (gameId: string): Promise<PlayerRanks> => {
+    const cached = rankCache.get(gameId);
+    if (cached && Date.now() - cached.at < RANK_TTL_MS) {
+      return cached.ranks;
+    }
+    const room = rooms.getRoom(gameId);
+    const db = getDb();
+    if (!room || !db) {
+      return {};
+    }
+    const ranks: PlayerRanks = {};
+    await Promise.all(
+      room.players.map(async (player) => {
+        try {
+          const snap = await db.collection("profiles").doc(player.id).get();
+          const data = snap.exists ? snap.data() : null;
+          if (!data) {
+            return;
+          }
+          const points = typeof data.points === "number" ? data.points : 0;
+          const tier = getRankTier(points);
+          ranks[player.id] = { icon: tier.icon, name: tier.name };
+        } catch {
+          // Profile unreadable (rules/permissions) — player shows no rank badge.
+        }
+      }),
+    );
+    rankCache.set(gameId, { at: Date.now(), ranks });
+    return ranks;
+  };
+
+  const pushGameState = async (gameId: string): Promise<void> => {
     const sockets = roomSockets.get(gameId);
     if (!sockets) {
       return;
     }
+    const ranks = await fetchRanks(gameId);
     for (const socket of sockets) {
       const playerId = socket.data.playerId;
       if (!playerId) {
@@ -98,7 +155,7 @@ export function registerSockets(
       }
       const view = rooms.getPlayerView(gameId, playerId);
       if (view.ok) {
-        socket.emit("game:state", view.value);
+        socket.emit("game:state", withRanks(view.value, ranks));
       }
     }
   };
@@ -149,7 +206,7 @@ export function registerSockets(
     }
   };
 
-  const emitGameEnded = (event: Extract<RoomEvent, { type: "ended" }>): void => {
+  const emitGameEnded = async (event: Extract<RoomEvent, { type: "ended" }>): Promise<void> => {
     const room = rooms.getRoom(event.gameId);
     const players = room
       ? room.players.map((player) => ({
@@ -159,24 +216,43 @@ export function registerSockets(
         }))
       : [];
 
-    // Calculate and apply rank point changes
-    if (room) {
-      const scoringPlayers = room.players.map((player) => ({
-        uid: socketDataByPlayer.get(player.id)?.uid ?? null,
-        isWinner: player.id === event.winnerId,
-        cardsRemaining: player.hand.length,
-        vaultCardsUsed: player.playedEffectIds?.filter((id) => id.startsWith("t")).length ?? 0,
-        currentPoints: 0, // Will be read from Firestore in applyGameEndScores
-      }));
-      applyGameEndScores(scoringPlayers).catch(() => {});
+    // Calculate and apply rank point changes. Guests (no uid) score nothing.
+    const scoringPlayers = room
+      ? room.players.map((player) => ({
+          uid: socketDataByPlayer.get(player.id)?.uid ?? null,
+          isWinner: player.id === event.winnerId,
+          cardsRemaining: player.hand.length,
+          vaultCardsUsed: player.playedEffectIds?.filter((id) => id.startsWith("t")).length ?? 0,
+          currentPoints: 0, // real total read from Firestore inside applyGameEndScores
+        }))
+      : [];
+    let changes: PointChange[];
+    let pointsConfigured = false;
+    try {
+      changes = await applyGameEndScores(scoringPlayers);
+      pointsConfigured = getDb() !== null;
+    } catch {
+      // Firestore unavailable — still report deltas, but no persisted totals.
+      changes = calculatePointChanges(scoringPlayers);
     }
+    const changeByUid = new Map(changes.map((change) => [change.uid, change]));
 
     io.to(event.gameId).emit("game:ended", {
       gameId: event.gameId,
       winner: event.winnerId ? { id: event.winnerId, name: event.winnerName } : null,
-      players,
+      players: players.map((player) => {
+        const change = changeByUid.get(player.id);
+        return {
+          ...player,
+          pointsDelta: change?.delta ?? 0,
+          points: change && pointsConfigured ? change.newPoints : null,
+          rankName: change && pointsConfigured ? change.newTier : null,
+        };
+      }),
       reason: "hand_emptied",
     });
+    // Ranks change after scoring — drop the cache so the next push is fresh.
+    rankCache.delete(event.gameId);
     pushGameState(event.gameId);
   };
 
@@ -226,7 +302,7 @@ export function registerSockets(
         pushGameState(event.gameId);
         break;
       case "ended":
-        emitGameEnded(event);
+        void emitGameEnded(event);
         break;
       case "prompt":
         emitPrompt(event);
@@ -275,18 +351,47 @@ export function registerSockets(
     console.log(`[socket] connected: ${socket.id}`);
     const data = socket.data as SocketData;
 
-    // Verify Firebase token if present
+    // Verify Firebase token if present. Anonymous tokens still decode, but guests
+    // (anonymous auth) are skipped by rank/scoring — only verified non-anonymous
+    // tokens become an authoritative uid.
     const serverAuth = getAuth();
     const socketAuth = socket as typeof socket & { auth?: Record<string, unknown> };
     if (serverAuth && socketAuth.auth?.token && typeof socketAuth.auth.token === "string") {
       try {
         const decoded = await serverAuth.verifyIdToken(socketAuth.auth.token as string);
-        data.uid = decoded.uid;
-        data.playerId = decoded.uid; // Use uid as authoritative playerId
+        if (decoded.firebase?.sign_in_provider !== "anonymous") {
+          data.uid = decoded.uid;
+          data.playerId = decoded.uid; // Use uid as authoritative playerId
+        }
       } catch {
         // Invalid token — treat as guest
       }
     }
+
+    socket.on("auth:verify", (payload) => {
+      const parsed = AuthVerifySchema.safeParse(payload);
+      if (!parsed.success) {
+        return;
+      }
+      const auth = getAuth();
+      if (!auth) {
+        return;
+      }
+      auth
+        .verifyIdToken(parsed.data.token)
+        .then((decoded) => {
+          if (decoded.firebase?.sign_in_provider === "anonymous") {
+            return;
+          }
+          // socketDataByPlayer holds a reference to socket.data, so mutating uid here
+          // is reflected in the game-end scoring lookup. Don't touch playerId — the
+          // seat may be keyed by a guest id this socket created before signing in.
+          data.uid = decoded.uid;
+        })
+        .catch(() => {
+          // Invalid token — stay a guest
+        });
+    });
 
     socket.on("rooms:list", () => {
       socket.emit("rooms:list:return", rooms.listRooms());
@@ -384,18 +489,21 @@ export function registerSockets(
       });
     });
 
-    socket.on("game:state:get", (payload) => {
+    socket.on("game:state:get", async (payload) => {
       const parsed = GetGameStateSchema.safeParse(payload);
       if (!parsed.success) {
         emitError(socket, "INVALID_STATE_GET", "Invalid state payload.");
         return;
       }
-      const result = rooms.getPlayerView(parsed.data.gameId, parsed.data.playerId);
+      // Override playerId with authenticated uid when available
+      const playerId = data.uid ?? parsed.data.playerId;
+      const result = rooms.getPlayerView(parsed.data.gameId, playerId);
       if (!result.ok) {
         emitFailure(socket, result.error);
         return;
       }
-      socket.emit("game:state", result.value);
+      const ranks = await fetchRanks(parsed.data.gameId);
+      socket.emit("game:state", withRanks(result.value, ranks));
     });
 
     socket.on("game:action", (payload) => {
@@ -412,7 +520,7 @@ export function registerSockets(
       pushGameState(parsed.data.gameId);
     });
 
-    socket.on("game:rejoin", (payload) => {
+    socket.on("game:rejoin", async (payload) => {
       const parsed = RejoinRoomSchema.safeParse(payload);
       if (!parsed.success) {
         emitError(socket, "INVALID_REJOIN", "Invalid rejoin payload.");
@@ -429,7 +537,8 @@ export function registerSockets(
       data.playerId = playerId;
       socket.join(parsed.data.gameId);
       addToRoom(parsed.data.gameId, socket);
-      socket.emit("game:state", result.value);
+      const ranks = await fetchRanks(parsed.data.gameId);
+      socket.emit("game:state", withRanks(result.value, ranks));
       io.to(parsed.data.gameId).emit(
         "lobby:update",
         rooms.getLobbyPlayers(parsed.data.gameId) ?? [],

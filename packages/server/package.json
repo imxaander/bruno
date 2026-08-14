@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@bruno/shared": "*",
+    "dotenv": "^17.4.2",
     "express": "^4.21.2",
     "firebase-admin": "^13.0.0",
     "socket.io": "^4.8.1",

@@ -70,6 +70,7 @@ function StarField() {
 export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGameProps) {
   const sorted = [...players].sort((a, b) => a.handCount - b.handCount);
   const champion = winner?.name ?? "Draw";
+  const championPlayer = winner ? (players.find((p) => p.id === winner.id) ?? null) : null;
   return (
     <div
       style={{
@@ -257,6 +258,21 @@ export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGam
               >
                 {reason === "hand_emptied" ? "First to empty hand" : "Round complete"}
               </p>
+              {championPlayer && championPlayer.pointsDelta !== 0 ? (
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: championPlayer.pointsDelta > 0 ? "#37e66a" : "#ff5d5d",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  {championPlayer.pointsDelta > 0 ? "+" : ""}
+                  {championPlayer.pointsDelta} pts
+                  {championPlayer.rankName ? ` · ${championPlayer.rankName}` : ""}
+                </p>
+              ) : null}
             </div>
             <GameCard color="red" value="0" size="md" lifted />
             <span
@@ -370,6 +386,26 @@ export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGam
                 </span>
                 <span style={{ fontSize: 12, color: "rgba(200,216,240,0.5)", fontWeight: 700 }}>
                   {player.handCount}
+                </span>
+                <span
+                  style={{
+                    width: 52,
+                    textAlign: "right",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color:
+                      player.pointsDelta > 0
+                        ? "#37e66a"
+                        : player.pointsDelta < 0
+                          ? "#ff5d5d"
+                          : "rgba(200,216,240,0.3)",
+                  }}
+                >
+                  {player.pointsDelta > 0
+                    ? `+${player.pointsDelta}`
+                    : player.pointsDelta < 0
+                      ? `${player.pointsDelta}`
+                      : "—"}
                 </span>
               </div>
             ))}

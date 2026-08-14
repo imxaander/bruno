@@ -62,7 +62,17 @@ const SEATS_8P: CSSProperties[] = [
   { top: "52%", right: "1%" },
 ];
 
-export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting, profileIcon, profileRank, onProfileClick }: GameProps) {
+export function Game({
+  socket,
+  identity,
+  roomId,
+  goLobby,
+  onEnded,
+  reconnecting,
+  profileIcon,
+  profileRank,
+  onProfileClick,
+}: GameProps) {
   const [view, setView] = useState<PlayerView | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -500,7 +510,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting,
             background: "rgba(0,238,255,0.06)",
             border: "1px solid rgba(0,238,255,0.2)",
             borderRadius: 20,
-            padding: "4px 12px 4px 6px",
+            padding: "4px 14px",
             cursor: "pointer",
             transition: "background 0.14s, border-color 0.14s",
             marginRight: 8,
@@ -514,19 +524,17 @@ export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting,
             e.currentTarget.style.borderColor = "rgba(0,238,255,0.2)";
           }}
         >
-          <span style={{ fontSize: 16 }}>{profileIcon || "🎮"}</span>
-          {profileRank ? (
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: "rgba(0,238,255,0.7)",
-                letterSpacing: "0.04em",
-              }}
-            >
-              {profileRank}
-            </span>
-          ) : null}
+          {profileIcon ? <span style={{ fontSize: 14 }}>{profileIcon}</span> : null}
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "rgba(0,238,255,0.7)",
+              letterSpacing: "0.1em",
+            }}
+          >
+            PROFILE
+          </span>
         </button>
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 8 }}>
@@ -714,7 +722,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting,
           data-player-seat={player.id}
           style={{ position: "absolute", zIndex: 2, ...SEATS_8P[i] }}
         >
-          <Seat player={player} compact />
+          <Seat player={player} compact rankIcon={player.rankIcon} rankName={player.rankName} />
         </div>
       ))}
 
@@ -792,7 +800,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting,
       >
         {opponents.map((player) => (
           <div key={player.id} data-player-seat={player.id}>
-            <Seat player={player} />
+            <Seat player={player} rankIcon={player.rankIcon} rankName={player.rankName} />
           </div>
         ))}
       </div>

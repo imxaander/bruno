@@ -1,5 +1,6 @@
 import type { PlayerView } from "../game/state.js";
 import type {
+  AuthVerifyPayload,
   CreateRoomPayload,
   ErrorEnvelope,
   GameAction,
@@ -27,6 +28,7 @@ export interface ClientToServerEvents {
   "game:rejoin": (payload: { gameId: string; playerId: string }) => void;
   "game:state:get": (payload: GetGameStatePayload) => void;
   "vault:catalog:get": () => void;
+  "auth:verify": (payload: AuthVerifyPayload) => void;
 }
 
 export interface ServerToClientEvents {

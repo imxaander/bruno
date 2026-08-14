@@ -22,7 +22,14 @@ function statusOf(room: RoomSummary): StatusType {
   return room.playerCount >= room.maxPlayers ? "full" : "open";
 }
 
-export function Rooms({ socket, identity, goLobby, profileIcon, profileRank, onProfileClick }: RoomsProps) {
+export function Rooms({
+  socket,
+  identity,
+  goLobby,
+  profileIcon,
+  profileRank,
+  onProfileClick,
+}: RoomsProps) {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [roomName, setRoomName] = useState("");
@@ -87,7 +94,12 @@ export function Rooms({ socket, identity, goLobby, profileIcon, profileRank, onP
         flexDirection: "column",
       }}
     >
-      <PageHeader label="Game Rooms" profileIcon={profileIcon} profileRank={profileRank} onProfileClick={onProfileClick} />
+      <PageHeader
+        label="Game Rooms"
+        profileIcon={profileIcon}
+        profileRank={profileRank}
+        onProfileClick={onProfileClick}
+      />
 
       {error ? (
         <div

@@ -51,7 +51,7 @@ export function PageHeader({ label, profileIcon, profileRank, onProfileClick }: 
             background: "rgba(0,238,255,0.06)",
             border: "1px solid rgba(0,238,255,0.2)",
             borderRadius: 20,
-            padding: "4px 12px 4px 6px",
+            padding: "4px 14px",
             cursor: "pointer",
             transition: "background 0.14s, border-color 0.14s",
           }}
@@ -64,19 +64,17 @@ export function PageHeader({ label, profileIcon, profileRank, onProfileClick }: 
             e.currentTarget.style.borderColor = "rgba(0,238,255,0.2)";
           }}
         >
-          <span style={{ fontSize: 18 }}>{profileIcon || "🎮"}</span>
-          {profileRank ? (
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: "rgba(0,238,255,0.7)",
-                letterSpacing: "0.04em",
-              }}
-            >
-              {profileRank}
-            </span>
-          ) : null}
+          {profileIcon ? <span style={{ fontSize: 14 }}>{profileIcon}</span> : null}
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "rgba(0,238,255,0.7)",
+              letterSpacing: "0.1em",
+            }}
+          >
+            PROFILE
+          </span>
         </button>
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

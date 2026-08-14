@@ -5,11 +5,22 @@ export interface UpdateEntry {
   bullets: string[];
 }
 
-export const UPDATES_LATEST_VERSION = "0.2.0";
+export const UPDATES_LATEST_VERSION = "0.3.0";
 
 export const UPDATES_STORAGE_KEY = "bruno_updates_seen";
 
 export const CHANGELOG: UpdateEntry[] = [
+  {
+    version: "0.3.0",
+    date: "2026-08-15",
+    title: "Rank points, profiles & winner scoring",
+    bullets: [
+      "Rank points — winning scores +5 (plus +1 per vault card, up to +10); losers earn +3 for the best hand or lose 5 for the worst.",
+      "Profile refresh — points, wins and rank update in the profile tab right after a game, no reload needed.",
+      "Signed-in identity — you play as your profile username and your rank badge shows on your seat.",
+      "Winner reveal now shows the points you earned (and lost) at the end of every round.",
+    ],
+  },
   {
     version: "0.2.0",
     date: "2026-08-15",

@@ -29,7 +29,14 @@ interface SeatProps {
   rankName?: string;
 }
 
-export function Seat({ player, self = false, compact = false, showSeat = false, rankIcon, rankName }: SeatProps) {
+export function Seat({
+  player,
+  self = false,
+  compact = false,
+  showSeat = false,
+  rankIcon,
+  rankName,
+}: SeatProps) {
   const avatarColor = hashColor(player.id);
   const active = player.isTurn;
   const avatarSize = compact ? 36 : 44;
@@ -63,6 +70,7 @@ export function Seat({ player, self = false, compact = false, showSeat = false, 
         </div>
         {rankIcon ? (
           <span
+            title={rankName ?? undefined}
             style={{
               position: "absolute",
               bottom: -4,

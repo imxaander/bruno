@@ -7,6 +7,7 @@ import {
   signOut as firebaseSignOut,
   linkWithPopup,
   onAuthStateChanged,
+  onIdTokenChanged,
   type User,
 } from "firebase/auth";
 
@@ -55,4 +56,13 @@ export function onAuthChange(cb: (user: User | null) => void): () => void {
     return () => {};
   }
   return onAuthStateChanged(auth, cb);
+}
+
+/** Fires on sign-in, sign-out, and ID token refresh — ideal for re-verifying the socket. */
+export function onIdToken(cb: (user: User | null) => void): () => void {
+  if (!auth) {
+    cb(null);
+    return () => {};
+  }
+  return onIdTokenChanged(auth, cb);
 }

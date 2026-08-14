@@ -806,8 +806,22 @@ describe("room lifecycle over the wire", () => {
       expect(ended.gameId).toBe(gameId);
       expect(ended.winner).toEqual({ id: "PID-a", name: "Alice" });
       expect(ended.reason).toBe("hand_emptied");
-      expect(ended.players).toContainEqual({ id: "PID-a", name: "Alice", handCount: 0 });
-      expect(ended.players).toContainEqual({ id: "PID-b", name: "Bob", handCount: 8 });
+      expect(ended.players).toContainEqual({
+        id: "PID-a",
+        name: "Alice",
+        handCount: 0,
+        pointsDelta: 0,
+        points: null,
+        rankName: null,
+      });
+      expect(ended.players).toContainEqual({
+        id: "PID-b",
+        name: "Bob",
+        handCount: 8,
+        pointsDelta: 0,
+        points: null,
+        rankName: null,
+      });
 
       const [viewA] = await stateA;
       expect(viewA.status).toBe("concluding");

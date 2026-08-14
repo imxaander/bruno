@@ -1,10 +1,15 @@
+import dotenv from "dotenv";
 import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { createServer } from "node:http";
 import express from "express";
 import { Server } from "socket.io";
 import type { ClientToServerEvents, ServerToClientEvents } from "@bruno/shared";
 import { loadConfig } from "./config.js";
 import { registerSockets } from "./sockets/index.js";
+import { getDb } from "./firebase/firestore.js";
+
+dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 
 const config = loadConfig();
 
@@ -37,4 +42,9 @@ registerSockets(io);
 
 httpServer.listen(config.port, () => {
   console.log(`[server] BRUNO server listening on http://localhost:${config.port}`);
+  console.log(
+    getDb()
+      ? "[server] Firebase Firestore connected — ranks and scoring active"
+      : "[server] Firebase not configured — ranks and scoring disabled",
+  );
 });

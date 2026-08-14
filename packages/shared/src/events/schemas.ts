@@ -31,6 +31,13 @@ export const RejoinRoomSchema = z.object({
 });
 export type RejoinRoomPayload = z.infer<typeof RejoinRoomSchema>;
 
+/** A Firebase ID token sent after auth state changes so the server can set socket.data.uid
+ * even when the socket connected before sign-in completed. */
+export const AuthVerifySchema = z.object({
+  token: z.string().min(1),
+});
+export type AuthVerifyPayload = z.infer<typeof AuthVerifySchema>;
+
 export const ErrorEnvelopeSchema = z.object({
   ok: z.literal(false),
   code: z.string(),
@@ -183,6 +190,9 @@ export const GameEndedPlayerSchema = z.object({
   id: z.string(),
   name: z.string(),
   handCount: z.number().int().nonnegative(),
+  pointsDelta: z.number().int(),
+  points: z.number().int().nullable(),
+  rankName: z.string().nullable(),
 });
 export type GameEndedPlayer = z.infer<typeof GameEndedPlayerSchema>;
 

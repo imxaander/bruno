@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { GameEndedPayload } from "@bruno/shared";
-import { useSocket } from "./socket/useSocket.js";
+import { useSocket, type PlayerIdentity } from "./socket/useSocket.js";
 import { AuthProvider, useAuth } from "./firebase/AuthProvider.js";
 import { ProfileModal } from "./firebase/ProfileModal.js";
 import { AfterGame } from "./pages/AfterGame.js";
@@ -13,13 +13,28 @@ type Screen = "home" | "rooms" | "lobby" | "game" | "aftergame";
 
 function AppContent() {
   const { socket, identity, saveIdentity, setRoomId: setSocketRoomId, reconnecting } = useSocket();
-  const { profile, rank, user } = useAuth();
+  const { profile, rank, user, profileError, displayName, guest, available, refreshProfile } =
+    useAuth();
   const [screen, setScreen] = useState<Screen>("home");
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomName, setRoomName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(8);
   const [ended, setEnded] = useState<GameEndedPayload | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+
+  const isSignedIn = available && !!user && !guest;
+  // Signed-in players are the Firebase uid + their profile username; guests keep
+  // the locally stored guest handle. Never clobber the guest identity with the
+  // signed-in name so it survives sign-out.
+  const effectiveIdentity = useMemo<PlayerIdentity>(() => {
+    if (isSignedIn) {
+      return {
+        id: user?.uid || identity.id,
+        name: profile?.username || displayName || identity.name,
+      };
+    }
+    return identity;
+  }, [isSignedIn, user, profile, displayName, identity]);
 
   const goRooms = useCallback(() => {
     setEnded(null);
@@ -53,23 +68,26 @@ function AppContent() {
       setEnded(payload);
       setSocketRoomId(null);
       setScreen("aftergame");
+      // Scoring is committed server-side before game:ended is emitted, so re-fetch
+      // the profile now — the points/wins/rank shown after a win or loss stay fresh.
+      void refreshProfile();
     },
-    [setSocketRoomId],
+    [setSocketRoomId, refreshProfile],
   );
 
   const handlePlay = useCallback(
     (name: string) => {
-      if (!identity.id && name) {
+      if (!isSignedIn && name) {
         saveIdentity(name);
       }
       goRooms();
     },
-    [identity.id, saveIdentity, goRooms],
+    [isSignedIn, saveIdentity, goRooms],
   );
 
-  const profileProps = profile && rank
-    ? { profile, rank, email: user?.email ?? null, onClose: () => setProfileOpen(false) }
-    : null;
+  const handleProfileClick = useCallback(() => {
+    setProfileOpen(true);
+  }, []);
 
   const content = (() => {
     if (screen === "home") {
@@ -81,11 +99,11 @@ function AppContent() {
       return (
         <Rooms
           socket={socket}
-          identity={identity}
+          identity={effectiveIdentity}
           goLobby={goLobby}
           profileIcon={profile?.icon}
           profileRank={rank?.name}
-          onProfileClick={() => setProfileOpen(true)}
+          onProfileClick={handleProfileClick}
         />
       );
     }
@@ -93,7 +111,7 @@ function AppContent() {
       return (
         <Lobby
           socket={socket}
-          identity={identity}
+          identity={effectiveIdentity}
           roomId={roomId}
           roomName={roomName}
           maxPlayers={maxPlayers}
@@ -101,7 +119,7 @@ function AppContent() {
           goGame={goGame}
           profileIcon={profile?.icon}
           profileRank={rank?.name}
-          onProfileClick={() => setProfileOpen(true)}
+          onProfileClick={handleProfileClick}
         />
       );
     }
@@ -109,14 +127,14 @@ function AppContent() {
       return (
         <Game
           socket={socket}
-          identity={identity}
+          identity={effectiveIdentity}
           roomId={roomId}
           goLobby={goRooms}
           onEnded={handleEnded}
           reconnecting={reconnecting}
           profileIcon={profile?.icon}
           profileRank={rank?.name}
-          onProfileClick={() => setProfileOpen(true)}
+          onProfileClick={handleProfileClick}
         />
       );
     }
@@ -134,7 +152,15 @@ function AppContent() {
   return (
     <>
       {content}
-      {profileOpen && profileProps ? <ProfileModal {...profileProps} /> : null}
+      {profileOpen ? (
+        <ProfileModal
+          profile={profile}
+          rank={rank}
+          email={user?.email ?? null}
+          error={profileError}
+          onClose={() => setProfileOpen(false)}
+        />
+      ) : null}
     </>
   );
 }

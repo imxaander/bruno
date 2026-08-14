@@ -13,9 +13,9 @@ export interface PlayerProfile {
 
 /** A single rank tier (e.g., "Bronze 3", "Gold 1"). */
 export interface RankTier {
-  name: string;       // "Bronze 3", "Gold 1", etc.
-  rank: string;       // "Bronze", "Gold", etc.
-  icon: string;       // "🥉", "🥇", etc.
+  name: string; // "Bronze 3", "Gold 1", etc.
+  rank: string; // "Bronze", "Gold", etc.
+  icon: string; // "🥉", "🥇", etc.
   minPoints: number;
   maxPoints: number;
 }
@@ -23,20 +23,20 @@ export interface RankTier {
 /** All rank tiers in ascending order. */
 export const RANK_TIERS: RankTier[] = [
   { name: "Bronze 3", rank: "Bronze", icon: "🥉", minPoints: 0, maxPoints: 49 },
-  { name: "Bronze 2", rank: "Bronze", icon: "🥉", minPoints: 50, maxPoints: 99 },
-  { name: "Bronze 1", rank: "Bronze", icon: "🥉", minPoints: 100, maxPoints: 149 },
+  { name: "Bronze 2", rank: "Bronze", icon: "🛡️", minPoints: 50, maxPoints: 99 },
+  { name: "Bronze 1", rank: "Bronze", icon: "⚔️", minPoints: 100, maxPoints: 149 },
   { name: "Silver 3", rank: "Silver", icon: "🥈", minPoints: 150, maxPoints: 199 },
-  { name: "Silver 2", rank: "Silver", icon: "🥈", minPoints: 200, maxPoints: 249 },
-  { name: "Silver 1", rank: "Silver", icon: "🥈", minPoints: 250, maxPoints: 299 },
+  { name: "Silver 2", rank: "Silver", icon: "🌙", minPoints: 200, maxPoints: 249 },
+  { name: "Silver 1", rank: "Silver", icon: "⭐", minPoints: 250, maxPoints: 299 },
   { name: "Gold 3", rank: "Gold", icon: "🥇", minPoints: 300, maxPoints: 349 },
-  { name: "Gold 2", rank: "Gold", icon: "🥇", minPoints: 350, maxPoints: 399 },
-  { name: "Gold 1", rank: "Gold", icon: "🥇", minPoints: 400, maxPoints: 449 },
+  { name: "Gold 2", rank: "Gold", icon: "🔥", minPoints: 350, maxPoints: 399 },
+  { name: "Gold 1", rank: "Gold", icon: "💫", minPoints: 400, maxPoints: 449 },
   { name: "Platinum 3", rank: "Platinum", icon: "💎", minPoints: 450, maxPoints: 499 },
-  { name: "Platinum 2", rank: "Platinum", icon: "💎", minPoints: 500, maxPoints: 549 },
-  { name: "Platinum 1", rank: "Platinum", icon: "💎", minPoints: 550, maxPoints: 599 },
+  { name: "Platinum 2", rank: "Platinum", icon: "🌀", minPoints: 500, maxPoints: 549 },
+  { name: "Platinum 1", rank: "Platinum", icon: "🔮", minPoints: 550, maxPoints: 599 },
   { name: "Diamond 3", rank: "Diamond", icon: "💠", minPoints: 600, maxPoints: 649 },
-  { name: "Diamond 2", rank: "Diamond", icon: "💠", minPoints: 650, maxPoints: 699 },
-  { name: "Diamond 1", rank: "Diamond", icon: "💠", minPoints: 700, maxPoints: 749 },
+  { name: "Diamond 2", rank: "Diamond", icon: "✨", minPoints: 650, maxPoints: 699 },
+  { name: "Diamond 1", rank: "Diamond", icon: "🌟", minPoints: 700, maxPoints: 749 },
   { name: "Bruno", rank: "Bruno", icon: "👑", minPoints: 750, maxPoints: Infinity },
 ];
 

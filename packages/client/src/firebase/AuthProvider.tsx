@@ -19,10 +19,12 @@ interface AuthContextValue {
   displayName: string;
   profile: PlayerProfile | null;
   rank: RankTier | null;
+  profileError: string | null;
   signInGoogle: () => Promise<void>;
   signInGuest: () => Promise<void>;
   firebaseSignOut: () => Promise<void>;
   upgradeGuest: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   available: boolean;
 }
 
@@ -45,15 +47,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const loadOrCreateProfile = useCallback(async (u: User) => {
-    let prof = await getProfile(u.uid);
-    if (!prof) {
-      prof = createDefaultProfile(u.uid, computeDisplayName(u));
-      // Save it to Firestore (non-blocking — don't await on render)
-      import("./profiles.js").then((m) => m.saveProfile(prof!));
+    try {
+      let prof = await getProfile(u.uid);
+      if (!prof) {
+        prof = createDefaultProfile(u.uid, computeDisplayName(u));
+        // Save it to Firestore (non-blocking — don't await on render)
+        import("./profiles.js").then((m) => m.saveProfile(prof!));
+      }
+      setProfile(prof);
+      setProfileError(null);
+    } catch (err) {
+      // Firestore read failed (rules/permissions/offline) — keep profile null so the
+      // profile modal shows an explanatory fallback instead of silently doing nothing.
+      const reason = err instanceof Error ? err.message : String(err);
+      setProfileError(reason);
+      console.warn("[profile] failed to load from Firestore:", reason);
     }
-    setProfile(prof);
   }, []);
 
   useEffect(() => {
@@ -103,6 +115,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (u) setUser(u);
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    const current = auth?.currentUser;
+    if (current) {
+      await loadOrCreateProfile(current);
+    }
+  }, [loadOrCreateProfile]);
+
   const value = useMemo<AuthContextValue>(() => {
     const isAvailable = auth !== null;
     const rank = profile ? getRankTier(profile.points) : null;
@@ -113,13 +132,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       displayName: user ? computeDisplayName(user) : "",
       profile,
       rank,
+      profileError,
       signInGoogle: handleSignInGoogle,
       signInGuest: handleSignInGuest,
       firebaseSignOut: handleSignOut,
       upgradeGuest: handleUpgradeGuest,
+      refreshProfile,
       available: isAvailable,
     };
-  }, [user, loading, profile, handleSignInGoogle, handleSignInGuest, handleSignOut, handleUpgradeGuest]);
+  }, [
+    user,
+    loading,
+    profile,
+    profileError,
+    handleSignInGoogle,
+    handleSignInGuest,
+    handleSignOut,
+    handleUpgradeGuest,
+    refreshProfile,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

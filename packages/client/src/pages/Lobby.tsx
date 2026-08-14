@@ -246,7 +246,12 @@ export function Lobby({
         flexDirection: "column",
       }}
     >
-      <PageHeader label="Lobby" profileIcon={profileIcon} profileRank={profileRank} onProfileClick={onProfileClick} />
+      <PageHeader
+        label="Lobby"
+        profileIcon={profileIcon}
+        profileRank={profileRank}
+        onProfileClick={onProfileClick}
+      />
 
       {error ? (
         <div

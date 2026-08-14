@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createSocket, type BrunoSocket } from "./client.js";
-import { auth } from "../firebase/client.js";
+import { auth, onIdToken } from "../firebase/client.js";
 
 export interface PlayerIdentity {
   id: string;
@@ -35,9 +35,28 @@ export function useSocket() {
 
   useEffect(() => {
     const sock = createSocket({ autoConnect: false });
+    // Fetch the current Firebase ID token, attach it for (re)connects, and verify it
+    // against the live socket so the server can set socket.data.uid even when the
+    // socket connected before sign-in completed. Anonymous guests are skipped.
+    const applyAuth = async (verify: boolean) => {
+      const user = auth?.currentUser;
+      if (!user || user.isAnonymous) {
+        return;
+      }
+      try {
+        const token = await user.getIdToken();
+        sock.auth = { token };
+        if (verify) {
+          sock.emit("auth:verify", { token });
+        }
+      } catch {
+        // Token fetch failed — stay a guest
+      }
+    };
     const onConnect = () => {
       setConnected(true);
       setReconnecting(false);
+      void applyAuth(true);
       // If we're in a game, rejoin after reconnection.
       const rid = roomIdRef.current;
       const id = readIdentity().id;
@@ -52,33 +71,24 @@ export function useSocket() {
     };
     const onReconnectAttempt = async () => {
       setReconnecting(true);
-      // Re-attach Firebase token on reconnect
-      if (auth?.currentUser) {
-        try {
-          const token = await auth.currentUser.getIdToken();
-          sock.auth = { token };
-        } catch {
-          // Token fetch failed — reconnect without auth
-        }
-      }
+      await applyAuth(false);
     };
     sock.on("connect", onConnect);
     sock.on("disconnect", onDisconnect);
     sock.io.on("reconnect_attempt", onReconnectAttempt);
-    // Attach Firebase token before connecting
-    (async () => {
-      if (auth?.currentUser) {
-        try {
-          const token = await auth.currentUser.getIdToken();
-          sock.auth = { token };
-        } catch {
-          // Token fetch failed — connect without auth
-        }
-      }
+    // Re-verify whenever auth state or the ID token changes (fires once immediately
+    // with the current user, and again after anonymous -> Google upgrades).
+    const unsubscribeAuth = onIdToken(() => {
+      void applyAuth(true);
+    });
+    // Attach Firebase token before connecting.
+    void (async () => {
+      await applyAuth(false);
       sock.connect();
     })();
     setSocket(sock);
     return () => {
+      unsubscribeAuth();
       sock.off("connect", onConnect);
       sock.off("disconnect", onDisconnect);
       sock.io.off("reconnect_attempt", onReconnectAttempt);
@@ -86,11 +96,14 @@ export function useSocket() {
     };
   }, []);
 
-  const saveIdentity = useCallback((name: string) => {
-    const next: PlayerIdentity = { id: randomId("PID"), name };
-    localStorage.setItem("bruno_player_info", JSON.stringify(next));
-    setIdentity(next);
-  }, []);
+  const saveIdentity = useCallback(
+    (name: string) => {
+      const next: PlayerIdentity = { id: identity.id || randomId("PID"), name };
+      localStorage.setItem("bruno_player_info", JSON.stringify(next));
+      setIdentity(next);
+    },
+    [identity.id],
+  );
 
   const setRoomId = useCallback((id: string | null) => {
     roomIdRef.current = id;

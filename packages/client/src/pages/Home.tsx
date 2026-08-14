@@ -21,6 +21,7 @@ export function Home({ identity, socket, saveIdentity, onPlay }: HomeProps) {
     guest,
     loading,
     displayName: authDisplayName,
+    profile,
     signInGoogle,
     firebaseSignOut,
     available,
@@ -31,12 +32,13 @@ export function Home({ identity, socket, saveIdentity, onPlay }: HomeProps) {
   const [vaultCatalog, setVaultCatalog] = useState<VaultGuideEntry[] | null>(null);
   const [updatesOpen, setUpdatesOpen] = useState(hasUnseenUpdates);
 
-  // Resolve the effective name for guests
-  const effectiveName = user && !guest ? authDisplayName : inputName;
+  // Signed-in users play as their profile username; guests use the editable handle.
+  const signedInName = profile?.username || authDisplayName;
+  const effectiveName = user && !guest ? signedInName : inputName;
   const canPlay = user && !guest ? true : effectiveName.trim().length > 0;
 
   const handlePlayClick = () => {
-    const playName = (user && !guest ? authDisplayName : inputName).trim();
+    const playName = (user && !guest ? signedInName : inputName).trim();
     if (!canPlay) return;
     if (!user || guest) {
       saveIdentity(playName);
@@ -297,7 +299,7 @@ export function Home({ identity, socket, saveIdentity, onPlay }: HomeProps) {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {authDisplayName}
+                  {signedInName}
                 </span>
               </div>
             </div>
