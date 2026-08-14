@@ -73,6 +73,7 @@ export function toPlayerView(
     turnDeadline: room.turnDeadline,
     pileEffect: room.pileEffect,
     revealed: revealed.length > 0 ? revealed : undefined,
+    investmentOffer: room.investmentPending.has(playerId) || undefined,
   };
 }
 

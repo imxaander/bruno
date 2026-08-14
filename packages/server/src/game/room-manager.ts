@@ -11,7 +11,7 @@ import { isVaultTokenCard } from "@bruno/shared";
 import { buildDeck, dealHands, seedPile, type Rng } from "./deck.js";
 import { applyDraw, nextIndex, playCard, type EngineError } from "./engine.js";
 import { getResolverInputs, revealHands, sampleVaultOffers } from "./effects/index.js";
-import { countMatchingCards } from "./effects/helpers.js";
+import { countMatchingCards, addCards } from "./effects/helpers.js";
 import {
   applyLocationStart,
   applyMayhem,
@@ -923,6 +923,30 @@ export class RoomManager {
     return this.completePlay(room, player, pending.cardIndex, undefined);
   }
 
+  private applyInvestmentDraw(
+    room: Room,
+    player: Player,
+  ): RoomResult<ActionOutcome> {
+    if (!room.investmentPending.has(player.id)) {
+      return fail("INVALID_ACTION");
+    }
+    room.investmentPending.delete(player.id);
+    const added = addCards(room, player, 1, this.rng);
+    this.emit({
+      type: "draw",
+      gameId: room.id,
+      playerId: player.id,
+      playerName: player.name,
+      count: added,
+    });
+    const log = [`${player.name} draws ${added} extra card(s) this round (Investment).`];
+    for (const message of log) {
+      this.emit({ type: "log", gameId: room.id, message });
+    }
+    // Investment draw doesn't end the turn — the player still plays normally.
+    return { ok: true, value: { log, won: false, nextPlayerId: null } };
+  }
+
   performAction(gameId: string, playerId: string, action: GameAction): RoomResult<ActionOutcome> {
     const room = this.rooms.get(gameId);
     if (!room) {
@@ -981,6 +1005,9 @@ export class RoomManager {
         ok: true,
         value: { log: result.value.log, won: false, nextPlayerId: nextPlayer?.id ?? null },
       };
+    }
+    if (action.type === "investment-draw") {
+      return this.applyInvestmentDraw(room, player);
     }
     return fail("INVALID_ACTION");
   }

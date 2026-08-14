@@ -133,6 +133,8 @@ export class Room {
   reveals = new Map<string, Reveal[]>();
   winnerId?: string;
   winnerName?: string;
+  /** Player ids with a pending Investment draw offer this round (cleared when accepted or round advances). */
+  investmentPending = new Set<string>();
 
   constructor(input: { name: string; hostId: string; maxPlayers: number }) {
     this.id = randomBytes(6).toString("hex");

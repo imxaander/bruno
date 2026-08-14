@@ -131,7 +131,11 @@ function handlePassive(
     case "accumulation":
       return handleAccumulation(room, passive, event);
     case "investment":
-      return event.kind === "round-advanced" ? handleInvestment(room, passive, rng) : { logs: [] };
+      if (event.kind === "round-advanced") {
+        room.investmentPending.clear();
+        return handleInvestment(room, passive, rng);
+      }
+      return { logs: [] };
     case "most-wanted":
       return event.kind === "card-played"
         ? handleMostWanted(room, passive, event.card, event.playerId, rng)
@@ -200,18 +204,20 @@ function handleAccumulation(
   return { logs: [`${owner?.name ?? "??"} doubles the +${extra} with Accumulation.`] };
 }
 
-/** t3-investment: "Each round, you may choose to draw an additional card." Auto-drawn. */
+/** t3-investment: "Each round, you may choose to draw an additional card." */
 function handleInvestment(
   room: Room,
   passive: Extract<PassiveState, { kind: "investment" }>,
-  rng: Rng,
+  _rng: Rng,
 ): HandlerResult {
+  // Register a pending draw offer for the owner. They may accept it during their turn
+  // via a dedicated button, or it expires at the next round boundary.
+  room.investmentPending.add(passive.ownerId);
   const owner = room.getPlayer(passive.ownerId);
   if (!owner) {
     return { logs: [] };
   }
-  const added = addCards(room, owner, 1, rng);
-  return { logs: [`${owner.name} draws ${added} extra card(s) this round (Investment).`] };
+  return { logs: [`${owner.name} may draw +1 extra card this round (Investment).`] };
 }
 
 /** t2-most-wanted: "that player will be +1 every time they play a blue or red card." */

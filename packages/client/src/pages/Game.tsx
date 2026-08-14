@@ -357,6 +357,17 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
     socket?.emit("game:action", { gameId: roomId, type: "draw", playerId: identity.id });
   }, [socket, roomId, identity.id]);
 
+  const investmentDraw = useCallback(() => {
+    if (!roomId || !identity.id) {
+      return;
+    }
+    socket?.emit("game:action", {
+      gameId: roomId,
+      type: "investment-draw",
+      playerId: identity.id,
+    });
+  }, [socket, roomId, identity.id]);
+
   const leaveGame = useCallback(() => {
     if (roomId && identity.id) {
       socket?.emit("lobby:leave", { gameId: roomId, playerId: identity.id });
@@ -560,22 +571,41 @@ export function Game({ socket, identity, roomId, goLobby, onEnded }: GameProps) 
         playerName={turnPlayerName}
       />
       {myTurn ? (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={draw}
-          disabled={!canDraw}
-          style={{
-            color: canDraw ? "#ffaa00" : "rgba(200,216,240,0.3)",
-            borderColor: canDraw ? "rgba(255,170,0,0.35)" : "rgba(200,216,240,0.1)",
-            padding: "10px 22px",
-            fontSize: 17,
-            boxShadow: canDraw ? "0 0 12px rgba(255,170,0,0.2)" : "none",
-            cursor: canDraw ? "pointer" : "not-allowed",
-          }}
-        >
-          DRAW
-        </Button>
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={draw}
+            disabled={!canDraw}
+            style={{
+              color: canDraw ? "#ffaa00" : "rgba(200,216,240,0.3)",
+              borderColor: canDraw ? "rgba(255,170,0,0.35)" : "rgba(200,216,240,0.1)",
+              padding: "10px 22px",
+              fontSize: 17,
+              boxShadow: canDraw ? "0 0 12px rgba(255,170,0,0.2)" : "none",
+              cursor: canDraw ? "pointer" : "not-allowed",
+            }}
+          >
+            DRAW
+          </Button>
+          {view.investmentOffer ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={investmentDraw}
+              style={{
+                color: "#00e676",
+                borderColor: "rgba(0,230,118,0.35)",
+                padding: "8px 18px",
+                fontSize: 13,
+                boxShadow: "0 0 10px rgba(0,230,118,0.15)",
+                cursor: "pointer",
+              }}
+            >
+              DRAW +1 (Investment)
+            </Button>
+          ) : null}
+        </>
       ) : null}
     </div>
   );

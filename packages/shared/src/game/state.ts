@@ -51,4 +51,6 @@ export interface PlayerView {
   /** Vault effect resolved by the current pile-top token, if any. */
   pileEffect?: PileEffect;
   revealed?: RevealedHand[];
+  /** Player id who has a pending Investment draw offer this round (only visible to that player). */
+  investmentOffer?: boolean;
 }

@@ -1815,12 +1815,13 @@ describe("wave 5 event-driven passives", () => {
     expect(findOwnerPassive(room, "accumulation", "p0")).toBeUndefined();
   });
 
-  it("draws one extra card for the owner on round advance (t3-investment)", () => {
+  it("registers a pending draw offer for the owner on round advance (t3-investment)", () => {
     const { room } = startGame(3);
     const before = room.players[0]!.hand.length;
     addPassive(room, { kind: "investment", ownerId: "p0" });
     const result = emitGameEvent(room, { kind: "round-advanced", newRound: 1 }, seeded(1));
-    expect(room.players[0]!.hand).toHaveLength(before + 1);
+    expect(room.players[0]!.hand).toHaveLength(before); // no auto-draw
+    expect(room.investmentPending.has("p0")).toBe(true);
     expect(result.logs.join(" ")).toMatch(/Investment/);
   });
 

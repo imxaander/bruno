@@ -10,6 +10,7 @@ export const GameActionTypeSchema = z.enum([
   "vault-choice",
   "choose-targets",
   "choose-cards",
+  "investment-draw",
 ]);
 
 export const GameActionSchema = z.object({
