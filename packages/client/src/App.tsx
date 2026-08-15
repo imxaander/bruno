@@ -113,26 +113,10 @@ function AppContent() {
       );
     }
     if (screen === "ranks") {
-      return (
-        <Ranks
-          goHome={goHome}
-          goHelp={goHelp}
-          profileIcon={profile?.icon}
-          profileRank={rank?.name}
-          onProfileClick={handleProfileClick}
-        />
-      );
+      return <Ranks goHome={goHome} goHelp={goHelp} />;
     }
     if (screen === "help") {
-      return (
-        <Help
-          goHome={goHome}
-          goRanks={goRanks}
-          profileIcon={profile?.icon}
-          profileRank={rank?.name}
-          onProfileClick={handleProfileClick}
-        />
-      );
+      return <Help goHome={goHome} goRanks={goRanks} />;
     }
     if (screen === "rooms") {
       return (
@@ -140,9 +124,13 @@ function AppContent() {
           socket={socket}
           identity={effectiveIdentity}
           goLobby={goLobby}
-          profileIcon={profile?.icon}
-          profileRank={rank?.name}
-          onProfileClick={handleProfileClick}
+          goRanks={goRanks}
+          goHelp={goHelp}
+          profile={profile}
+          rank={rank}
+          email={user?.email ?? null}
+          profileError={profileError}
+          onEditProfile={handleProfileClick}
         />
       );
     }
@@ -156,9 +144,6 @@ function AppContent() {
           maxPlayers={maxPlayers}
           goRooms={goRooms}
           goGame={goGame}
-          profileIcon={profile?.icon}
-          profileRank={rank?.name}
-          onProfileClick={handleProfileClick}
         />
       );
     }
@@ -171,9 +156,6 @@ function AppContent() {
           goLobby={goRooms}
           onEnded={handleEnded}
           reconnecting={reconnecting}
-          profileIcon={profile?.icon}
-          profileRank={rank?.name}
-          onProfileClick={handleProfileClick}
         />
       );
     }
@@ -198,6 +180,7 @@ function AppContent() {
           email={user?.email ?? null}
           error={profileError}
           onClose={() => setProfileOpen(false)}
+          initialEdit
         />
       ) : null}
     </>

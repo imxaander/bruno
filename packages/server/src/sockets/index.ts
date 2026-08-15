@@ -46,6 +46,8 @@ export interface RegisterSocketsOptions {
   turnManager?: TurnManager;
   rng?: Rng;
   startOptions?: StartGameOptions;
+  /** Minimum seated players required to start a game (default 1). */
+  minPlayers?: number;
 }
 
 const ERROR_MESSAGES: Record<RoomError, string> = {
@@ -55,8 +57,9 @@ const ERROR_MESSAGES: Record<RoomError, string> = {
   GAME_STARTED: "This game has already started.",
   NOT_IN_ROOM: "You are not in this room.",
   NOT_HOST: "Only the host can start the game.",
-  NO_PLAYERS: "There are no players in this room.",
   INVALID_PLAYER: "Invalid player identity.",
+  NEED_MORE_PLAYERS: "At least 3 players are needed to start a game.",
+  INVALID_MAX_PLAYERS: "A room must be created for at least 3 players.",
 };
 
 const ENGINE_ERROR_MESSAGES: Record<EngineError, string> = {
@@ -92,36 +95,44 @@ export function registerSockets(
   const socketDataByPlayer = new Map<string, SocketData>(); // playerId -> SocketData
   let rooms: RoomManager;
 
-  // playerId -> { icon, name } ranks, cached briefly per room to avoid a Firestore
-  // read on every state push. Freshness of ~30s is fine (ranks only change after games).
-  type PlayerRanks = Record<string, { icon: string; name: string }>;
-  const rankCache = new Map<string, { at: number; ranks: PlayerRanks }>();
-  const RANK_TTL_MS = 30_000;
+  // playerId -> { rankIcon, rankName, profileIcon }, cached briefly per room to
+  // avoid a Firestore read on every state push. Freshness of ~30s is fine (ranks
+  // only change after games).
+  type PlayerMeta = Record<string, { rankIcon: string; rankName: string; profileIcon: string }>;
+  const metaCache = new Map<string, { at: number; meta: PlayerMeta }>();
+  const META_TTL_MS = 30_000;
 
-  const withRanks = (view: PlayerView, ranks: PlayerRanks): PlayerView => {
-    if (Object.keys(ranks).length === 0) {
+  const withMeta = (view: PlayerView, meta: PlayerMeta): PlayerView => {
+    if (Object.keys(meta).length === 0) {
       return view;
     }
     return {
       ...view,
       players: view.players.map((player) => {
-        const rank = ranks[player.id];
-        return rank ? { ...player, rankIcon: rank.icon, rankName: rank.name } : player;
+        const m = meta[player.id];
+        return m
+          ? {
+              ...player,
+              profileIcon: m.profileIcon || undefined,
+              rankIcon: m.rankIcon,
+              rankName: m.rankName,
+            }
+          : player;
       }),
     };
   };
 
-  const fetchRanks = async (gameId: string): Promise<PlayerRanks> => {
-    const cached = rankCache.get(gameId);
-    if (cached && Date.now() - cached.at < RANK_TTL_MS) {
-      return cached.ranks;
+  const fetchMeta = async (gameId: string): Promise<PlayerMeta> => {
+    const cached = metaCache.get(gameId);
+    if (cached && Date.now() - cached.at < META_TTL_MS) {
+      return cached.meta;
     }
     const room = rooms.getRoom(gameId);
     const db = getDb();
     if (!room || !db) {
       return {};
     }
-    const ranks: PlayerRanks = {};
+    const meta: PlayerMeta = {};
     await Promise.all(
       room.players.map(async (player) => {
         try {
@@ -132,14 +143,18 @@ export function registerSockets(
           }
           const points = typeof data.points === "number" ? data.points : 0;
           const tier = getRankTier(points);
-          ranks[player.id] = { icon: tier.icon, name: tier.name };
+          meta[player.id] = {
+            rankIcon: tier.icon,
+            rankName: tier.name,
+            profileIcon: typeof data.icon === "string" ? data.icon : "",
+          };
         } catch {
-          // Profile unreadable (rules/permissions) — player shows no rank badge.
+          // Profile unreadable (rules/permissions) — player shows no rank/avatar.
         }
       }),
     );
-    rankCache.set(gameId, { at: Date.now(), ranks });
-    return ranks;
+    metaCache.set(gameId, { at: Date.now(), meta });
+    return meta;
   };
 
   const pushGameState = async (gameId: string): Promise<void> => {
@@ -147,7 +162,7 @@ export function registerSockets(
     if (!sockets) {
       return;
     }
-    const ranks = await fetchRanks(gameId);
+    const meta = await fetchMeta(gameId);
     for (const socket of sockets) {
       const playerId = socket.data.playerId;
       if (!playerId) {
@@ -155,7 +170,7 @@ export function registerSockets(
       }
       const view = rooms.getPlayerView(gameId, playerId);
       if (view.ok) {
-        socket.emit("game:state", withRanks(view.value, ranks));
+        socket.emit("game:state", withMeta(view.value, meta));
       }
     }
   };
@@ -208,11 +223,13 @@ export function registerSockets(
 
   const emitGameEnded = async (event: Extract<RoomEvent, { type: "ended" }>): Promise<void> => {
     const room = rooms.getRoom(event.gameId);
+    const meta = await fetchMeta(event.gameId);
     const players = room
       ? room.players.map((player) => ({
           id: player.id,
           name: player.name,
           handCount: player.hand.length,
+          icon: meta[player.id]?.profileIcon ?? null,
         }))
       : [];
 
@@ -252,7 +269,7 @@ export function registerSockets(
       reason: "hand_emptied",
     });
     // Ranks change after scoring — drop the cache so the next push is fresh.
-    rankCache.delete(event.gameId);
+    metaCache.delete(event.gameId);
     pushGameState(event.gameId);
   };
 
@@ -315,6 +332,7 @@ export function registerSockets(
     turnManager: options.turnManager,
     rng: options.rng,
     startOptions: options.startOptions,
+    minPlayers: options.minPlayers,
   });
 
   const addToRoom = (roomId: string, socket: BrunoSocket): void => {
@@ -502,8 +520,8 @@ export function registerSockets(
         emitFailure(socket, result.error);
         return;
       }
-      const ranks = await fetchRanks(parsed.data.gameId);
-      socket.emit("game:state", withRanks(result.value, ranks));
+      const meta = await fetchMeta(parsed.data.gameId);
+      socket.emit("game:state", withMeta(result.value, meta));
     });
 
     socket.on("game:action", (payload) => {
@@ -537,8 +555,8 @@ export function registerSockets(
       data.playerId = playerId;
       socket.join(parsed.data.gameId);
       addToRoom(parsed.data.gameId, socket);
-      const ranks = await fetchRanks(parsed.data.gameId);
-      socket.emit("game:state", withRanks(result.value, ranks));
+      const meta = await fetchMeta(parsed.data.gameId);
+      socket.emit("game:state", withMeta(result.value, meta));
       io.to(parsed.data.gameId).emit(
         "lobby:update",
         rooms.getLobbyPlayers(parsed.data.gameId) ?? [],

@@ -55,6 +55,7 @@ beforeAll(async () => {
   rooms = registerSockets(io, {
     turnManager: new TurnManager(5000, timers.set),
     startOptions: { locationId: null, mayhemEventId: null, originId: null },
+    minPlayers: 2,
   });
   await new Promise<void>((resolve) => httpServer.listen(0, resolve));
   port = (httpServer.address() as AddressInfo).port;
@@ -813,6 +814,7 @@ describe("room lifecycle over the wire", () => {
         pointsDelta: 0,
         points: null,
         rankName: null,
+        icon: null,
       });
       expect(ended.players).toContainEqual({
         id: "PID-b",
@@ -821,6 +823,7 @@ describe("room lifecycle over the wire", () => {
         pointsDelta: 0,
         points: null,
         rankName: null,
+        icon: null,
       });
 
       const [viewA] = await stateA;

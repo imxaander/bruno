@@ -45,9 +45,6 @@ interface GameProps {
   goLobby: () => void;
   onEnded: (payload: GameEndedPayload) => void;
   reconnecting?: boolean;
-  profileIcon?: string;
-  profileRank?: string;
-  onProfileClick?: () => void;
 }
 
 // Fixed seat positions for the 8-player ring (clockwise from bottom-left).
@@ -62,17 +59,7 @@ const SEATS_8P: CSSProperties[] = [
   { top: "52%", right: "1%" },
 ];
 
-export function Game({
-  socket,
-  identity,
-  roomId,
-  goLobby,
-  onEnded,
-  reconnecting,
-  profileIcon,
-  profileRank,
-  onProfileClick,
-}: GameProps) {
+export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting }: GameProps) {
   const [view, setView] = useState<PlayerView | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -500,66 +487,28 @@ export function Game({
         </span>
       </div>
       <div style={{ flex: 1 }} />
-      {onProfileClick ? (
-        <button
-          onClick={onProfileClick}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 8 }}>
+        <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            background: "rgba(0,238,255,0.06)",
-            border: "1px solid rgba(0,238,255,0.2)",
-            borderRadius: 20,
-            padding: "4px 14px",
-            cursor: "pointer",
-            transition: "background 0.14s, border-color 0.14s",
-            marginRight: 8,
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: connected ? "#00e676" : "rgba(200,216,240,0.3)",
+            boxShadow: connected ? "0 0 8px rgba(0,230,118,0.8)" : "none",
+            animation: connected ? "neon-pulse 2s ease-in-out infinite" : undefined,
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(0,238,255,0.12)";
-            e.currentTarget.style.borderColor = "rgba(0,238,255,0.4)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(0,238,255,0.06)";
-            e.currentTarget.style.borderColor = "rgba(0,238,255,0.2)";
+        />
+        <span
+          style={{
+            fontSize: 12,
+            color: connected ? "rgba(0,230,118,0.8)" : "rgba(200,216,240,0.3)",
+            letterSpacing: "0.1em",
+            fontWeight: 600,
           }}
         >
-          {profileIcon ? <span style={{ fontSize: 14 }}>{profileIcon}</span> : null}
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "rgba(0,238,255,0.7)",
-              letterSpacing: "0.1em",
-            }}
-          >
-            PROFILE
-          </span>
-        </button>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 8 }}>
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: connected ? "#00e676" : "rgba(200,216,240,0.3)",
-              boxShadow: connected ? "0 0 8px rgba(0,230,118,0.8)" : "none",
-              animation: connected ? "neon-pulse 2s ease-in-out infinite" : undefined,
-            }}
-          />
-          <span
-            style={{
-              fontSize: 12,
-              color: connected ? "rgba(0,230,118,0.8)" : "rgba(200,216,240,0.3)",
-              letterSpacing: "0.1em",
-              fontWeight: 600,
-            }}
-          >
-            {connected ? "LIVE" : "OFF"}
-          </span>
-        </div>
-      )}
+          {connected ? "LIVE" : "OFF"}
+        </span>
+      </div>
       <button
         onClick={() => {
           if (!vaultCatalog && socket) {
@@ -722,7 +671,13 @@ export function Game({
           data-player-seat={player.id}
           style={{ position: "absolute", zIndex: 2, ...SEATS_8P[i] }}
         >
-          <Seat player={player} compact rankIcon={player.rankIcon} rankName={player.rankName} />
+          <Seat
+            player={player}
+            compact
+            rankIcon={player.rankIcon}
+            rankName={player.rankName}
+            profileIcon={player.profileIcon}
+          />
         </div>
       ))}
 
@@ -800,7 +755,12 @@ export function Game({
       >
         {opponents.map((player) => (
           <div key={player.id} data-player-seat={player.id}>
-            <Seat player={player} rankIcon={player.rankIcon} rankName={player.rankName} />
+            <Seat
+              player={player}
+              rankIcon={player.rankIcon}
+              rankName={player.rankName}
+              profileIcon={player.profileIcon}
+            />
           </div>
         ))}
       </div>

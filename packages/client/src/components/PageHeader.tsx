@@ -1,12 +1,8 @@
 interface PageHeaderProps {
   label?: string;
-  profileIcon?: string;
-  profileRank?: string;
-  onProfileClick?: () => void;
 }
 
-export function PageHeader({ label, profileIcon, profileRank, onProfileClick }: PageHeaderProps) {
-  const hasProfile = !!onProfileClick;
+export function PageHeader({ label }: PageHeaderProps) {
   return (
     <div
       style={{
@@ -41,65 +37,28 @@ export function PageHeader({ label, profileIcon, profileRank, onProfileClick }: 
         </>
       ) : null}
       <div style={{ flex: 1 }} />
-      {hasProfile ? (
-        <button
-          onClick={onProfileClick}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            background: "rgba(0,238,255,0.06)",
-            border: "1px solid rgba(0,238,255,0.2)",
-            borderRadius: 20,
-            padding: "4px 14px",
-            cursor: "pointer",
-            transition: "background 0.14s, border-color 0.14s",
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: "#00e676",
+            boxShadow: "0 0 8px rgba(0,230,118,0.8)",
+            animation: "neon-pulse 2s ease-in-out infinite",
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(0,238,255,0.12)";
-            e.currentTarget.style.borderColor = "rgba(0,238,255,0.4)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(0,238,255,0.06)";
-            e.currentTarget.style.borderColor = "rgba(0,238,255,0.2)";
+        />
+        <span
+          style={{
+            fontSize: 12,
+            color: "rgba(0,230,118,0.8)",
+            letterSpacing: "0.1em",
+            fontWeight: 600,
           }}
         >
-          {profileIcon ? <span style={{ fontSize: 14 }}>{profileIcon}</span> : null}
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "rgba(0,238,255,0.7)",
-              letterSpacing: "0.1em",
-            }}
-          >
-            PROFILE
-          </span>
-        </button>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#00e676",
-              boxShadow: "0 0 8px rgba(0,230,118,0.8)",
-              animation: "neon-pulse 2s ease-in-out infinite",
-            }}
-          />
-          <span
-            style={{
-              fontSize: 12,
-              color: "rgba(0,230,118,0.8)",
-              letterSpacing: "0.1em",
-              fontWeight: 600,
-            }}
-          >
-            LIVE
-          </span>
-        </div>
-      )}
+          LIVE
+        </span>
+      </div>
     </div>
   );
 }

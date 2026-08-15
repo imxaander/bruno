@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
-import type { ErrorEnvelope, RoomCreateReturn, RoomSummary } from "@bruno/shared";
+import type {
+  ErrorEnvelope,
+  PlayerProfile,
+  RankTier,
+  RoomCreateReturn,
+  RoomSummary,
+} from "@bruno/shared";
 import { StatusBadge, StatusDot, type StatusType } from "../components/Badge.js";
 import { Button } from "../components/Button.js";
-import GameCard from "../components/GameCard.js";
 import { PageHeader } from "../components/PageHeader.js";
+import { UpdatesPanel } from "../components/modals.js";
+import { hasUnseenUpdates, markUpdatesSeen } from "../changelog.js";
+import { ProfileModal } from "../firebase/ProfileModal.js";
 import type { BrunoSocket } from "../socket/client.js";
 import type { PlayerIdentity } from "../socket/useSocket.js";
 
@@ -11,12 +19,14 @@ interface RoomsProps {
   socket: BrunoSocket | null;
   identity: PlayerIdentity;
   goLobby: (gameId: string, gameName: string, maxPlayers?: number) => void;
-  profileIcon?: string;
-  profileRank?: string;
-  onProfileClick?: () => void;
+  goRanks: () => void;
+  goHelp: () => void;
+  profile: PlayerProfile | null;
+  rank: RankTier | null;
+  email: string | null;
+  profileError: string | null;
+  onEditProfile: () => void;
 }
-
-const MAX_PLAYERS = 8;
 
 function statusOf(room: RoomSummary): StatusType {
   return room.playerCount >= room.maxPlayers ? "full" : "open";
@@ -26,9 +36,13 @@ export function Rooms({
   socket,
   identity,
   goLobby,
-  profileIcon,
-  profileRank,
-  onProfileClick,
+  goRanks,
+  goHelp,
+  profile,
+  rank,
+  email,
+  profileError,
+  onEditProfile,
 }: RoomsProps) {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -36,6 +50,7 @@ export function Rooms({
   const [nameFocused, setNameFocused] = useState(false);
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [error, setError] = useState<string | null>(null);
+  const [updatesOpen, setUpdatesOpen] = useState(hasUnseenUpdates);
 
   useEffect(() => {
     if (!socket) {
@@ -94,12 +109,7 @@ export function Rooms({
         flexDirection: "column",
       }}
     >
-      <PageHeader
-        label="Game Rooms"
-        profileIcon={profileIcon}
-        profileRank={profileRank}
-        onProfileClick={onProfileClick}
-      />
+      <PageHeader label="Game Rooms" />
 
       {error ? (
         <div
@@ -312,72 +322,238 @@ export function Rooms({
                 textTransform: "uppercase",
               }}
             >
-              You
+              Your Profile
             </p>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: "rgba(200,216,240,0.5)", fontWeight: 600 }}>
-                Handle
-              </span>
-              <span
-                style={{
-                  fontFamily: "'Barlow Condensed'",
-                  fontWeight: 800,
-                  fontSize: 20,
-                  color: "#c8d8f0",
-                }}
-              >
-                {identity.name || "—"}
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: "rgba(200,216,240,0.5)", fontWeight: 600 }}>
-                Max Players
-              </span>
-              <span
-                style={{
-                  fontFamily: "'Barlow Condensed'",
-                  fontWeight: 800,
-                  fontSize: 20,
-                  color: "#c8d8f0",
-                }}
-              >
-                {MAX_PLAYERS}
-              </span>
-            </div>
+            {profile && rank ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      width: 46,
+                      height: 46,
+                      flexShrink: 0,
+                      borderRadius: "50%",
+                      background:
+                        "linear-gradient(135deg, rgba(0,238,255,0.15), rgba(255,0,204,0.15))",
+                      border: "2px solid rgba(0,238,255,0.25)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 24,
+                    }}
+                  >
+                    {profile.icon}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontFamily: "'Barlow Condensed'",
+                        fontWeight: 800,
+                        fontSize: 19,
+                        color: "#e8f0ff",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {profile.username}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                      <span style={{ fontSize: 15 }}>{rank.icon}</span>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: "rgba(0,238,255,0.75)",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        {rank.name}
+                      </span>
+                      <span style={{ fontSize: 11, color: "rgba(200,216,240,0.4)" }}>
+                        ({profile.points} pts)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    padding: "10px",
+                    background: "rgba(0,238,255,0.04)",
+                    borderRadius: 9,
+                  }}
+                >
+                  {[
+                    { label: "Wins", value: profile.wins },
+                    { label: "Games", value: profile.gamesPlayed },
+                    { label: "Vaults", value: profile.vaultCardsUsed },
+                  ].map((stat) => (
+                    <div key={stat.label} style={{ flex: 1, textAlign: "center" }}>
+                      <div
+                        style={{
+                          fontFamily: "'Barlow Condensed'",
+                          fontWeight: 800,
+                          fontSize: 18,
+                          color: "#00eeff",
+                        }}
+                      >
+                        {stat.value}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 600,
+                          color: "rgba(200,216,240,0.4)",
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {stat.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {email ? (
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "rgba(200,216,240,0.4)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {email}
+                  </div>
+                ) : null}
+                <Button variant="outline" size="sm" onClick={onEditProfile}>
+                  EDIT PROFILE
+                </Button>
+              </>
+            ) : (
+              <>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                    color: "rgba(200,216,240,0.5)",
+                  }}
+                >
+                  {profileError
+                    ? `Your profile couldn't be loaded from Firebase: ${profileError}`
+                    : "Sign in with Google to build your profile, earn rank points and track your wins."}
+                </p>
+              </>
+            )}
           </div>
+
           <div
             style={{
               background: "rgba(11,11,18,0.92)",
               border: "1px solid rgba(0,238,255,0.08)",
               borderRadius: 10,
-              padding: "20px",
+              padding: "16px",
               display: "flex",
               flexDirection: "column",
               gap: 10,
-              alignItems: "center",
             }}
           >
-            <p
+            <button
+              onClick={goHelp}
               style={{
-                margin: 0,
-                fontSize: 11,
+                width: "100%",
+                background: "rgba(255,0,204,0.05)",
+                border: "1px solid rgba(255,0,204,0.25)",
+                borderRadius: 7,
+                padding: "9px 0",
+                fontFamily: "'Rajdhani'",
                 fontWeight: 700,
-                color: "rgba(0,238,255,0.5)",
+                fontSize: 13,
                 letterSpacing: "0.2em",
-                textTransform: "uppercase",
+                color: "rgba(255,0,204,0.75)",
+                cursor: "pointer",
+                transition: "background 0.14s, box-shadow 0.14s",
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.background = "rgba(255,0,204,0.12)";
+                event.currentTarget.style.boxShadow = "0 0 16px rgba(255,0,204,0.25)";
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.background = "rgba(255,0,204,0.05)";
+                event.currentTarget.style.boxShadow = "none";
               }}
             >
-              Sample Cards
-            </p>
-            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-              <GameCard color="red" value="7" size="sm" />
-              <GameCard vault="gold" value="SURGE" size="sm" />
-              <GameCard vault="diamond" value="ECHO" size="sm" />
-            </div>
+              {"\u25B6"} HOW TO PLAY
+            </button>
+            <button
+              onClick={goRanks}
+              style={{
+                width: "100%",
+                background: "rgba(255,204,0,0.05)",
+                border: "1px solid rgba(255,204,0,0.25)",
+                borderRadius: 7,
+                padding: "9px 0",
+                fontFamily: "'Rajdhani'",
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: "0.2em",
+                color: "rgba(255,204,0,0.75)",
+                cursor: "pointer",
+                transition: "background 0.14s, box-shadow 0.14s",
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.background = "rgba(255,204,0,0.12)";
+                event.currentTarget.style.boxShadow = "0 0 16px rgba(255,204,0,0.25)";
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.background = "rgba(255,204,0,0.05)";
+                event.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              {"\u2726"} RANKS
+            </button>
+            <button
+              onClick={() => setUpdatesOpen(true)}
+              style={{
+                width: "100%",
+                background: "rgba(200,216,240,0.05)",
+                border: "1px solid rgba(200,216,240,0.2)",
+                borderRadius: 7,
+                padding: "9px 0",
+                fontFamily: "'Rajdhani'",
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: "0.2em",
+                color: "rgba(200,216,240,0.65)",
+                cursor: "pointer",
+                transition: "background 0.14s, box-shadow 0.14s",
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.background = "rgba(200,216,240,0.1)";
+                event.currentTarget.style.boxShadow = "0 0 16px rgba(200,216,240,0.2)";
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.background = "rgba(200,216,240,0.05)";
+                event.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              {"\u2728"} WHAT'S NEW
+            </button>
           </div>
         </div>
       </div>
 
+      {updatesOpen ? (
+        <UpdatesPanel
+          onClose={() => {
+            markUpdatesSeen();
+            setUpdatesOpen(false);
+          }}
+        />
+      ) : null}
       {createOpen ? (
         <div
           style={{
@@ -474,7 +650,7 @@ export function Rooms({
                 Max Players
               </label>
               <div style={{ display: "flex", gap: 8 }}>
-                {[2, 3, 4, 5, 6, 7, 8].map((n) => (
+                {[3, 4, 5, 6, 7, 8].map((n) => (
                   <button
                     key={n}
                     onClick={() => setMaxPlayers(n)}

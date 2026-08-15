@@ -63,7 +63,9 @@ export interface PointChange {
 /**
  * Calculate point changes for all players after a game ends.
  * - Winner: +5 base + (+1 per vault card used), max +10
- * - Losers: least cards = +3, most cards = −5, others = 0
+ * - Best loser (fewest cards): +3
+ * - Worst loser (most cards): −5
+ * - Middle pack: +2 down to −4, scaled by how many cards each loser still holds
  */
 export function calculatePointChanges(
   players: {
@@ -98,6 +100,7 @@ export function calculatePointChanges(
 
   const minCards = Math.min(...losers.map((p) => p.cardsRemaining));
   const maxCards = Math.max(...losers.map((p) => p.cardsRemaining));
+  const spread = maxCards - minCards;
 
   const changes: PointChange[] = [];
 
@@ -113,8 +116,11 @@ export function calculatePointChanges(
         delta = 3;
       } else if (player.cardsRemaining === maxCards) {
         delta = -5;
+      } else if (spread > 0) {
+        // Middle pack: interpolate +2 (nearly emptied) down to −4 (nearly worst).
+        const t = (player.cardsRemaining - minCards) / spread;
+        delta = Math.round(2 - 6 * t);
       }
-      // else: 0 — middle pack
     }
 
     const oldTier = getRankTier(player.currentPoints);

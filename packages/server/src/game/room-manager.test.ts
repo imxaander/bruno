@@ -77,6 +77,20 @@ describe("RoomManager", () => {
     expect(room.players[0]).toMatchObject({ id: "p1", name: "Alice", isHost: true });
   });
 
+  it("rejects a room sized below the 3-player minimum", () => {
+    const manager = createManager();
+    const attempt = manager.createRoom({
+      name: "A",
+      playerId: "p1",
+      playerName: "A",
+      maxPlayers: 2,
+    });
+    if (attempt.ok) {
+      throw new Error("expected undersized room to fail");
+    }
+    expect(attempt.error).toBe("INVALID_MAX_PLAYERS");
+  });
+
   it("lists only prepping rooms with maxPlayers", () => {
     const manager = createManager();
     const room = value(
@@ -112,10 +126,11 @@ describe("RoomManager", () => {
   it("rejects join when the room is full", () => {
     const manager = createManager();
     const room = value(
-      manager.createRoom({ name: "A", playerId: "p1", playerName: "A", maxPlayers: 2 }),
+      manager.createRoom({ name: "A", playerId: "p1", playerName: "A", maxPlayers: 3 }),
     );
     value(manager.joinRoom(room.id, "p2", "B"));
-    const full = manager.joinRoom(room.id, "p3", "C");
+    value(manager.joinRoom(room.id, "p3", "C"));
+    const full = manager.joinRoom(room.id, "p4", "D");
     if (full.ok) {
       throw new Error("expected full room join to fail");
     }
@@ -286,6 +301,24 @@ describe("RoomManager", () => {
       throw new Error("expected non-host start to fail");
     }
     expect(attempt.error).toBe("NOT_HOST");
+  });
+
+  it("rejects start until minPlayers are seated", () => {
+    const manager = new RoomManager({
+      minPlayers: 3,
+      turnManager: new TurnManager(5000, () => ({ cancel: () => {} })),
+    });
+    const room = value(
+      manager.createRoom({ name: "A", playerId: "p1", playerName: "A", maxPlayers: 4 }),
+    );
+    value(manager.joinRoom(room.id, "p2", "B"));
+    const attempt = manager.startGame(room.id, "p1", seeded(1));
+    if (attempt.ok) {
+      throw new Error("expected start with too few players to fail");
+    }
+    expect(attempt.error).toBe("NEED_MORE_PLAYERS");
+    value(manager.joinRoom(room.id, "p3", "C"));
+    expect(value(manager.startGame(room.id, "p1", seeded(2))).status).toBe("ongoing");
   });
 
   it("derives a PlayerView with only the actor's hand and only the pile top", () => {

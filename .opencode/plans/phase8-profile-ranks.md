@@ -41,7 +41,7 @@ interface PlayerProfile {
 - **Losers**:
   - Least cards remaining among losers: +3
   - Most cards remaining among losers: −5
-  - Others: 0 (no change)
+  - Middle pack: +2 down to −4, scaled by cards remaining between the best and worst losers
 
 **Rank display format**: `{icon} {RankName} {Tier} ({points} pts)` — e.g., "🥇 Gold 2 (375 pts)"
 

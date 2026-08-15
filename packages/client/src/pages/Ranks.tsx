@@ -6,9 +6,6 @@ import { PageHeader } from "../components/PageHeader.js";
 interface RanksProps {
   goHome: () => void;
   goHelp: () => void;
-  profileIcon?: string;
-  profileRank?: string;
-  onProfileClick?: () => void;
 }
 
 const FONT_DISPLAY = "'Barlow Condensed', sans-serif";
@@ -46,10 +43,18 @@ const SCORING: Array<{
     color: "#37e66a",
   },
   {
+    label: "Middle Pack",
+    value: "+2 → −4",
+    unit: "scaled by cards left",
+    detail:
+      "Everyone between the extremes scores between +2 and −4 — the closer to emptying your hand, the more you keep.",
+    color: "#00eeff",
+  },
+  {
     label: "Worst Loser",
     value: "−5",
     unit: "most cards left",
-    detail: "Everyone else in the middle of the pack scores 0 — nothing gained, nothing lost.",
+    detail: "The player stuck with the most cards pays the biggest price.",
     color: "#ff5d5d",
   },
 ];
@@ -76,7 +81,7 @@ function Card({ children, style }: { children: React.ReactNode; style?: CSSPrope
   );
 }
 
-export function Ranks({ goHome, goHelp, profileIcon, profileRank, onProfileClick }: RanksProps) {
+export function Ranks({ goHome, goHelp }: RanksProps) {
   const groups: Record<string, RankTier[]> = {};
   for (const tier of RANK_TIERS) {
     (groups[tier.rank] ??= []).push(tier);
@@ -93,12 +98,7 @@ export function Ranks({ goHome, goHelp, profileIcon, profileRank, onProfileClick
         flexDirection: "column",
       }}
     >
-      <PageHeader
-        label="RANKS"
-        profileIcon={profileIcon}
-        profileRank={profileRank}
-        onProfileClick={onProfileClick}
-      />
+      <PageHeader label="RANKS" />
 
       <div
         style={{

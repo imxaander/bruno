@@ -5,9 +5,6 @@ import { PageHeader } from "../components/PageHeader.js";
 interface HelpProps {
   goHome: () => void;
   goRanks: () => void;
-  profileIcon?: string;
-  profileRank?: string;
-  onProfileClick?: () => void;
 }
 
 const FONT_DISPLAY = "'Barlow Condensed', sans-serif";
@@ -136,7 +133,7 @@ const VAULT_TIERS = [
   },
 ];
 
-export function Help({ goHome, goRanks, profileIcon, profileRank, onProfileClick }: HelpProps) {
+export function Help({ goHome, goRanks }: HelpProps) {
   return (
     <div
       style={{
@@ -148,12 +145,7 @@ export function Help({ goHome, goRanks, profileIcon, profileRank, onProfileClick
         flexDirection: "column",
       }}
     >
-      <PageHeader
-        label="HOW TO PLAY"
-        profileIcon={profileIcon}
-        profileRank={profileRank}
-        onProfileClick={onProfileClick}
-      />
+      <PageHeader label="HOW TO PLAY" />
 
       <div
         style={{
@@ -389,8 +381,9 @@ export function Help({ goHome, goRanks, profileIcon, profileRank, onProfileClick
           <Section n="10" title="Round End & Ranks">
             <Para>
               Emptying your hand wins the round. The round-over screen shows how many rank points
-              each player earned or lost — winners score big, the closest loser still gains, and the
-              worst hand pays the price. Points build your profile and climb the rank ladder.
+              each player earned or lost — winners score big, the closest loser still gains,
+              everyone in between gains or loses a little (from +2 down to −4), and the worst hand
+              pays the price. Points build your profile and climb the rank ladder.
             </Para>
             <div style={{ display: "flex", gap: 10 }}>
               <Button variant="outline" size="md" onClick={goRanks}>

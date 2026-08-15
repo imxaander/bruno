@@ -31,7 +31,7 @@ describe("calculatePointChanges", () => {
     expect(changes.find((c) => c.uid === "winner")!.delta).toBe(10);
   });
 
-  it("gives +3 to the loser with the fewest cards and −5 to the loser with the most", () => {
+  it("gives +3 to the best loser, −5 to the worst, and interpolates the middle pack from +2 to −4", () => {
     const changes = calculatePointChanges([
       player({ uid: "winner", isWinner: true, vaultCardsUsed: 0 }),
       player({ uid: "best-loser", cardsRemaining: 3 }),
@@ -40,8 +40,29 @@ describe("calculatePointChanges", () => {
     ]);
     const byUid = Object.fromEntries(changes.map((c) => [c.uid, c.delta]));
     expect(byUid["best-loser"]).toBe(3);
-    expect(byUid["mid-loser"]).toBe(0);
+    // (7 - 3) / (11 - 3) = 0.5 → round(2 − 3) = −1
+    expect(byUid["mid-loser"]).toBe(-1);
     expect(byUid["worst-loser"]).toBe(-5);
+  });
+
+  it("scales middle-pack points between +2 and −4 by cards left", () => {
+    const changes = calculatePointChanges([
+      player({ uid: "winner", isWinner: true, vaultCardsUsed: 0 }),
+      player({ uid: "best", cardsRemaining: 2 }),
+      player({ uid: "near-best", cardsRemaining: 4 }),
+      player({ uid: "near-worst", cardsRemaining: 10 }),
+      player({ uid: "worst", cardsRemaining: 12 }),
+    ]);
+    const byUid = Object.fromEntries(changes.map((c) => [c.uid, c.delta]));
+    // spread = 10, t values: 0.2 and 0.8 → round(2 − 1.2) = 1, round(2 − 4.8) = −3
+    expect(byUid["best"]).toBe(3);
+    expect(byUid["near-best"]).toBe(1);
+    expect(byUid["near-worst"]).toBe(-3);
+    expect(byUid["worst"]).toBe(-5);
+    for (const uid of ["best", "near-best", "near-worst", "worst"]) {
+      expect(byUid[uid]).toBeGreaterThanOrEqual(-5);
+      expect(byUid[uid]).toBeLessThanOrEqual(3);
+    }
   });
 
   it("does not award +3/−5 when there is only one loser", () => {

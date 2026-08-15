@@ -43,10 +43,18 @@ interface ProfileModalProps {
   email: string | null;
   error: string | null;
   onClose: () => void;
+  initialEdit?: boolean;
 }
 
-export function ProfileModal({ profile, rank, email, error, onClose }: ProfileModalProps) {
-  const [editing, setEditing] = useState(false);
+export function ProfileModal({
+  profile,
+  rank,
+  email,
+  error,
+  onClose,
+  initialEdit = false,
+}: ProfileModalProps) {
+  const [editing, setEditing] = useState(() => initialEdit);
   const [icon, setIcon] = useState(profile?.icon ?? "");
   const [username, setUsername] = useState(profile?.username ?? "");
   const [saving, setSaving] = useState(false);

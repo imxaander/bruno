@@ -220,7 +220,7 @@ export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGam
                     color: "#00eeff",
                   }}
                 >
-                  ?
+                  {championPlayer?.icon || "?"}
                 </span>
               </div>
               <div
@@ -371,6 +371,9 @@ export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGam
               >
                 <span style={{ fontSize: 12, color: "rgba(200,216,240,0.4)", width: 18 }}>
                   {rank + 1}
+                </span>
+                <span style={{ fontSize: 14, width: 20, textAlign: "center" }}>
+                  {player.icon ?? ""}
                 </span>
                 <span
                   style={{

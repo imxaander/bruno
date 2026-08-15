@@ -5,11 +5,23 @@ export interface UpdateEntry {
   bullets: string[];
 }
 
-export const UPDATES_LATEST_VERSION = "0.3.0";
+export const UPDATES_LATEST_VERSION = "0.4.0";
 
 export const UPDATES_STORAGE_KEY = "bruno_updates_seen";
 
 export const CHANGELOG: UpdateEntry[] = [
+  {
+    version: "0.4.0",
+    date: "2026-08-15",
+    title: "Ranks, How-to-Play & room minimums",
+    bullets: [
+      "Ranks page — browse every rank from Bronze 3 to Bruno with the exact point ranges.",
+      "How to Play — a full tutorial covering turns, special cards, the vault, locations, Hell Gate and origins.",
+      "Your profile lives in the lobby — edit icon, username and email right from the rooms page.",
+      "Rooms now need at least 3 players. Localhost still allows solo games for testing.",
+      "Middle-pack scoring — everyone between the best and worst loser now gains +2 to −4 points instead of a flat 0.",
+    ],
+  },
   {
     version: "0.3.0",
     date: "2026-08-15",

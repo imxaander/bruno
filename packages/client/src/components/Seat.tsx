@@ -27,6 +27,7 @@ interface SeatProps {
   showSeat?: boolean;
   rankIcon?: string;
   rankName?: string;
+  profileIcon?: string;
 }
 
 export function Seat({
@@ -36,6 +37,7 @@ export function Seat({
   showSeat = false,
   rankIcon,
   rankName,
+  profileIcon,
 }: SeatProps) {
   const avatarColor = hashColor(player.id);
   const active = player.isTurn;
@@ -65,7 +67,7 @@ export function Seat({
           }}
         >
           <span style={{ fontSize: Math.round(avatarSize * 0.42), color: avatarColor }}>
-            {player.name.charAt(0).toUpperCase()}
+            {profileIcon || player.name.charAt(0).toUpperCase()}
           </span>
         </div>
         {rankIcon ? (

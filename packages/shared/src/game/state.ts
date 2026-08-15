@@ -19,6 +19,8 @@ export interface PublicPlayer {
   handCount: number;
   rankIcon?: string;
   rankName?: string;
+  /** The player's profile avatar emoji (absent for guests). */
+  profileIcon?: string;
 }
 
 /** A hand this viewer is entitled to see (vault reveal effects). */

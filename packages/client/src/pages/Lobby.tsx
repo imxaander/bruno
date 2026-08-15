@@ -14,9 +14,6 @@ interface LobbyProps {
   maxPlayers: number;
   goRooms: () => void;
   goGame: (gameId: string) => void;
-  profileIcon?: string;
-  profileRank?: string;
-  onProfileClick?: () => void;
 }
 
 const SEAT_COUNT = 8;
@@ -172,9 +169,6 @@ export function Lobby({
   maxPlayers,
   goRooms,
   goGame,
-  profileIcon,
-  profileRank,
-  onProfileClick,
 }: LobbyProps) {
   const [players, setPlayers] = useState<LobbyPlayer[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -235,6 +229,13 @@ export function Lobby({
 
   const host = players.find((player) => player.isHost);
 
+  // Localhost dev allows solo games; deployed builds need at least 3 players to start.
+  const isLocalhost = ["localhost", "127.0.0.1", "0.0.0.0", "::1"].includes(
+    window.location.hostname,
+  );
+  const minStartPlayers = isLocalhost ? 1 : 3;
+  const canStart = players.length >= minStartPlayers;
+
   return (
     <div
       style={{
@@ -246,12 +247,7 @@ export function Lobby({
         flexDirection: "column",
       }}
     >
-      <PageHeader
-        label="Lobby"
-        profileIcon={profileIcon}
-        profileRank={profileRank}
-        onProfileClick={onProfileClick}
-      />
+      <PageHeader label="Lobby" />
 
       {error ? (
         <div
@@ -294,6 +290,11 @@ export function Lobby({
               {players.length} / {maxPlayers} players &nbsp;·&nbsp; Hosted by {host?.name ?? "—"}{" "}
               &nbsp;·&nbsp;
               <span style={{ color: "rgba(0,230,118,0.7)" }}>Waiting to start</span>
+              {!isLocalhost && players.length < minStartPlayers ? (
+                <span style={{ color: "rgba(255,60,80,0.75)", marginLeft: 6 }}>
+                  · Need at least {minStartPlayers} players
+                </span>
+              ) : null}
             </p>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
@@ -310,9 +311,13 @@ export function Lobby({
                 variant="cta"
                 size="md"
                 style={{ padding: "10px 28px", fontSize: 17 }}
-                onClick={start}
+                onClick={() => {
+                  if (canStart) {
+                    start();
+                  }
+                }}
               >
-                START GAME
+                {canStart ? "START GAME" : `NEED ${minStartPlayers}+`}
               </Button>
             ) : null}
           </div>

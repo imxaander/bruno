@@ -13,6 +13,11 @@ dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 
 const config = loadConfig();
 
+// Localhost dev allows solo games (1 player); deployed games need at least 3.
+const isLocalhost = /(^|\.)localhost$|^127\.0\.0\.1|^0\.0\.0\.0|^\[::1\]$/.test(
+  new URL(config.clientUrl).hostname,
+);
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -38,10 +43,15 @@ if (existsSync(config.staticDir)) {
   console.log(`[server] serving client from ${config.staticDir}`);
 }
 
-registerSockets(io);
+registerSockets(io, { minPlayers: isLocalhost ? 1 : 3 });
 
 httpServer.listen(config.port, () => {
   console.log(`[server] BRUNO server listening on http://localhost:${config.port}`);
+  console.log(
+    isLocalhost
+      ? "[server] localhost mode — solo games allowed (start with 1 player)"
+      : "[server] deployed mode — at least 3 players required to start",
+  );
   console.log(
     getDb()
       ? "[server] Firebase Firestore connected — ranks and scoring active"

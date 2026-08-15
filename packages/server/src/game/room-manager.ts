@@ -33,8 +33,9 @@ export type RoomError =
   | "GAME_STARTED"
   | "NOT_IN_ROOM"
   | "NOT_HOST"
-  | "NO_PLAYERS"
-  | "INVALID_PLAYER";
+  | "INVALID_PLAYER"
+  | "NEED_MORE_PLAYERS"
+  | "INVALID_MAX_PLAYERS";
 
 export type RoomResult<T> = { ok: true; value: T } | { ok: false; error: RoomError | EngineError };
 
@@ -42,6 +43,9 @@ export type RoomResult<T> = { ok: true; value: T } | { ok: false; error: RoomErr
 export const RECONNECT_GRACE_MS = 60_000;
 
 const VAULT_OFFER_COUNT = 3;
+
+/** Every room must be created to seat at least this many players. */
+export const MIN_ROOM_CAPACITY = 3;
 
 function fail<T>(error: RoomError | EngineError): RoomResult<T> {
   return { ok: false, error };
@@ -114,6 +118,11 @@ export interface RoomManagerOptions {
   turnManager?: TurnManager;
   rng?: Rng;
   startOptions?: StartGameOptions;
+  /**
+   * Minimum number of seated players required to start a game. Localhost dev
+   * keeps this at 1 (solo testing); deployed games require 3.
+   */
+  minPlayers?: number;
 }
 
 export class RoomManager {
@@ -121,12 +130,14 @@ export class RoomManager {
   private readonly eventSink: RoomEventSink;
   private readonly turnManager: TurnManager;
   private readonly startOptions: StartGameOptions | undefined;
+  private readonly minPlayers: number;
   private rng: Rng;
 
   constructor(options: RoomManagerOptions = {}) {
     this.eventSink = options.eventSink ?? (() => {});
     this.turnManager = options.turnManager ?? new TurnManager();
     this.startOptions = options.startOptions;
+    this.minPlayers = options.minPlayers ?? 1;
     this.rng = options.rng ?? Math.random;
   }
 
@@ -397,6 +408,9 @@ export class RoomManager {
     if (!input.playerId || !input.playerName) {
       return fail("INVALID_PLAYER");
     }
+    if (input.maxPlayers < MIN_ROOM_CAPACITY) {
+      return fail("INVALID_MAX_PLAYERS");
+    }
     const room = new Room({
       name: input.name,
       hostId: input.playerId,
@@ -645,8 +659,8 @@ export class RoomManager {
     if (room.hostId !== playerId) {
       return fail("NOT_HOST");
     }
-    if (room.players.length === 0) {
-      return fail("NO_PLAYERS");
+    if (room.players.length < this.minPlayers) {
+      return fail("NEED_MORE_PLAYERS");
     }
     const start = options ?? this.startOptions ?? {};
     room.status = "ongoing";
