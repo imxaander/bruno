@@ -240,7 +240,7 @@ export function Lobby({
     <div
       style={{
         width: "100%",
-        minHeight: "100vh",
+        minHeight: "var(--bruno-vh)",
         background: "linear-gradient(160deg,#0a0a14 0%,#080810 60%,#080810 100%)",
         fontFamily: "'Rajdhani',sans-serif",
         display: "flex",

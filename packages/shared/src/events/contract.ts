@@ -10,6 +10,7 @@ import type {
   GamePrompt,
   GetGameStatePayload,
   JoinRoomPayload,
+  LeaderboardReturn,
   LeaveRoomPayload,
   LobbyPlayer,
   RoomCreateReturn,
@@ -29,6 +30,7 @@ export interface ClientToServerEvents {
   "game:state:get": (payload: GetGameStatePayload) => void;
   "vault:catalog:get": () => void;
   "auth:verify": (payload: AuthVerifyPayload) => void;
+  "leaderboard:get": () => void;
 }
 
 export interface ServerToClientEvents {
@@ -50,5 +52,6 @@ export interface ServerToClientEvents {
   "game:alert": (payload: GameAlert) => void;
   "game:ended": (payload: GameEndedPayload) => void;
   "vault:catalog:return": (payload: VaultCatalogReturn) => void;
+  "leaderboard:return": (payload: LeaderboardReturn) => void;
   error: (payload: ErrorEnvelope) => void;
 }

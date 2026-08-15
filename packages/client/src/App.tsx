@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
-import type { GameEndedPayload } from "@bruno/shared";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { GameEndedPayload, LeaderboardEntry } from "@bruno/shared";
 import { useSocket, type PlayerIdentity } from "./socket/useSocket.js";
 import { AuthProvider, useAuth } from "./firebase/AuthProvider.js";
 import { ProfileModal } from "./firebase/ProfileModal.js";
+import { LeaderboardModal } from "./components/modals.js";
 import { AfterGame } from "./pages/AfterGame.js";
 import { Game } from "./pages/Game.js";
 import { Help } from "./pages/Help.js";
@@ -23,6 +24,21 @@ function AppContent() {
   const [maxPlayers, setMaxPlayers] = useState(8);
   const [ended, setEnded] = useState<GameEndedPayload | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null);
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+    const onLeaderboard = (payload: { players: LeaderboardEntry[] }) => {
+      setLeaderboard(payload.players);
+    };
+    socket.on("leaderboard:return", onLeaderboard);
+    return () => {
+      socket.off("leaderboard:return", onLeaderboard);
+    };
+  }, [socket]);
 
   const isSignedIn = available && !!user && !guest;
   // Signed-in players are the Firebase uid + their profile username; guests keep
@@ -99,6 +115,12 @@ function AppContent() {
     setProfileOpen(true);
   }, []);
 
+  const openLeaderboard = useCallback(() => {
+    setLeaderboard(null);
+    setLeaderboardOpen(true);
+    socket?.emit("leaderboard:get");
+  }, [socket]);
+
   const content = (() => {
     if (screen === "home") {
       return (
@@ -131,6 +153,7 @@ function AppContent() {
           email={user?.email ?? null}
           profileError={profileError}
           onEditProfile={handleProfileClick}
+          onLeaderboard={openLeaderboard}
         />
       );
     }
@@ -156,6 +179,7 @@ function AppContent() {
           goLobby={goRooms}
           onEnded={handleEnded}
           reconnecting={reconnecting}
+          onLeaderboard={openLeaderboard}
         />
       );
     }
@@ -181,6 +205,13 @@ function AppContent() {
           error={profileError}
           onClose={() => setProfileOpen(false)}
           initialEdit
+        />
+      ) : null}
+      {leaderboardOpen ? (
+        <LeaderboardModal
+          entries={leaderboard}
+          myUid={user?.uid ?? null}
+          onClose={() => setLeaderboardOpen(false)}
         />
       ) : null}
     </>

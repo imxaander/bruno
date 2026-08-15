@@ -45,6 +45,7 @@ interface GameProps {
   goLobby: () => void;
   onEnded: (payload: GameEndedPayload) => void;
   reconnecting?: boolean;
+  onLeaderboard: () => void;
 }
 
 // Fixed seat positions for the 8-player ring (clockwise from bottom-left).
@@ -59,7 +60,15 @@ const SEATS_8P: CSSProperties[] = [
   { top: "52%", right: "1%" },
 ];
 
-export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting }: GameProps) {
+export function Game({
+  socket,
+  identity,
+  roomId,
+  goLobby,
+  onEnded,
+  reconnecting,
+  onLeaderboard,
+}: GameProps) {
   const [view, setView] = useState<PlayerView | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -406,7 +415,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting 
       <div
         style={{
           width: "100%",
-          minHeight: "100vh",
+          minHeight: "var(--bruno-vh)",
           background: "radial-gradient(ellipse at 50% 40%, #0c0c1a 0%, #080810 60%, #060610 100%)",
           display: "flex",
           flexDirection: "column",
@@ -530,6 +539,23 @@ export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting 
         }}
       >
         VAULTS
+      </button>
+      <button
+        onClick={onLeaderboard}
+        style={{
+          padding: "5px 14px",
+          fontFamily: "'Rajdhani'",
+          fontWeight: 600,
+          fontSize: 12,
+          background: "transparent",
+          color: "rgba(255,204,0,0.7)",
+          border: "1px solid rgba(255,204,0,0.3)",
+          borderRadius: 5,
+          cursor: "pointer",
+          letterSpacing: "0.08em",
+        }}
+      >
+        {"\u{1F3C6}"} LEADERBOARD
       </button>
       <button
         onClick={leaveGame}
@@ -819,7 +845,7 @@ export function Game({ socket, identity, roomId, goLobby, onEnded, reconnecting 
     <div
       style={{
         width: "100%",
-        height: "100vh",
+        height: "var(--bruno-vh)",
         background: pageBackground,
         fontFamily: "'Rajdhani', sans-serif",
         display: "flex",

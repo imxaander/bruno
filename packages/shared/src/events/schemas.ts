@@ -231,3 +231,20 @@ export const RoomCreateReturnSchema = z.discriminatedUnion("ok", [
   }),
 ]);
 export type RoomCreateReturn = z.infer<typeof RoomCreateReturnSchema>;
+
+export const LeaderboardEntrySchema = z.object({
+  uid: z.string().min(1),
+  username: z.string().min(1),
+  icon: z.string().nullable(),
+  points: z.number().int().min(0),
+  wins: z.number().int().min(0),
+  gamesPlayed: z.number().int().min(0),
+  rankIcon: z.string(),
+  rankName: z.string(),
+});
+export type LeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>;
+
+export const LeaderboardReturnSchema = z.object({
+  players: z.array(LeaderboardEntrySchema).max(25),
+});
+export type LeaderboardReturn = z.infer<typeof LeaderboardReturnSchema>;

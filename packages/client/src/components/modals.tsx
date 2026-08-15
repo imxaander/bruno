@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { CardView, VaultGuideEntry, VaultOffer } from "@bruno/shared";
+import type { CardView, LeaderboardEntry, VaultGuideEntry, VaultOffer } from "@bruno/shared";
 import GameCard, { type VaultTier } from "./GameCard.js";
 import { VAULT_ICONS } from "./vaultIcons.js";
 import { CHANGELOG, UPDATES_LATEST_VERSION } from "../changelog.js";
@@ -1567,7 +1567,7 @@ export function VaultGuide({ entries, onClose }: VaultGuideProps) {
             flexDirection: "column",
             gap: 20,
             padding: "18px 24px 24px",
-            maxHeight: "68vh",
+            maxHeight: "calc(68vh / var(--bruno-zoom))",
             overflowY: "auto",
           }}
         >
@@ -1773,7 +1773,7 @@ export function UpdatesPanel({ onClose }: UpdatesPanelProps) {
             flexDirection: "column",
             gap: 10,
             padding: "18px 24px 8px",
-            maxHeight: "62vh",
+            maxHeight: "calc(62vh / var(--bruno-zoom))",
             overflowY: "auto",
           }}
         >
@@ -1879,6 +1879,216 @@ export function UpdatesPanel({ onClose }: UpdatesPanelProps) {
               </div>
             );
           })}
+        </div>
+        <div
+          style={{
+            padding: "12px 24px",
+            borderTop: "1px solid rgba(0,238,255,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              fontFamily: FONT_DISPLAY,
+              fontWeight: 800,
+              fontSize: 14,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              padding: "8px 26px",
+              background: "transparent",
+              color: "#00eeff",
+              border: "1px solid rgba(0,238,255,0.35)",
+              borderRadius: 8,
+              cursor: "pointer",
+            }}
+          >
+            Got it
+          </button>
+        </div>
+      </Frame>
+    </Overlay>
+  );
+}
+
+const RANK_MEDAL_COLORS = ["#ffcc00", "#c8d8f0", "#ff8a3c"];
+
+export function LeaderboardModal({
+  entries,
+  myUid,
+  onClose,
+}: {
+  entries: LeaderboardEntry[] | null;
+  myUid?: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <Overlay>
+      <Frame title="LEADERBOARD" subtitle="Top players by rank points" width={560}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            padding: "18px 24px 24px",
+            maxHeight: "calc(68vh / var(--bruno-zoom))",
+            overflowY: "auto",
+          }}
+        >
+          {entries === null ? (
+            <p
+              style={{
+                margin: "18px 0",
+                textAlign: "center",
+                fontSize: 13,
+                letterSpacing: "0.12em",
+                color: "rgba(200,216,240,0.4)",
+              }}
+            >
+              LOADING…
+            </p>
+          ) : entries.length === 0 ? (
+            <p
+              style={{
+                margin: "18px 0",
+                textAlign: "center",
+                fontSize: 13,
+                lineHeight: 1.6,
+                color: "rgba(200,216,240,0.4)",
+              }}
+            >
+              No ranked players yet. Sign in with Google and play to earn rank points.
+            </p>
+          ) : (
+            entries.map((entry, index) => {
+              const rank = index + 1;
+              const medal = rank <= 3 ? RANK_MEDAL_COLORS[rank - 1] : null;
+              const isMe = myUid != null && entry.uid === myUid;
+              return (
+                <div
+                  key={entry.uid}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    background: isMe ? "rgba(0,238,255,0.08)" : "rgba(16,16,28,0.55)",
+                    border: isMe
+                      ? "1px solid rgba(0,238,255,0.35)"
+                      : "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 30,
+                      textAlign: "center",
+                      fontFamily: FONT_DISPLAY,
+                      fontWeight: 800,
+                      fontSize: 20,
+                      color: medal ?? "rgba(200,216,240,0.35)",
+                      textShadow: medal ? `0 0 12px ${medal}66` : "none",
+                    }}
+                  >
+                    {rank}
+                  </span>
+                  <span
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 20,
+                      background: "rgba(0,238,255,0.1)",
+                      border: "1px solid rgba(0,238,255,0.25)",
+                    }}
+                  >
+                    {entry.icon ? (
+                      <span style={{ fontSize: 22 }}>{entry.icon}</span>
+                    ) : (
+                      <span
+                        style={{
+                          fontFamily: FONT_DISPLAY,
+                          fontWeight: 800,
+                          color: "#00eeff",
+                        }}
+                      >
+                        {(entry.username[0] || "?").toUpperCase()}
+                      </span>
+                    )}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontFamily: FONT_UI,
+                        fontWeight: 700,
+                        fontSize: 15,
+                        color: "#eaf2ff",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {entry.username}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        letterSpacing: "0.06em",
+                        color: "rgba(200,216,240,0.4)",
+                      }}
+                    >
+                      <span style={{ marginRight: 4 }}>{entry.rankIcon}</span>
+                      {entry.rankName}
+                      {isMe ? (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            fontSize: 9,
+                            letterSpacing: "0.14em",
+                            color: "#00eeff",
+                            border: "1px solid rgba(0,238,255,0.4)",
+                            borderRadius: 4,
+                            padding: "1px 5px",
+                          }}
+                        >
+                          YOU
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div
+                      style={{
+                        fontFamily: FONT_DISPLAY,
+                        fontWeight: 800,
+                        fontSize: 22,
+                        color: "#00eeff",
+                        lineHeight: 1,
+                        textShadow: "0 0 14px rgba(0,238,255,0.5)",
+                      }}
+                    >
+                      {entry.points}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 600,
+                        letterSpacing: "0.12em",
+                        color: "rgba(200,216,240,0.35)",
+                      }}
+                    >
+                      {entry.wins} WINS
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
         <div
           style={{

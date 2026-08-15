@@ -137,7 +137,7 @@ export function Help({ goHome, goRanks }: HelpProps) {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "var(--bruno-vh)",
         background:
           "radial-gradient(ellipse at 50% 0%, rgba(255,0,204,0.05) 0%, rgba(9,9,16,0.5) 40%, #07070e 100%)",
         fontFamily: FONT_UI,

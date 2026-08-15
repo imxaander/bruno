@@ -43,6 +43,10 @@
   --bruno-text-caption-s: 10px;
   --bruno-text-nano: 9px;
 
+  /* UI scale — all app UI is rendered 15% larger than authored */
+  --bruno-zoom: 1.15;
+  --bruno-vh: calc(100vh / var(--bruno-zoom));
+
   /* spacing */
   --bruno-space-1: 4px;
   --bruno-space-2: 8px;

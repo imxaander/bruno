@@ -87,7 +87,7 @@ export function ProfileModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 400,
-          maxHeight: "80vh",
+          maxHeight: "calc(80vh / var(--bruno-zoom))",
           background: "rgba(11,11,20,0.97)",
           border: "1px solid rgba(0,238,255,0.18)",
           borderRadius: 16,

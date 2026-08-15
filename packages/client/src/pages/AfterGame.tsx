@@ -75,7 +75,7 @@ export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGam
     <div
       style={{
         width: "100%",
-        minHeight: "100vh",
+        minHeight: "var(--bruno-vh)",
         background: "radial-gradient(ellipse at 50% 0%, #0c1410 0%, #090910 45%, #070710 100%)",
         fontFamily: "'Rajdhani',sans-serif",
         display: "flex",

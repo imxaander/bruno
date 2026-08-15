@@ -5,11 +5,21 @@ export interface UpdateEntry {
   bullets: string[];
 }
 
-export const UPDATES_LATEST_VERSION = "0.4.0";
+export const UPDATES_LATEST_VERSION = "0.5.0";
 
 export const UPDATES_STORAGE_KEY = "bruno_updates_seen";
 
 export const CHANGELOG: UpdateEntry[] = [
+  {
+    version: "0.5.0",
+    date: "2026-08-15",
+    title: "Leaderboard & bigger UI",
+    bullets: [
+      "Leaderboard — the top 25 players by rank points, opened from the rooms page or in-game.",
+      "Your rank, icon and wins are highlighted on your own leaderboard row.",
+      "The whole UI is now 15% larger — every modal, label and button reads bigger.",
+    ],
+  },
   {
     version: "0.4.0",
     date: "2026-08-15",

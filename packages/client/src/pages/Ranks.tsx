@@ -90,7 +90,7 @@ export function Ranks({ goHome, goHelp }: RanksProps) {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "var(--bruno-vh)",
         background:
           "radial-gradient(ellipse at 50% 0%, rgba(0,238,255,0.06) 0%, rgba(9,9,16,0.5) 40%, #07070e 100%)",
         fontFamily: FONT_UI,

@@ -26,6 +26,7 @@ interface RoomsProps {
   email: string | null;
   profileError: string | null;
   onEditProfile: () => void;
+  onLeaderboard: () => void;
 }
 
 function statusOf(room: RoomSummary): StatusType {
@@ -43,6 +44,7 @@ export function Rooms({
   email,
   profileError,
   onEditProfile,
+  onLeaderboard,
 }: RoomsProps) {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -102,7 +104,7 @@ export function Rooms({
     <div
       style={{
         width: "100%",
-        minHeight: "100vh",
+        minHeight: "var(--bruno-vh)",
         background: "linear-gradient(160deg, #0a0a14 0%, #080810 60%, #080810 100%)",
         fontFamily: "'Rajdhani', sans-serif",
         display: "flex",
@@ -541,6 +543,33 @@ export function Rooms({
               }}
             >
               {"\u2728"} WHAT'S NEW
+            </button>
+            <button
+              onClick={onLeaderboard}
+              style={{
+                width: "100%",
+                background: "rgba(255,204,0,0.05)",
+                border: "1px solid rgba(255,204,0,0.25)",
+                borderRadius: 7,
+                padding: "9px 0",
+                fontFamily: "'Rajdhani'",
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: "0.2em",
+                color: "rgba(255,204,0,0.75)",
+                cursor: "pointer",
+                transition: "background 0.14s, box-shadow 0.14s",
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.background = "rgba(255,204,0,0.12)";
+                event.currentTarget.style.boxShadow = "0 0 16px rgba(255,204,0,0.25)";
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.background = "rgba(255,204,0,0.05)";
+                event.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              {"\u{1F3C6}"} LEADERBOARD
             </button>
           </div>
         </div>

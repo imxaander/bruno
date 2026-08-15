@@ -76,7 +76,7 @@ export function Home({ identity, socket, saveIdentity, onPlay, goRanks, goHelp }
     <div
       style={{
         width: "100%",
-        minHeight: "100vh",
+        minHeight: "var(--bruno-vh)",
         background: "radial-gradient(ellipse at 50% 25%, #0d0d1e 0%, #080812 45%, #060610 100%)",
         display: "flex",
         alignItems: "center",

@@ -856,6 +856,15 @@ describe("room lifecycle over the wire", () => {
     alice.disconnect();
   });
 
+  it("returns an empty leaderboard when Firestore is unavailable", { timeout: 15000 }, async () => {
+    const alice = await connect();
+    const leaderboard = once(alice, "leaderboard:return");
+    alice.emit("leaderboard:get");
+    const [payload] = await leaderboard;
+    expect(payload.players).toEqual([]);
+    alice.disconnect();
+  });
+
   it(
     "rejoins a disconnected player and restores their game state",
     { timeout: 15000 },

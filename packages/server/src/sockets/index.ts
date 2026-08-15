@@ -585,6 +585,38 @@ export function registerSockets(
       socket.emit("vault:catalog:return", { implemented });
     });
 
+    socket.on("leaderboard:get", async () => {
+      const db = getDb();
+      if (!db) {
+        socket.emit("leaderboard:return", { players: [] });
+        return;
+      }
+      try {
+        const snap = await db.collection("profiles").orderBy("points", "desc").limit(25).get();
+        const players = snap.docs.map((doc) => {
+          const data = doc.data();
+          const points = typeof data.points === "number" ? data.points : 0;
+          const wins = typeof data.wins === "number" ? data.wins : 0;
+          const games = typeof data.gamesPlayed === "number" ? data.gamesPlayed : 0;
+          const tier = getRankTier(points);
+          return {
+            uid: doc.id,
+            username: typeof data.username === "string" && data.username ? data.username : "Player",
+            icon: typeof data.icon === "string" && data.icon ? data.icon : null,
+            points,
+            wins,
+            gamesPlayed: games,
+            rankIcon: tier.icon,
+            rankName: tier.name,
+          };
+        });
+        socket.emit("leaderboard:return", { players });
+      } catch (error) {
+        console.error("[socket] leaderboard:get failed", error);
+        socket.emit("leaderboard:return", { players: [] });
+      }
+    });
+
     socket.on("disconnect", () => {
       console.log(`[socket] disconnected: ${socket.id}`);
       const roomId = data.roomId;

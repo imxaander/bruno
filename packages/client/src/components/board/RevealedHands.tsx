@@ -37,7 +37,7 @@ export function RevealedHands({ revealed, players }: RevealedHandsProps) {
         flexDirection: "column",
         gap: 10,
         maxWidth: 280,
-        maxHeight: "calc(100vh - 160px)",
+        maxHeight: "calc((100vh - 160px) / var(--bruno-zoom))",
         overflowY: "auto",
       }}
     >
