@@ -13,9 +13,11 @@ interface HomeProps {
   socket: BrunoSocket | null;
   saveIdentity: (name: string) => void;
   onPlay: (name: string) => void;
+  goRanks: () => void;
+  goHelp: () => void;
 }
 
-export function Home({ identity, socket, saveIdentity, onPlay }: HomeProps) {
+export function Home({ identity, socket, saveIdentity, onPlay, goRanks, goHelp }: HomeProps) {
   const {
     user,
     guest,
@@ -538,6 +540,64 @@ export function Home({ identity, socket, saveIdentity, onPlay }: HomeProps) {
           }}
         >
           {"\u25C8"} VAULT GUIDE
+        </button>
+
+        <button
+          onClick={goRanks}
+          style={{
+            background: "transparent",
+            border: "1px solid rgba(255,204,0,0.3)",
+            borderRadius: 8,
+            padding: "10px 28px",
+            fontFamily: "'Rajdhani'",
+            fontWeight: 700,
+            fontSize: 14,
+            letterSpacing: "0.24em",
+            color: "rgba(255,204,0,0.7)",
+            cursor: "pointer",
+            transition: "color 0.14s, border-color 0.14s, box-shadow 0.14s",
+          }}
+          onMouseEnter={(event) => {
+            event.currentTarget.style.color = "#ffcc00";
+            event.currentTarget.style.borderColor = "rgba(255,204,0,0.7)";
+            event.currentTarget.style.boxShadow = "0 0 20px rgba(255,204,0,0.25)";
+          }}
+          onMouseLeave={(event) => {
+            event.currentTarget.style.color = "rgba(255,204,0,0.7)";
+            event.currentTarget.style.borderColor = "rgba(255,204,0,0.3)";
+            event.currentTarget.style.boxShadow = "none";
+          }}
+        >
+          {"\u2726"} RANKS
+        </button>
+
+        <button
+          onClick={goHelp}
+          style={{
+            background: "transparent",
+            border: "1px solid rgba(255,0,204,0.3)",
+            borderRadius: 8,
+            padding: "10px 28px",
+            fontFamily: "'Rajdhani'",
+            fontWeight: 700,
+            fontSize: 14,
+            letterSpacing: "0.24em",
+            color: "rgba(255,0,204,0.7)",
+            cursor: "pointer",
+            transition: "color 0.14s, border-color 0.14s, box-shadow 0.14s",
+          }}
+          onMouseEnter={(event) => {
+            event.currentTarget.style.color = "#ff00cc";
+            event.currentTarget.style.borderColor = "rgba(255,0,204,0.7)";
+            event.currentTarget.style.boxShadow = "0 0 20px rgba(255,0,204,0.25)";
+          }}
+          onMouseLeave={(event) => {
+            event.currentTarget.style.color = "rgba(255,0,204,0.7)";
+            event.currentTarget.style.borderColor = "rgba(255,0,204,0.3)";
+            event.currentTarget.style.boxShadow = "none";
+          }}
+        >
+          {"\u25B6"} HOW TO PLAY
         </button>
 
         <button

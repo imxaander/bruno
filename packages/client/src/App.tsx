@@ -5,11 +5,13 @@ import { AuthProvider, useAuth } from "./firebase/AuthProvider.js";
 import { ProfileModal } from "./firebase/ProfileModal.js";
 import { AfterGame } from "./pages/AfterGame.js";
 import { Game } from "./pages/Game.js";
+import { Help } from "./pages/Help.js";
 import { Home } from "./pages/Home.js";
 import { Lobby } from "./pages/Lobby.js";
+import { Ranks } from "./pages/Ranks.js";
 import { Rooms } from "./pages/Rooms.js";
 
-type Screen = "home" | "rooms" | "lobby" | "game" | "aftergame";
+type Screen = "home" | "rooms" | "lobby" | "game" | "aftergame" | "ranks" | "help";
 
 function AppContent() {
   const { socket, identity, saveIdentity, setRoomId: setSocketRoomId, reconnecting } = useSocket();
@@ -44,6 +46,14 @@ function AppContent() {
   const goHome = useCallback(() => {
     setEnded(null);
     setScreen("home");
+  }, []);
+  const goRanks = useCallback(() => {
+    setEnded(null);
+    setScreen("ranks");
+  }, []);
+  const goHelp = useCallback(() => {
+    setEnded(null);
+    setScreen("help");
   }, []);
   const goLobby = useCallback(
     (gameId: string, name: string, roomMaxPlayers = 8) => {
@@ -92,7 +102,36 @@ function AppContent() {
   const content = (() => {
     if (screen === "home") {
       return (
-        <Home identity={identity} socket={socket} saveIdentity={saveIdentity} onPlay={handlePlay} />
+        <Home
+          identity={identity}
+          socket={socket}
+          saveIdentity={saveIdentity}
+          onPlay={handlePlay}
+          goRanks={goRanks}
+          goHelp={goHelp}
+        />
+      );
+    }
+    if (screen === "ranks") {
+      return (
+        <Ranks
+          goHome={goHome}
+          goHelp={goHelp}
+          profileIcon={profile?.icon}
+          profileRank={rank?.name}
+          onProfileClick={handleProfileClick}
+        />
+      );
+    }
+    if (screen === "help") {
+      return (
+        <Help
+          goHome={goHome}
+          goRanks={goRanks}
+          profileIcon={profile?.icon}
+          profileRank={rank?.name}
+          onProfileClick={handleProfileClick}
+        />
       );
     }
     if (screen === "rooms") {
