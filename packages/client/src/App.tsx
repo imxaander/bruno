@@ -15,10 +15,9 @@ import { Help } from "./pages/Help.js";
 import { Home } from "./pages/Home.js";
 import { Lobby } from "./pages/Lobby.js";
 import { Ranks } from "./pages/Ranks.js";
-import { Marie } from "./pages/Marie.js";
 import { Rooms } from "./pages/Rooms.js";
 
-type Screen = "home" | "rooms" | "lobby" | "game" | "aftergame" | "ranks" | "help" | "marie";
+type Screen = "home" | "rooms" | "lobby" | "game" | "aftergame" | "ranks" | "help";
 
 function AppContent() {
   const { socket, identity, saveIdentity, setRoomId: setSocketRoomId, reconnecting } = useSocket();
@@ -99,10 +98,6 @@ function AppContent() {
     setEnded(null);
     setScreen("help");
   }, []);
-  const goMarie = useCallback(() => {
-    setEnded(null);
-    setScreen("marie");
-  }, []);
   const goLobby = useCallback(
     (gameId: string, name: string, roomMaxPlayers = 8) => {
       setRoomId(gameId);
@@ -162,7 +157,6 @@ function AppContent() {
           onPlay={handlePlay}
           goRanks={goRanks}
           goHelp={goHelp}
-          goMarie={goMarie}
         />
       );
     }
@@ -171,9 +165,6 @@ function AppContent() {
     }
     if (screen === "help") {
       return <Help goHome={goHome} goRanks={goRanks} />;
-    }
-    if (screen === "marie") {
-      return <Marie goHome={goHome} />;
     }
     if (screen === "rooms") {
       return (
