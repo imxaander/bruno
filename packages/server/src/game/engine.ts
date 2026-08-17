@@ -27,6 +27,32 @@ export type EngineError =
 
 export type EngineResult<T> = { ok: true; value: T } | { ok: false; error: EngineError };
 
+/** Mark the deck as exhausted when it first hits 0, and detect stalemate after a full round. */
+function trackStalemate(room: Room): boolean {
+  if (room.deck.length === 0 && room.deckExhaustedRound === undefined) {
+    room.deckExhaustedRound = room.round;
+  }
+  if (
+    room.deck.length === 0 &&
+    room.deckExhaustedRound !== undefined &&
+    room.round > room.deckExhaustedRound
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Find the player with the fewest cards; tiebreak by seat index. */
+function fewestCardsPlayer(room: Room): Player | undefined {
+  let best: Player | undefined;
+  for (const p of room.players) {
+    if (!best || p.hand.length < best.hand.length) {
+      best = p;
+    }
+  }
+  return best;
+}
+
 export interface PlayOutcome {
   log: string[];
   won: boolean;
@@ -43,6 +69,7 @@ export interface PlayOutcome {
 export interface DrawOutcome {
   log: string[];
   drawn: number;
+  won: boolean;
 }
 
 export function pileTop(room: Room): Card | undefined {
@@ -313,6 +340,20 @@ export function playCard(
     log.push(`${player.name} takes another turn.`);
   }
   log.push(...runDueDeferred(room, rng));
+
+  if (!won && trackStalemate(room)) {
+    const winner = fewestCardsPlayer(room);
+    if (winner) {
+      room.status = "concluding";
+      room.winnerId = winner.id;
+      room.winnerName = winner.name;
+      won = true;
+      log.push(
+        `The deck is exhausted and no cards can be drawn — ${winner.name} wins by fewest cards (stalemate).`,
+      );
+    }
+  }
+
   return { ok: true, value: { log, won, effect } };
 }
 
@@ -343,11 +384,27 @@ export function applyDraw(room: Room, rng: Rng = Math.random): EngineResult<Draw
     log.push(...rollNextMayhem(room, rng));
   }
   log.push(...runDueDeferred(room, rng));
+
+  let won = false;
+  if (trackStalemate(room)) {
+    const winner = fewestCardsPlayer(room);
+    if (winner) {
+      room.status = "concluding";
+      room.winnerId = winner.id;
+      room.winnerName = winner.name;
+      won = true;
+      log.push(
+        `The deck is exhausted and no cards can be drawn — ${winner.name} wins by fewest cards (stalemate).`,
+      );
+    }
+  }
+
   return {
     ok: true,
     value: {
       log,
       drawn: cards.length,
+      won,
     },
   };
 }

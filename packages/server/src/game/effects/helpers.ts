@@ -124,9 +124,14 @@ export function resolveTargets(
   return sampleDistinct(chosen, count, rng);
 }
 
+const DISABLED_EFFECTS = new Set(["t1-silver-tongue", "t1-maim"]);
+
 export function sampleVaultOffers(tier: VaultCardType, count: number, rng: Rng): Card[] {
   return sampleDistinct(
-    CARDS.filter((card) => card.type === tier && getResolver(card.id) !== undefined),
+    CARDS.filter(
+      (card) =>
+        card.type === tier && getResolver(card.id) !== undefined && !DISABLED_EFFECTS.has(card.id),
+    ),
     count,
     rng,
   );

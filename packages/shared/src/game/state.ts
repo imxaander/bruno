@@ -82,4 +82,6 @@ export interface PlayerView {
   connected?: boolean;
   /** Passives currently active on or affecting the requesting player. */
   myPassives?: ActivePassive[];
+  /** Epoch-ms when the game started — used for the elapsed timer. */
+  startedAt?: number;
 }

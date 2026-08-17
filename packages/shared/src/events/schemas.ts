@@ -201,7 +201,7 @@ export const GameEndedPayloadSchema = z.object({
   gameId: z.string().min(1),
   winner: z.object({ id: z.string(), name: z.string() }).nullable(),
   players: z.array(GameEndedPlayerSchema),
-  reason: z.literal("hand_emptied"),
+  reason: z.enum(["hand_emptied", "stalemate"]),
 });
 export type GameEndedPayload = z.infer<typeof GameEndedPayloadSchema>;
 

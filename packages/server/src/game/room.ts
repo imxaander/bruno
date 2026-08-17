@@ -139,6 +139,10 @@ export class Room {
   investmentPending = new Set<string>();
   /** Last fleeting card played — shown muted on top of the pile (visual only, not in backend pile). */
   fleetingPileTop?: Card;
+  /** Round when the deck first became empty. Used for stalemate detection. */
+  deckExhaustedRound?: number;
+  /** Epoch-ms when startGame was called — used for the elapsed game timer. */
+  startedAt?: number;
 
   /** Reconnect grace window for a disconnected player. Grace expires at `until` (epoch-ms). */
   reconnectGrace?: { timer: NodeJS.Timeout; until: number };

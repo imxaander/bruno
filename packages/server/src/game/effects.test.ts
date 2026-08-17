@@ -1919,17 +1919,17 @@ describe("wave 5 event-driven passives", () => {
     expect(room.players[0]!.hand).toHaveLength(afterRed - 1);
   });
 
-  it("blocks Cruelty victims from winning until both hold exactly 1 card (t2-cruelty)", () => {
+  it("blocks Cruelty victims from winning until both hold 10 or fewer cards (t2-cruelty)", () => {
     const { room } = startGame(3);
     addPassive(room, { kind: "cruelty", ownerId: "p0", victims: ["p1", "p2"] });
     room.players[1]!.hand = [makeColorCard("a", "red")];
-    room.players[2]!.hand = [makeColorCard("b", "red"), makeColorCard("c", "blue")];
+    room.players[2]!.hand = Array.from({ length: 11 }, (_, i) => makeColorCard(`c${i}`, "blue"));
 
     expect(isWinAllowed(room, room.players[1]!).allowed).toBe(false);
     expect(isWinAllowed(room, room.players[2]!).allowed).toBe(false);
     expect(isWinAllowed(room, room.players[0]!).allowed).toBe(true);
 
-    room.players[2]!.hand = [makeColorCard("b", "red")];
+    room.players[2]!.hand = Array.from({ length: 10 }, (_, i) => makeColorCard(`c${i}`, "blue"));
     const lifted = emitGameEvent(
       room,
       { kind: "card-played", playerId: "p1", card: makeColorCard("a", "red") },

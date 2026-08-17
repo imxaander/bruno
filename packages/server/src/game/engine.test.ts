@@ -526,3 +526,83 @@ describe("applyDraw", () => {
     expect(room.pendingDraw).toBe(0);
   });
 });
+
+describe("stalemate", () => {
+  it("does not trigger on the round the deck first empties", () => {
+    const { room } = startGame(2);
+    setState(room, red5(), "red");
+    room.deck = [];
+    room.round = 1;
+    room.deckExhaustedRound = undefined;
+    const result = applyDraw(room, seeded(1));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(result.value.won).toBe(false);
+    expect(room.deckExhaustedRound).toBe(1);
+  });
+
+  it("triggers after a full round with empty deck", () => {
+    const { room } = startGame(2);
+    setState(room, red5(), "red");
+    room.deck = [];
+    room.round = 2;
+    room.deckExhaustedRound = 1;
+    const result = applyDraw(room, seeded(1));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(result.value.won).toBe(true);
+    expect(room.status).toBe("concluding");
+    expect(room.winnerId).toBeDefined();
+  });
+
+  it("player with fewest cards wins on stalemate via playCard", () => {
+    const { room } = startGame(3);
+    room.players[0]!.hand = [red5()];
+    room.players[1]!.hand = [red5(), redSkip()];
+    room.players[2]!.hand = [red5(), redSkip(), greenReverse()];
+    setState(room, red5(), "red");
+    room.deck = [];
+    room.round = 2;
+    room.deckExhaustedRound = 1;
+    room.currentTurnIndex = 0;
+    const result = playCard(room, room.players[0]!, 0, undefined, seeded(1));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.won).toBe(true);
+    }
+    expect(room.winnerId).toBe("p0");
+  });
+
+  it("player with fewest cards wins on stalemate via applyDraw", () => {
+    const { room } = startGame(3);
+    room.players[0]!.hand = [red5()];
+    room.players[1]!.hand = [red5(), redSkip()];
+    room.players[2]!.hand = [red5(), redSkip(), greenReverse()];
+    setState(room, red5(), "red");
+    room.deck = [];
+    room.round = 2;
+    room.deckExhaustedRound = 1;
+    room.currentTurnIndex = 0;
+    const result = applyDraw(room, seeded(1));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(result.value.won).toBe(true);
+    expect(room.winnerId).toBe("p0");
+  });
+
+  it("does not trigger when deck still has cards", () => {
+    const { room } = startGame(2);
+    setState(room, red5(), "red");
+    room.deck = [red5(), red5(), red5()];
+    room.round = 2;
+    room.deckExhaustedRound = 1;
+    const result = applyDraw(room, seeded(1));
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    expect(result.value.won).toBe(false);
+  });
+});

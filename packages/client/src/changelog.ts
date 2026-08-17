@@ -5,11 +5,22 @@ export interface UpdateEntry {
   bullets: string[];
 }
 
-export const UPDATES_LATEST_VERSION = "0.6.0";
+export const UPDATES_LATEST_VERSION = "0.7.0";
 
 export const UPDATES_STORAGE_KEY = "bruno_updates_seen";
 
 export const CHANGELOG: UpdateEntry[] = [
+  {
+    version: "0.7.0",
+    date: "2026-08-17",
+    title: "Stalemate end-game & Cruelty rework",
+    bullets: [
+      "A running game timer at the top of the board shows how long the current match has been going.",
+      "Stalemate — if the deck empties and no one has won after a full round, the player with the fewest cards wins with normal scoring.",
+      "The end-game screen now shows the reason the game ended (first to empty hand or deck exhausted).",
+      "Cruelty now lifts when both victims reach 10 or fewer cards instead of exactly 1.",
+    ],
+  },
   {
     version: "0.6.0",
     date: "2026-08-17",

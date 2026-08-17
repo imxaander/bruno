@@ -105,6 +105,7 @@ export function toPlayerView(
       ? Math.max(0, room.reconnectGrace.until - Date.now())
       : undefined,
     connected: me?.connected ?? true,
+    startedAt: room.startedAt,
   };
 
   const myPassives: ActivePassive[] = [];

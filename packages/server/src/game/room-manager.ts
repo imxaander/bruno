@@ -56,7 +56,13 @@ export type RoomEvent =
   | { type: "alert"; gameId: string; playerId: string; message: string }
   | { type: "draw"; gameId: string; playerId: string; playerName: string; count: number }
   | { type: "turn"; gameId: string; playerIndex: number; playerId: string }
-  | { type: "ended"; gameId: string; winnerId: string; winnerName: string }
+  | {
+      type: "ended";
+      gameId: string;
+      winnerId: string;
+      winnerName: string;
+      reason: "hand_emptied" | "stalemate";
+    }
   | { type: "prompt"; gameId: string; playerId: string; kind: "choose-color" }
   | { type: "prompt"; gameId: string; playerId: string; kind: "vault-choice"; offers: Card[] }
   | {
@@ -395,6 +401,16 @@ export class RoomManager {
     for (const message of result.value.log) {
       this.emit({ type: "log", gameId: roomId, message });
     }
+    if (result.value.won) {
+      this.emit({
+        type: "ended",
+        gameId: room.id,
+        winnerId: room.winnerId ?? player.id,
+        winnerName: room.winnerName ?? player.name,
+        reason: "stalemate",
+      });
+      return;
+    }
     this.scheduleTurn(roomId);
     this.emitTurn(room);
   }
@@ -664,6 +680,7 @@ export class RoomManager {
     }
     const start = options ?? this.startOptions ?? {};
     room.status = "ongoing";
+    room.startedAt = Date.now();
     this.rng = rng;
     room.deck = buildDeck(rng, room.players.length);
     const hands = dealHands(room.deck, room.players.length, HAND_SIZE);
@@ -770,6 +787,7 @@ export class RoomManager {
         gameId: room.id,
         winnerId: room.winnerId ?? player.id,
         winnerName: room.winnerName ?? player.name,
+        reason: room.deckExhaustedRound !== undefined ? "stalemate" : "hand_emptied",
       });
       return {
         ok: true,
@@ -1124,6 +1142,19 @@ export class RoomManager {
       });
       for (const message of result.value.log) {
         this.emit({ type: "log", gameId, message });
+      }
+      if (result.value.won) {
+        this.emit({
+          type: "ended",
+          gameId: room.id,
+          winnerId: room.winnerId ?? player.id,
+          winnerName: room.winnerName ?? player.name,
+          reason: "stalemate",
+        });
+        return {
+          ok: true,
+          value: { log: result.value.log, won: true, nextPlayerId: null },
+        };
       }
       this.scheduleTurn(room.id);
       this.emitTurn(room);

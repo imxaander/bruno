@@ -6,7 +6,7 @@ import { PageHeader } from "../components/PageHeader.js";
 interface AfterGameProps {
   winner: { id: string; name: string } | null;
   players: GameEndedPlayer[];
-  reason: "hand_emptied";
+  reason: "hand_emptied" | "stalemate";
   goHome: () => void;
   goRooms: () => void;
 }
@@ -256,7 +256,11 @@ export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGam
                   letterSpacing: "0.12em",
                 }}
               >
-                {reason === "hand_emptied" ? "First to empty hand" : "Round complete"}
+                {reason === "hand_emptied"
+                  ? "First to empty hand"
+                  : reason === "stalemate"
+                    ? "Deck exhausted — fewest cards wins"
+                    : "Round complete"}
               </p>
               {championPlayer && championPlayer.pointsDelta !== 0 ? (
                 <p

@@ -266,7 +266,7 @@ export function registerSockets(
           rankName: change && pointsConfigured ? change.newTier : null,
         };
       }),
-      reason: "hand_emptied",
+      reason: event.reason,
     });
     // Ranks change after scoring — drop the cache so the next push is fresh.
     metaCache.delete(event.gameId);

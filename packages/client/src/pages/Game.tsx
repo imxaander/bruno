@@ -18,6 +18,7 @@ import { TableStatus } from "../components/TableStatus.js";
 import { PlayerHand } from "../components/board/PlayerHand.js";
 import { RevealedHands } from "../components/board/RevealedHands.js";
 import { ActivePassives } from "../components/ActivePassives.js";
+import { GameTimer } from "../components/GameTimer.js";
 import { TableOval } from "../components/board/TableOval.js";
 import DrawFly, { type DrawFlyTarget } from "../components/board/DrawFly.js";
 import EffectBanner from "../components/EffectBanner.js";
@@ -676,6 +677,7 @@ export function Game({
   const board = isRing ? (
     <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
       <TurnIndicator myTurn={myTurn} />
+      {view.startedAt ? <GameTimer startedAt={view.startedAt} /> : null}
       <div
         style={{
           position: "absolute",

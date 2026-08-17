@@ -41,7 +41,8 @@ export const PASSIVE_META: Record<string, PassiveMeta> = {
     cardId: "t2-cruelty",
     name: "Cruelty",
     icon: "\u{1F6A6}",
-    description: "Chosen victims cannot win until both of their hands are reduced to 1 card.",
+    description:
+      "Chosen victims cannot win until both of their hands are reduced to 10 cards or fewer.",
   },
   tyranny: {
     cardId: "t1-tyranny",

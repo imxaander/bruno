@@ -37,7 +37,7 @@ interface GameAlertProps {
 export default function GameAlert({
   message,
   tone = "warn",
-  duration = 3200,
+  duration = 5000,
   onDismiss,
 }: GameAlertProps) {
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function GameAlert({
         bottom: 92,
         left: "50%",
         transform: "translateX(-50%)",
-        zIndex: 60,
+        zIndex: 200,
         pointerEvents: "none",
       }}
     >

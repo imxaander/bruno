@@ -85,8 +85,8 @@ export function isWinAllowed(room: Room, player: Player): { allowed: boolean; re
   for (const passive of room.passives) {
     if (passive.kind === "cruelty" && passive.victims.includes(player.id)) {
       const victims = passive.victims.map((id) => room.getPlayer(id));
-      const allAtOne = victims.every((victim) => victim && victim.hand.length === 1);
-      if (!allAtOne) {
+      const allLow = victims.every((victim) => victim && victim.hand.length <= 10);
+      if (!allLow) {
         return {
           allowed: false,
           reason: `${player.name} is held back by Cruelty and cannot win yet.`,
@@ -269,17 +269,17 @@ function handleParasitism(
   };
 }
 
-/** t2-cruelty: "neither can win until both of their hands are reduced to 1." */
+/** t2-cruelty: "neither can win until both of their hands are reduced to 10." */
 function handleCruelty(
   room: Room,
   passive: Extract<PassiveState, { kind: "cruelty" }>,
 ): HandlerResult {
   const victims = passive.victims.map((id) => room.getPlayer(id));
-  if (victims.length === 2 && victims.every((victim) => victim && victim.hand.length === 1)) {
+  if (victims.length === 2 && victims.every((victim) => victim && victim.hand.length <= 10)) {
     removePassive(room, "cruelty", passive.ownerId);
     return {
       logs: [
-        `Cruelty is lifted — both ${victims.map((v) => v?.name).join(" and ")} hold exactly 1 card.`,
+        `Cruelty is lifted — both ${victims.map((v) => v?.name).join(" and ")} hold 10 or fewer cards.`,
       ],
     };
   }
