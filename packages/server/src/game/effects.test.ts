@@ -306,6 +306,7 @@ describe("target-picking resolver batch", () => {
 
   it("steals 2 vault tokens in total from the picked targets (t2-vault-hunter)", () => {
     const { room } = startGame(4);
+    room.players[0]!.hand = [skipCard()];
     for (const index of [1, 2, 3]) {
       room.players[index]!.hand = [vaultToken("vault-silver"), vaultToken("vault-gold")];
     }
@@ -326,6 +327,7 @@ describe("target-picking resolver batch", () => {
 
   it("can steal both vaults from a single target (t2-vault-hunter)", () => {
     const { room } = startGame(4);
+    room.players[0]!.hand = [skipCard()];
     room.players[1]!.hand = [vaultToken("vault-silver"), vaultToken("vault-gold")];
     room.players[2]!.hand = [skipCard()];
     room.players[3]!.hand = [skipCard()];
@@ -343,6 +345,7 @@ describe("target-picking resolver batch", () => {
 
   it("steals what is available when the targets hold fewer than 2 vaults (t2-vault-hunter)", () => {
     const { room } = startGame(3);
+    room.players[0]!.hand = [skipCard()];
     room.players[1]!.hand = [vaultToken("vault-silver")];
     room.players[2]!.hand = [skipCard()];
 
@@ -528,6 +531,7 @@ describe("wave 1 resolver batch", () => {
 
   it("grants 2 Silver Vault tokens (t2-twice-than-one)", () => {
     const { room } = startGame(2);
+    room.players[0]!.hand = [skipCard()];
     const effect = getResolver("t2-twice-than-one")!({
       game: room,
       actor: "p0",
@@ -539,6 +543,7 @@ describe("wave 1 resolver batch", () => {
 
   it("grants 3 Silver Vault tokens (t1-thrice-than-twice)", () => {
     const { room } = startGame(2);
+    room.players[0]!.hand = [skipCard()];
     const effect = getResolver("t1-thrice-than-twice")!({
       game: room,
       actor: "p0",
@@ -1692,6 +1697,16 @@ describe("wave 4 resolver batch (timed / deferred)", () => {
 
   it("grants 2 Diamond Vaults and pays out +15 with a vault discard after 3 rounds (t3-all-in)", () => {
     const { room } = startGame(3);
+    room.players[0]!.hand = [
+      skipCard(),
+      skipCard(),
+      skipCard(),
+      skipCard(),
+      skipCard(),
+      skipCard(),
+      skipCard(),
+      skipCard(),
+    ];
     room.deck = room.deck.filter((card) => !isVaultTokenCard(card));
     const tokensBefore = room.players[0]!.hand.filter((card) => isVaultTokenCard(card)).length;
 

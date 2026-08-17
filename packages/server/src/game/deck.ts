@@ -1,4 +1,9 @@
-import { buildBaseDeck, DEFAULT_DECK_COMPOSITION, type Card } from "@bruno/shared";
+import {
+  buildBaseDeck,
+  DEFAULT_DECK_COMPOSITION,
+  getDeckComposition,
+  type Card,
+} from "@bruno/shared";
 
 export type Rng = () => number;
 
@@ -17,8 +22,10 @@ export function shuffle<T>(items: readonly T[], rng: Rng = Math.random): T[] {
   return out;
 }
 
-export function buildDeck(rng: Rng = Math.random): Card[] {
-  return shuffle(buildBaseDeck(DEFAULT_DECK_COMPOSITION), rng);
+export function buildDeck(rng: Rng = Math.random, playerCount?: number): Card[] {
+  const composition =
+    playerCount != null ? getDeckComposition(playerCount) : DEFAULT_DECK_COMPOSITION;
+  return shuffle(buildBaseDeck(composition), rng);
 }
 
 export function dealHands(deck: Card[], playerCount: number, handSize: number): Card[][] {

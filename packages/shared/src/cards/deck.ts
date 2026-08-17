@@ -26,6 +26,26 @@ export const DEFAULT_DECK_COMPOSITION: DeckComposition = {
   vaultDiamond: 1,
 };
 
+export const SMALL_GROUP_COMPOSITION: DeckComposition = {
+  number: { countPerColor: 1, numbers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] },
+  skip: 5,
+  reverse: 5,
+  draw2: 5,
+  draw4: 6,
+  switchColor: 0,
+  shuffle: 0,
+  vaultSilver: 5,
+  vaultGold: 3,
+  vaultDiamond: 1,
+};
+
+export function getDeckComposition(playerCount: number): DeckComposition {
+  if (playerCount >= 6) {
+    return DEFAULT_DECK_COMPOSITION;
+  }
+  return SMALL_GROUP_COMPOSITION;
+}
+
 export function totalCardCount(composition: DeckComposition): number {
   const numbersPerColor = composition.number.numbers.length * composition.number.countPerColor;
   return (

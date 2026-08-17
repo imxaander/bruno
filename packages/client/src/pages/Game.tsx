@@ -17,6 +17,7 @@ import { EventHistory } from "../components/EventHistory.js";
 import { TableStatus } from "../components/TableStatus.js";
 import { PlayerHand } from "../components/board/PlayerHand.js";
 import { RevealedHands } from "../components/board/RevealedHands.js";
+import { ActivePassives } from "../components/ActivePassives.js";
 import { TableOval } from "../components/board/TableOval.js";
 import DrawFly, { type DrawFlyTarget } from "../components/board/DrawFly.js";
 import EffectBanner from "../components/EffectBanner.js";
@@ -780,7 +781,7 @@ export function Game({
         }}
       >
         {opponents.map((player) => (
-          <div key={player.id} data-player-seat={player.id}>
+          <div key={player.id} data-player-seat={player.id} style={{ textAlign: "center" }}>
             <Seat
               player={player}
               rankIcon={player.rankIcon}
@@ -930,6 +931,18 @@ export function Game({
       ) : null}
       {(view.revealed ?? []).length > 0 && prompt?.kind !== "pick-cards" ? (
         <RevealedHands revealed={view.revealed ?? []} players={view.players} />
+      ) : null}
+      {view.myPassives && view.myPassives.length > 0 ? (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 16,
+            right: 16,
+            zIndex: 40,
+          }}
+        >
+          <ActivePassives passives={view.myPassives} />
+        </div>
       ) : null}
       {prompt?.kind === "choose-color" ? <ColorPicker onPick={chooseColor} /> : null}
       {prompt?.kind === "vault-choice" && prompt.offers ? (

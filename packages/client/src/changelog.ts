@@ -5,11 +5,21 @@ export interface UpdateEntry {
   bullets: string[];
 }
 
-export const UPDATES_LATEST_VERSION = "0.5.0";
+export const UPDATES_LATEST_VERSION = "0.6.0";
 
 export const UPDATES_STORAGE_KEY = "bruno_updates_seen";
 
 export const CHANGELOG: UpdateEntry[] = [
+  {
+    version: "0.6.0",
+    date: "2026-08-17",
+    title: "Active passives panel",
+    bullets: [
+      "A new panel in the bottom-right corner shows your active passives with large square icon tiles.",
+      "Hover any icon to see the full effect description and who applied it.",
+      "Each passive is shown to the player who needs the info — casters see their own, targets see debuffs on them.",
+    ],
+  },
   {
     version: "0.5.0",
     date: "2026-08-15",

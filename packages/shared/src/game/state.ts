@@ -37,6 +37,22 @@ export interface PileEffect {
   text: string;
 }
 
+/** A compact representation of one active passive for the client. */
+export interface ActivePassive {
+  /** PassiveState kind — maps 1-to-1 with vaultIcons keys. */
+  kind: string;
+  /** Human-readable name of the passive effect. */
+  name: string;
+  /** Emoji icon. */
+  icon: string;
+  /** Full tooltip text describing what this passive does. */
+  description: string;
+  /** Player who activated this passive. */
+  ownerId: string;
+  /** Display name of the owner. */
+  ownerName: string;
+}
+
 export interface PlayerView {
   playerCount: number;
   players: PublicPlayer[];
@@ -64,4 +80,6 @@ export interface PlayerView {
   reconnectGraceMs?: number;
   /** Whether the current player's socket is disconnected. */
   connected?: boolean;
+  /** Passives currently active on or affecting the requesting player. */
+  myPassives?: ActivePassive[];
 }

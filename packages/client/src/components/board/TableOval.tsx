@@ -138,22 +138,15 @@ export function TableOval({
               }}
             />
           ) : pileTop ? (
-            <>
-              <GameCard
-                card={pileTop}
-                size="lg"
-                style={{ position: "absolute", top: 4, left: 4, opacity: 0.35 }}
-              />
-              <GameCard
-                card={pileTop}
-                size="lg"
-                style={{
-                  boxShadow: pileEffect
-                    ? "0 0 52px rgba(0,238,255,1), 0 0 100px rgba(0,238,255,0.6), 0 0 160px rgba(0,238,255,0.22), 0 8px 24px rgba(0,0,0,0.9)"
-                    : "0 0 52px rgba(0,110,255,1), 0 0 100px rgba(0,110,255,0.6), 0 0 160px rgba(0,110,255,0.22), 0 8px 24px rgba(0,0,0,0.9)",
-                }}
-              />
-            </>
+            <GameCard
+              card={pileTop}
+              size="lg"
+              style={{
+                boxShadow: pileEffect
+                  ? "0 0 52px rgba(0,238,255,1), 0 0 100px rgba(0,238,255,0.6), 0 0 160px rgba(0,238,255,0.22), 0 8px 24px rgba(0,0,0,0.9)"
+                  : "0 0 52px rgba(0,110,255,1), 0 0 100px rgba(0,110,255,0.6), 0 0 160px rgba(0,110,255,0.22), 0 8px 24px rgba(0,0,0,0.9)",
+              }}
+            />
           ) : (
             <GameCard faceDown size="lg" />
           )}

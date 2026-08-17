@@ -27,7 +27,10 @@ export function effectiveVaultTier(room: Room, tier: VaultCardType): VaultCardTy
 }
 
 export function chooseRandomLocation(rng: Rng): string | undefined {
-  return chooseRandom(cardsByType("location"), rng)?.id;
+  return chooseRandom(
+    cardsByType("location").filter((card) => card.id !== "loc-scorched-earth"),
+    rng,
+  )?.id;
 }
 
 export function chooseRandomOrigin(rng: Rng): string | undefined {

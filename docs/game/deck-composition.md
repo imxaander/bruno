@@ -70,6 +70,18 @@ Default (`DEFAULT_DECK_COMPOSITION`): 10/5/5/5/10/0/0 base cards per the table a
 5/3/1 vault tokens = **119 cards total**. See `../card-data-schema.md` for the full type
 contract and `vault-mechanism.md` for how the tokens resolve.
 
+### Player-count scaling
+
+`getDeckComposition(playerCount)` selects the composition based on seated players:
+
+| Players | Composition | Draw 4s | Total cards | Wild ratio |
+| ------- | ----------- | ------- | ----------- | ---------- |
+| 3–5     | Small-group | 6       | 115         | 5.2%       |
+| 6–8     | Default     | 10      | 119         | 8.4%       |
+
+Smaller groups get fewer Wild Draw 4 cards (6 instead of 10) to reduce swinginess when
+there are fewer opponents. Hand size stays 8 for all player counts.
+
 ## 3. Vault / special cards in the deck?
 
 | Card family            | In base deck? | How it enters play                                                                                                                                |

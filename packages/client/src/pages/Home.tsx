@@ -15,9 +15,18 @@ interface HomeProps {
   onPlay: (name: string) => void;
   goRanks: () => void;
   goHelp: () => void;
+  goMarie: () => void;
 }
 
-export function Home({ identity, socket, saveIdentity, onPlay, goRanks, goHelp }: HomeProps) {
+export function Home({
+  identity,
+  socket,
+  saveIdentity,
+  onPlay,
+  goRanks,
+  goHelp,
+  goMarie,
+}: HomeProps) {
   const {
     user,
     guest,
@@ -627,6 +636,35 @@ export function Home({ identity, socket, saveIdentity, onPlay, goRanks, goHelp }
           }}
         >
           {"\u2728"} WHAT'S NEW
+        </button>
+
+        <button
+          onClick={goMarie}
+          style={{
+            background: "transparent",
+            border: "1px solid rgba(255,96,144,0.3)",
+            borderRadius: 8,
+            padding: "10px 28px",
+            fontFamily: "'Rajdhani'",
+            fontWeight: 700,
+            fontSize: 14,
+            letterSpacing: "0.24em",
+            color: "rgba(255,96,144,0.7)",
+            cursor: "pointer",
+            transition: "color 0.14s, border-color 0.14s, box-shadow 0.14s",
+          }}
+          onMouseEnter={(event) => {
+            event.currentTarget.style.color = "#ff6090";
+            event.currentTarget.style.borderColor = "rgba(255,96,144,0.7)";
+            event.currentTarget.style.boxShadow = "0 0 20px rgba(255,96,144,0.25)";
+          }}
+          onMouseLeave={(event) => {
+            event.currentTarget.style.color = "rgba(255,96,144,0.7)";
+            event.currentTarget.style.borderColor = "rgba(255,96,144,0.3)";
+            event.currentTarget.style.boxShadow = "none";
+          }}
+        >
+          {"\u2764\uFE0F"} MARIE?
         </button>
 
         <p

@@ -31,13 +31,13 @@ export function RevealedHands({ revealed, players }: RevealedHandsProps) {
       style={{
         position: "fixed",
         left: 16,
-        bottom: 16,
+        top: 16,
         zIndex: 40,
         display: "flex",
         flexDirection: "column",
         gap: 10,
         maxWidth: 280,
-        maxHeight: "calc((100vh - 160px) / var(--bruno-zoom))",
+        maxHeight: "calc((100vh - 48px) / var(--bruno-zoom))",
         overflowY: "auto",
       }}
     >

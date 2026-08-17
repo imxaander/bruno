@@ -231,7 +231,7 @@ describe("room lifecycle over the wire", () => {
     expect(viewA.you.hand).toHaveLength(8);
     expect(viewA.players).toHaveLength(2);
     expect(viewA.pileTop).not.toBeNull();
-    expect(viewA.deckCount).toBe(119 - 17);
+    expect(viewA.deckCount).toBe(115 - 17);
     assertNoLeaks(viewA);
 
     const stateB = once(bob, "game:state");

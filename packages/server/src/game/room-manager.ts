@@ -665,7 +665,7 @@ export class RoomManager {
     const start = options ?? this.startOptions ?? {};
     room.status = "ongoing";
     this.rng = rng;
-    room.deck = buildDeck(rng);
+    room.deck = buildDeck(rng, room.players.length);
     const hands = dealHands(room.deck, room.players.length, HAND_SIZE);
     room.players.forEach((player, index) => {
       player.hand = hands[index] ?? [];

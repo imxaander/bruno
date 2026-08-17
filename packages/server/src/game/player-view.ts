@@ -1,4 +1,5 @@
 import type {
+  ActivePassive,
   Card,
   CardView,
   LobbyPlayer,
@@ -6,8 +7,9 @@ import type {
   PublicPlayer,
   RoomSummary,
 } from "@bruno/shared";
+import { PASSIVE_META } from "@bruno/shared";
 import { isPlayable } from "./engine.js";
-import type { Player, Room } from "./room.js";
+import type { PassiveState, Player, Room } from "./room.js";
 
 export function toCardView(card: Card): CardView {
   return {
@@ -38,6 +40,29 @@ function toPublicPlayer(player: Player, isTurn: boolean): PublicPlayer {
   };
 }
 
+function getAffectedPlayerIds(passive: PassiveState, room: Room): string[] {
+  switch (passive.kind) {
+    case "accumulation":
+    case "investment":
+    case "zephyr":
+    case "prayers":
+    case "ultimate-machine-form":
+    case "parasitism":
+    case "tyranny":
+    case "equality":
+    case "silver-tongue":
+    case "maim":
+    case "cutthroat":
+      return [passive.ownerId];
+    case "most-wanted":
+      return [passive.targetId];
+    case "cruelty":
+      return [...passive.victims];
+    case "scourge":
+      return [passive.infecteeId];
+  }
+}
+
 export function toPlayerView(
   room: Room,
   playerId: string,
@@ -51,7 +76,7 @@ export function toPlayerView(
       return player ? { playerId: player.id, cards: player.hand.map(toCardView) } : null;
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-  return {
+  const view: PlayerView = {
     playerCount: room.playerCount,
     players: room.players.map((player) =>
       toPublicPlayer(player, room.getPlayerIndex(player.id) === room.currentTurnIndex),
@@ -81,6 +106,30 @@ export function toPlayerView(
       : undefined,
     connected: me?.connected ?? true,
   };
+
+  const myPassives: ActivePassive[] = [];
+
+  for (const p of room.passives) {
+    const meta = PASSIVE_META[p.kind];
+    if (!meta) continue;
+    const affected = getAffectedPlayerIds(p, room);
+    if (!affected.includes(playerId)) continue;
+    const owner = room.getPlayer(p.ownerId);
+    myPassives.push({
+      kind: p.kind,
+      name: meta.name,
+      icon: meta.icon,
+      description: meta.description,
+      ownerId: p.ownerId,
+      ownerName: owner?.name ?? p.ownerId,
+    });
+  }
+
+  if (myPassives.length > 0) {
+    view.myPassives = myPassives;
+  }
+
+  return view;
 }
 
 export function toRoomSummary(room: Room): RoomSummary {

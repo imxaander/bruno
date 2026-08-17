@@ -225,7 +225,7 @@ describe("RoomManager", () => {
     expect(room.status).toBe("ongoing");
     expect(room.players[0]?.hand.length).toBeGreaterThanOrEqual(8);
     expect(room.pile).toHaveLength(1);
-    expect(room.deck).toHaveLength(119 - (room.players[0]?.hand.length ?? 8) - 1);
+    expect(room.deck).toHaveLength(115 - (room.players[0]?.hand.length ?? 8) - 1);
     expect(room.currentTurnIndex).toBe(0);
     expect(room.currentDirection).toBe(1);
   });
@@ -345,7 +345,7 @@ describe("RoomManager", () => {
       expect(card).toHaveProperty("type");
     }
     expect(view.pileTop).not.toBeNull();
-    expect(view.deckCount).toBe(119 - view.you.hand.length - (3 - 1) * 8 - 1);
+    expect(view.deckCount).toBe(115 - view.you.hand.length - (3 - 1) * 8 - 1);
 
     const serialized = JSON.stringify(view);
     expect(serialized).not.toContain('"pile":');

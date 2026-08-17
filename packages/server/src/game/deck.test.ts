@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildBaseDeck, DEFAULT_DECK_COMPOSITION, type Card } from "@bruno/shared";
+import {
+  buildBaseDeck,
+  DEFAULT_DECK_COMPOSITION,
+  SMALL_GROUP_COMPOSITION,
+  getDeckComposition,
+  type Card,
+} from "@bruno/shared";
 import { buildDeck, dealHands, draw, seedPile, shuffle } from "./deck.js";
 
 function seeded(seed: number): () => number {
@@ -84,5 +90,33 @@ describe("deck", () => {
     const pile: Card[] = [buildBaseDeck(DEFAULT_DECK_COMPOSITION)[0]!];
     const drawn = draw(deck, pile, 4);
     expect(drawn).toHaveLength(0);
+  });
+
+  it("builds a 115-card small-group deck (3-5 players)", () => {
+    expect(buildBaseDeck(SMALL_GROUP_COMPOSITION)).toHaveLength(115);
+  });
+
+  it("small-group deck has 6 draw4 cards vs 10 in default", () => {
+    const small = buildBaseDeck(SMALL_GROUP_COMPOSITION);
+    const default_ = buildBaseDeck(DEFAULT_DECK_COMPOSITION);
+    expect(small.filter((c) => c.type === "draw4")).toHaveLength(6);
+    expect(default_.filter((c) => c.type === "draw4")).toHaveLength(10);
+  });
+
+  it("returns small-group composition for 3-5 players", () => {
+    expect(getDeckComposition(3)).toBe(SMALL_GROUP_COMPOSITION);
+    expect(getDeckComposition(5)).toBe(SMALL_GROUP_COMPOSITION);
+  });
+
+  it("returns default composition for 6+ players", () => {
+    expect(getDeckComposition(6)).toBe(DEFAULT_DECK_COMPOSITION);
+    expect(getDeckComposition(8)).toBe(DEFAULT_DECK_COMPOSITION);
+  });
+
+  it("buildDeck selects composition by player count", () => {
+    const smallDeck = buildDeck(seeded(10), 3);
+    const defaultDeck = buildDeck(seeded(10), 6);
+    expect(smallDeck).toHaveLength(115);
+    expect(defaultDeck).toHaveLength(119);
   });
 });
