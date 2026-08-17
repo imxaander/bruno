@@ -11,6 +11,8 @@ function randomId(prefix: string): string {
   return prefix + Math.random().toString(36).replace("0.", "");
 }
 
+const RECONNECT_GAME_KEY = "bruno_reconnect_game";
+
 function readIdentity(): PlayerIdentity {
   try {
     const raw = localStorage.getItem("bruno_player_info");
@@ -26,12 +28,36 @@ function readIdentity(): PlayerIdentity {
   return { id: "", name: "" };
 }
 
+export function readSavedGame(): string | null {
+  try {
+    return localStorage.getItem(RECONNECT_GAME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function saveSavedGame(roomId: string): void {
+  try {
+    localStorage.setItem(RECONNECT_GAME_KEY, roomId);
+  } catch {
+    // storage unavailable
+  }
+}
+
+export function clearSavedGame(): void {
+  try {
+    localStorage.removeItem(RECONNECT_GAME_KEY);
+  } catch {
+    // storage unavailable
+  }
+}
+
 export function useSocket() {
   const [socket, setSocket] = useState<BrunoSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [identity, setIdentity] = useState<PlayerIdentity>(readIdentity);
-  const roomIdRef = useRef<string | null>(null);
+  const roomIdRef = useRef<string | null>(readSavedGame());
 
   useEffect(() => {
     const sock = createSocket({ autoConnect: false });
@@ -107,6 +133,11 @@ export function useSocket() {
 
   const setRoomId = useCallback((id: string | null) => {
     roomIdRef.current = id;
+    if (id) {
+      saveSavedGame(id);
+    } else {
+      clearSavedGame();
+    }
   }, []);
 
   const rejoin = useCallback(() => {

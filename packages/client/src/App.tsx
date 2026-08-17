@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GameEndedPayload, LeaderboardEntry } from "@bruno/shared";
-import { useSocket, type PlayerIdentity } from "./socket/useSocket.js";
+import {
+  useSocket,
+  type PlayerIdentity,
+  readSavedGame,
+  clearSavedGame,
+} from "./socket/useSocket.js";
 import { AuthProvider, useAuth } from "./firebase/AuthProvider.js";
 import { ProfileModal } from "./firebase/ProfileModal.js";
 import { LeaderboardModal } from "./components/modals.js";
@@ -19,14 +24,15 @@ function AppContent() {
   const { socket, identity, saveIdentity, setRoomId: setSocketRoomId, reconnecting } = useSocket();
   const { profile, rank, user, profileError, displayName, guest, available, refreshProfile } =
     useAuth();
-  const [screen, setScreen] = useState<Screen>("home");
-  const [roomId, setRoomId] = useState<string | null>(null);
+  const [screen, setScreen] = useState<Screen>(() => (readSavedGame() ? "game" : "home"));
+  const [roomId, setRoomId] = useState<string | null>(() => readSavedGame());
   const [roomName, setRoomName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(8);
   const [ended, setEnded] = useState<GameEndedPayload | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null);
+  const pendingRejoin = useRef(!!readSavedGame());
 
   useEffect(() => {
     if (!socket) {
@@ -35,11 +41,31 @@ function AppContent() {
     const onLeaderboard = (payload: { players: LeaderboardEntry[] }) => {
       setLeaderboard(payload.players);
     };
+    const onGameState = () => {
+      pendingRejoin.current = false;
+    };
+    const onError = (payload: { code: string; message: string }) => {
+      if (
+        pendingRejoin.current &&
+        screen === "game" &&
+        (payload.code === "ROOM_NOT_FOUND" || payload.code === "NOT_IN_ROOM")
+      ) {
+        pendingRejoin.current = false;
+        clearSavedGame();
+        setRoomId(null);
+        setSocketRoomId(null);
+        setScreen("rooms");
+      }
+    };
     socket.on("leaderboard:return", onLeaderboard);
+    socket.on("game:state", onGameState);
+    socket.on("error", onError);
     return () => {
       socket.off("leaderboard:return", onLeaderboard);
+      socket.off("game:state", onGameState);
+      socket.off("error", onError);
     };
-  }, [socket]);
+  }, [socket, screen, setSocketRoomId]);
 
   const isSignedIn = available && !!user && !guest;
   // Signed-in players are the Firebase uid + their profile username; guests keep
@@ -57,6 +83,7 @@ function AppContent() {
 
   const goRooms = useCallback(() => {
     setEnded(null);
+    clearSavedGame();
     setSocketRoomId(null);
     setScreen("rooms");
   }, [setSocketRoomId]);
@@ -97,10 +124,9 @@ function AppContent() {
   const handleEnded = useCallback(
     (payload: GameEndedPayload) => {
       setEnded(payload);
+      clearSavedGame();
       setSocketRoomId(null);
       setScreen("aftergame");
-      // Scoring is committed server-side before game:ended is emitted, so re-fetch
-      // the profile now — the points/wins/rank shown after a win or loss stay fresh.
       void refreshProfile();
     },
     [setSocketRoomId, refreshProfile],

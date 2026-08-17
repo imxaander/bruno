@@ -18,6 +18,7 @@ export const CHANGELOG: UpdateEntry[] = [
       "A new panel in the bottom-right corner shows your active passives with large square icon tiles.",
       "Hover any icon to see the full effect description and who applied it.",
       "Each passive is shown to the player who needs the info — casters see their own, targets see debuffs on them.",
+      "Page refresh reconnect — your last game is saved so you rejoin automatically after a refresh or network drop.",
     ],
   },
   {
