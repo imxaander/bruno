@@ -11,7 +11,9 @@ import {
   calculatePointChanges,
   getCard,
   getRankTier,
+  getShopItem,
   type ClientToServerEvents,
+  type CoinChange,
   type PlayerView,
   type PointChange,
   type ServerToClientEvents,
@@ -30,7 +32,7 @@ import { registeredResolverIds } from "../game/effects/registry.js";
 import type { TurnManager } from "../game/turn-manager.js";
 import { getAuth } from "../firebase/admin.js";
 import { getDb } from "../firebase/firestore.js";
-import { applyGameEndScores } from "../firebase/profileScoring.js";
+import { applyGameEndScores, processDailyLogin } from "../firebase/profileScoring.js";
 
 export type BrunoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -98,7 +100,16 @@ export function registerSockets(
   // playerId -> { rankIcon, rankName, profileIcon }, cached briefly per room to
   // avoid a Firestore read on every state push. Freshness of ~30s is fine (ranks
   // only change after games).
-  type PlayerMeta = Record<string, { rankIcon: string; rankName: string; profileIcon: string }>;
+  type PlayerMeta = Record<
+    string,
+    {
+      rankIcon: string;
+      rankName: string;
+      profileIcon: string;
+      equippedCardBack?: string;
+      equippedBackground?: string;
+    }
+  >;
   const metaCache = new Map<string, { at: number; meta: PlayerMeta }>();
   const META_TTL_MS = 30_000;
 
@@ -116,6 +127,8 @@ export function registerSockets(
               profileIcon: m.profileIcon || undefined,
               rankIcon: m.rankIcon,
               rankName: m.rankName,
+              equippedCardBack: m.equippedCardBack,
+              equippedBackground: m.equippedBackground,
             }
           : player;
       }),
@@ -147,6 +160,10 @@ export function registerSockets(
             rankIcon: tier.icon,
             rankName: tier.name,
             profileIcon: typeof data.icon === "string" ? data.icon : "",
+            equippedCardBack:
+              typeof data.equippedCardBack === "string" ? data.equippedCardBack : undefined,
+            equippedBackground:
+              typeof data.equippedBackground === "string" ? data.equippedBackground : undefined,
           };
         } catch {
           // Profile unreadable (rules/permissions) — player shows no rank/avatar.
@@ -243,27 +260,34 @@ export function registerSockets(
           currentPoints: 0, // real total read from Firestore inside applyGameEndScores
         }))
       : [];
-    let changes: PointChange[];
+    let pointChanges: PointChange[];
+    let coinChanges: CoinChange[];
     let pointsConfigured = false;
     try {
-      changes = await applyGameEndScores(scoringPlayers);
+      const result = await applyGameEndScores(scoringPlayers);
+      pointChanges = result.points;
+      coinChanges = result.coins;
       pointsConfigured = getDb() !== null;
     } catch {
       // Firestore unavailable — still report deltas, but no persisted totals.
-      changes = calculatePointChanges(scoringPlayers);
+      pointChanges = calculatePointChanges(scoringPlayers);
+      coinChanges = [];
     }
-    const changeByUid = new Map(changes.map((change) => [change.uid, change]));
+    const changeByUid = new Map(pointChanges.map((change) => [change.uid, change]));
+    const coinsByUid = new Map(coinChanges.map((c) => [c.uid, c]));
 
     io.to(event.gameId).emit("game:ended", {
       gameId: event.gameId,
       winner: event.winnerId ? { id: event.winnerId, name: event.winnerName } : null,
       players: players.map((player) => {
         const change = changeByUid.get(player.id);
+        const coin = coinsByUid.get(player.id);
         return {
           ...player,
           pointsDelta: change?.delta ?? 0,
           points: change && pointsConfigured ? change.newPoints : null,
           rankName: change && pointsConfigured ? change.newTier : null,
+          coinsEarned: coin?.total ?? 0,
         };
       }),
       reason: event.reason,
@@ -615,6 +639,110 @@ export function registerSockets(
         console.error("[socket] leaderboard:get failed", error);
         socket.emit("leaderboard:return", { players: [] });
       }
+    });
+
+    socket.on("shop:buy", async (payload: { itemId: string }) => {
+      if (!data.uid) {
+        emitError(socket, "NOT_AUTHENTICATED", "You must be signed in to buy items.");
+        return;
+      }
+      const item = getShopItem(payload.itemId);
+      if (!item) {
+        emitError(socket, "INVALID_ITEM", "Item not found.");
+        return;
+      }
+      const db = getDb();
+      if (!db) {
+        emitError(socket, "DB_UNAVAILABLE", "Server is offline.");
+        return;
+      }
+      const ref = db.collection("profiles").doc(data.uid);
+      const snap = await ref.get();
+      if (!snap.exists) {
+        emitError(socket, "PROFILE_NOT_FOUND", "Profile not found.");
+        return;
+      }
+      const profile = snap.data()!;
+      const coins = typeof profile.coins === "number" ? profile.coins : 0;
+      const inventory: { id: string; type: string; purchasedAt: number }[] = Array.isArray(
+        profile.inventory,
+      )
+        ? profile.inventory
+        : [];
+      if (inventory.some((entry) => entry.id === item.id)) {
+        emitError(socket, "ALREADY_OWNED", "You already own this item.");
+        return;
+      }
+      if (coins < item.cost) {
+        emitError(
+          socket,
+          "INSUFFICIENT_COINS",
+          `Not enough coins. Need ${item.cost}, have ${coins}.`,
+        );
+        return;
+      }
+      inventory.push({ id: item.id, type: item.category, purchasedAt: Date.now() });
+      await ref.set(
+        { coins: coins - item.cost, inventory, updatedAt: Date.now() },
+        { merge: true },
+      );
+      socket.emit("shop:purchase:ok", { itemId: item.id, coins: coins - item.cost });
+    });
+
+    socket.on("shop:equip", async (payload: { itemId: string }) => {
+      if (!data.uid) {
+        emitError(socket, "NOT_AUTHENTICATED", "You must be signed in to equip items.");
+        return;
+      }
+      const item = getShopItem(payload.itemId);
+      if (!item) {
+        emitError(socket, "INVALID_ITEM", "Item not found.");
+        return;
+      }
+      const db = getDb();
+      if (!db) {
+        emitError(socket, "DB_UNAVAILABLE", "Server is offline.");
+        return;
+      }
+      const ref = db.collection("profiles").doc(data.uid);
+      const snap = await ref.get();
+      if (!snap.exists) {
+        emitError(socket, "PROFILE_NOT_FOUND", "Profile not found.");
+        return;
+      }
+      const profile = snap.data()!;
+      const inventory: { id: string; type: string }[] = Array.isArray(profile.inventory)
+        ? profile.inventory
+        : [];
+      if (!inventory.some((entry) => entry.id === item.id)) {
+        emitError(socket, "NOT_OWNED", "You don't own this item.");
+        return;
+      }
+      const field = item.category === "card-back" ? "equippedCardBack" : "equippedBackground";
+      await ref.set({ [field]: item.id, updatedAt: Date.now() }, { merge: true });
+      socket.emit("shop:equip:ok", {
+        equippedCardBack:
+          field === "equippedCardBack"
+            ? item.id
+            : typeof profile.equippedCardBack === "string"
+              ? profile.equippedCardBack
+              : "cb-default",
+        equippedBackground:
+          field === "equippedBackground"
+            ? item.id
+            : typeof profile.equippedBackground === "string"
+              ? profile.equippedBackground
+              : "bg-default",
+      });
+    });
+
+    socket.on("daily:claim", async () => {
+      if (!data.uid) {
+        emitError(socket, "NOT_AUTHENTICATED", "You must be signed in to claim daily rewards.");
+        return;
+      }
+      const result = await processDailyLogin(data.uid);
+      socket.emit("daily:claim:return", { reward: result.reward, streak: result.streak });
     });
 
     socket.on("disconnect", () => {

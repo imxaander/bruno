@@ -105,7 +105,7 @@ export function Seat({
                 transformOrigin: "center bottom",
               }}
             >
-              <GameCard faceDown size="xs" />
+              <GameCard faceDown size="xs" cardBack={player.equippedCardBack} />
             </div>
           );
         })}

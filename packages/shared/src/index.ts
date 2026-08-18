@@ -2,3 +2,4 @@ export * from "./cards/index.js";
 export * from "./game/index.js";
 export * from "./events/index.js";
 export * from "./profile/types.js";
+export * from "./profile/shop.js";

@@ -9,6 +9,8 @@ interface TableOvalProps {
   pileEffect?: PileEffect;
   fleetingPileTop?: CardView;
   direction: 1 | -1;
+  deckCardBack?: string;
+  tableBackground?: string;
 }
 
 export function TableOval({
@@ -17,6 +19,8 @@ export function TableOval({
   pileEffect,
   fleetingPileTop,
   direction,
+  deckCardBack,
+  tableBackground,
 }: TableOvalProps) {
   const [vaultHover, setVaultHover] = useState(false);
   const arcPath = direction === 1 ? "M 20 6 A 14 14 0 0 1 34 20" : "M 20 6 A 14 14 0 0 0 6 20";
@@ -29,7 +33,8 @@ export function TableOval({
         maxWidth: 980,
         height: 220,
         borderRadius: "50%",
-        background: "radial-gradient(ellipse at center, #0d0d1c 0%, #090914 100%)",
+        background:
+          tableBackground ?? "radial-gradient(ellipse at center, #0d0d1c 0%, #090914 100%)",
         border: "2px solid rgba(0,238,255,0.08)",
         boxShadow: "0 0 60px rgba(0,238,255,0.05) inset, 0 10px 50px rgba(0,0,0,0.8)",
         display: "flex",
@@ -44,14 +49,16 @@ export function TableOval({
           <GameCard
             faceDown
             size="lg"
+            cardBack={deckCardBack}
             style={{ position: "absolute", top: -3, left: -2, opacity: 0.5 }}
           />
           <GameCard
             faceDown
             size="lg"
+            cardBack={deckCardBack}
             style={{ position: "absolute", top: -1, left: -1, opacity: 0.7 }}
           />
-          <GameCard faceDown size="lg" />
+          <GameCard faceDown size="lg" cardBack={deckCardBack} />
           <div
             style={{
               position: "absolute",
@@ -148,7 +155,7 @@ export function TableOval({
               }}
             />
           ) : (
-            <GameCard faceDown size="lg" />
+            <GameCard faceDown size="lg" cardBack={deckCardBack} />
           )}
           {vaultHover && pileEffect ? (
             <div

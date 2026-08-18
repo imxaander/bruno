@@ -37,6 +37,8 @@ function toPublicPlayer(player: Player, isTurn: boolean): PublicPlayer {
     isHost: player.isHost,
     isTurn,
     handCount: player.hand.length,
+    equippedCardBack: player.equippedCardBack,
+    equippedBackground: player.equippedBackground,
   };
 }
 

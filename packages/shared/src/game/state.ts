@@ -21,6 +21,10 @@ export interface PublicPlayer {
   rankName?: string;
   /** The player's profile avatar emoji (absent for guests). */
   profileIcon?: string;
+  /** Equipped cosmetic card-back id (e.g. "cb-neon"). */
+  equippedCardBack?: string;
+  /** Equipped cosmetic background id (e.g. "bg-cosmic"). */
+  equippedBackground?: string;
 }
 
 /** A hand this viewer is entitled to see (vault reveal effects). */

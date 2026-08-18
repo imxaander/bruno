@@ -31,6 +31,9 @@ export interface ClientToServerEvents {
   "vault:catalog:get": () => void;
   "auth:verify": (payload: AuthVerifyPayload) => void;
   "leaderboard:get": () => void;
+  "shop:buy": (payload: { itemId: string }) => void;
+  "shop:equip": (payload: { itemId: string }) => void;
+  "daily:claim": () => void;
 }
 
 export interface ServerToClientEvents {
@@ -53,5 +56,8 @@ export interface ServerToClientEvents {
   "game:ended": (payload: GameEndedPayload) => void;
   "vault:catalog:return": (payload: VaultCatalogReturn) => void;
   "leaderboard:return": (payload: LeaderboardReturn) => void;
+  "shop:purchase:ok": (payload: { itemId: string; coins: number }) => void;
+  "shop:equip:ok": (payload: { equippedCardBack: string; equippedBackground: string }) => void;
+  "daily:claim:return": (payload: { reward: number; streak: number }) => void;
   error: (payload: ErrorEnvelope) => void;
 }

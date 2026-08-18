@@ -6,6 +6,7 @@ import { PageHeader } from "../components/PageHeader.js";
 interface RanksProps {
   goHome: () => void;
   goHelp: () => void;
+  goRooms: () => void;
 }
 
 const FONT_DISPLAY = "'Barlow Condensed', sans-serif";
@@ -81,7 +82,7 @@ function Card({ children, style }: { children: React.ReactNode; style?: CSSPrope
   );
 }
 
-export function Ranks({ goHome, goHelp }: RanksProps) {
+export function Ranks({ goHome, goHelp, goRooms }: RanksProps) {
   const groups: Record<string, RankTier[]> = {};
   for (const tier of RANK_TIERS) {
     (groups[tier.rank] ??= []).push(tier);
@@ -98,7 +99,7 @@ export function Ranks({ goHome, goHelp }: RanksProps) {
         flexDirection: "column",
       }}
     >
-      <PageHeader label="RANKS" />
+      <PageHeader label="RANKS" onLogoClick={goRooms} />
 
       <div
         style={{

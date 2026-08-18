@@ -1,5 +1,12 @@
-import type { PointChange } from "@bruno/shared";
-import { calculatePointChanges, getRankTier } from "@bruno/shared";
+import type { PointChange, CoinChange } from "@bruno/shared";
+import {
+  calculatePointChanges,
+  calculateCoins,
+  dailyLoginReward,
+  todayDateString,
+  computeDailyStreak,
+  getRankTier,
+} from "@bruno/shared";
 import { getDb } from "./firestore.js";
 import { FieldValue } from "firebase-admin/firestore";
 
@@ -8,7 +15,7 @@ import { FieldValue } from "firebase-admin/firestore";
  * Guests (uid === null) are skipped.
  *
  * Reads each player's current points from Firestore so the new total is
- * accumulated (not clobbered), then returns the resolved point changes.
+ * accumulated (not clobbered), then returns the resolved point + coin changes.
  */
 export async function applyGameEndScores(
   players: {
@@ -18,25 +25,33 @@ export async function applyGameEndScores(
     vaultCardsUsed: number;
     currentPoints: number;
   }[],
-): Promise<PointChange[]> {
-  const changes = calculatePointChanges(players);
+): Promise<{ points: PointChange[]; coins: CoinChange[] }> {
+  const pointChanges = calculatePointChanges(players);
+  const coinChanges = calculateCoins(players);
   const db = getDb();
-  if (!db || changes.length === 0) return changes;
+  if (!db || pointChanges.length === 0) {
+    return { points: pointChanges, coins: coinChanges };
+  }
 
   const winnerUid = players.find((p) => p.isWinner && p.uid)?.uid ?? null;
+  const coinByUid = new Map(coinChanges.map((c) => [c.uid, c]));
 
-  const refs = changes.map((change) => db.collection("profiles").doc(change.uid));
+  const refs = pointChanges.map((change) => db.collection("profiles").doc(change.uid));
   const snapshots = await Promise.all(refs.map((ref) => ref.get()));
   const batch = db.batch();
-  const updated: PointChange[] = [];
+  const updatedPoints: PointChange[] = [];
 
-  for (let i = 0; i < changes.length; i++) {
-    const change = changes[i]!;
+  for (let i = 0; i < pointChanges.length; i++) {
+    const change = pointChanges[i]!;
     const snap = snapshots[i] ?? null;
     const oldPoints = Math.max(0, snap?.exists ? (snap.data()?.points as number) || 0 : 0);
     const newPoints = Math.max(0, oldPoints + change.delta);
+    const coin = coinByUid.get(change.uid);
+    const oldCoins = Math.max(0, snap?.exists ? (snap.data()?.coins as number) || 0 : 0);
+    const newCoins = oldCoins + (coin?.total ?? 0);
     const data: Record<string, unknown> = {
       points: newPoints,
+      coins: newCoins,
       gamesPlayed: FieldValue.increment(1),
       updatedAt: Date.now(),
     };
@@ -44,7 +59,7 @@ export async function applyGameEndScores(
       data.wins = FieldValue.increment(1);
     }
     batch.set(refs[i]!, data, { merge: true });
-    updated.push({
+    updatedPoints.push({
       uid: change.uid,
       delta: change.delta,
       oldPoints,
@@ -55,5 +70,52 @@ export async function applyGameEndScores(
   }
 
   await batch.commit();
-  return updated;
+  return { points: updatedPoints, coins: coinChanges };
+}
+
+/**
+ * Process daily login streak and return the reward amount.
+ * Returns 0 if already claimed today.
+ */
+export async function processDailyLogin(uid: string): Promise<{ reward: number; streak: number }> {
+  const db = getDb();
+  if (!db) return { reward: 0, streak: 0 };
+
+  const ref = db.collection("profiles").doc(uid);
+  const snap = await ref.get();
+  if (!snap.exists) return { reward: 0, streak: 0 };
+
+  const data = snap.data()!;
+  const lastLoginDate = (
+    typeof data.lastLoginDate === "string" ? data.lastLoginDate : ""
+  ) as string;
+  const currentStreak = (typeof data.dailyStreak === "number" ? data.dailyStreak : 0) as number;
+  const today = todayDateString();
+
+  if (lastLoginDate === today) {
+    return { reward: 0, streak: currentStreak };
+  }
+
+  const streakResult = computeDailyStreak(lastLoginDate, today);
+  let newStreak: number;
+  if (streakResult === 0) {
+    return { reward: 0, streak: currentStreak };
+  } else if (streakResult === -1) {
+    newStreak = currentStreak + 1;
+  } else {
+    newStreak = streakResult;
+  }
+
+  const reward = dailyLoginReward(newStreak);
+  await ref.set(
+    {
+      dailyStreak: newStreak,
+      lastLoginDate: today,
+      coins: FieldValue.increment(reward),
+      updatedAt: Date.now(),
+    },
+    { merge: true },
+  );
+
+  return { reward, streak: newStreak };
 }

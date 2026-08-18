@@ -20,6 +20,10 @@ export interface Player {
    * the player is hopped over instead of drawing/playing. Not decremented per turn.
    */
   liquidationUntilRound?: number;
+  /** Equipped cosmetic card-back id (populated from Firestore profile). */
+  equippedCardBack?: string;
+  /** Equipped cosmetic background id (populated from Firestore profile). */
+  equippedBackground?: string;
 }
 
 export const HAND_SIZE = 8;

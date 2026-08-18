@@ -815,6 +815,7 @@ describe("room lifecycle over the wire", () => {
         points: null,
         rankName: null,
         icon: null,
+        coinsEarned: 0,
       });
       expect(ended.players).toContainEqual({
         id: "PID-b",
@@ -824,6 +825,7 @@ describe("room lifecycle over the wire", () => {
         points: null,
         rankName: null,
         icon: null,
+        coinsEarned: 0,
       });
 
       const [viewA] = await stateA;

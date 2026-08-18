@@ -194,6 +194,7 @@ export const GameEndedPlayerSchema = z.object({
   points: z.number().int().nullable(),
   rankName: z.string().nullable(),
   icon: z.string().nullable(),
+  coinsEarned: z.number().int().nonnegative(),
 });
 export type GameEndedPlayer = z.infer<typeof GameEndedPlayerSchema>;
 

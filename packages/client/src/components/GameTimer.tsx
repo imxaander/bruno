@@ -24,20 +24,11 @@ export function GameTimer({ startedAt }: GameTimerProps) {
   return (
     <div
       style={{
-        position: "absolute",
-        top: 8,
-        left: "50%",
-        transform: "translateX(-50%)",
-        background: "rgba(10,14,26,0.85)",
-        border: "1px solid rgba(0,238,255,0.25)",
-        borderRadius: 6,
-        padding: "4px 12px",
         fontFamily: "'Share Tech Mono', monospace",
         fontSize: 14,
         color: "rgba(0,238,255,0.7)",
         letterSpacing: "0.08em",
         userSelect: "none",
-        zIndex: 5,
       }}
     >
       {formatElapsed(elapsed)}

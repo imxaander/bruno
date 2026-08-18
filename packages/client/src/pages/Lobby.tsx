@@ -247,7 +247,7 @@ export function Lobby({
         flexDirection: "column",
       }}
     >
-      <PageHeader label="Lobby" />
+      <PageHeader label="Lobby" onLogoClick={goRooms} />
 
       {error ? (
         <div

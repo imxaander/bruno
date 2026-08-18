@@ -16,13 +16,33 @@ function profileRef(uid: string) {
   return doc(db, COLLECTION, uid);
 }
 
+function normalizeProfile(raw: Record<string, unknown>): PlayerProfile {
+  return {
+    uid: (raw.uid as string) ?? "",
+    username: (raw.username as string) ?? "Player",
+    icon: (raw.icon as string) ?? "🎮",
+    wins: (raw.wins as number) ?? 0,
+    points: (raw.points as number) ?? 0,
+    gamesPlayed: (raw.gamesPlayed as number) ?? 0,
+    vaultCardsUsed: (raw.vaultCardsUsed as number) ?? 0,
+    coins: (raw.coins as number) ?? 0,
+    inventory: Array.isArray(raw.inventory) ? raw.inventory : [],
+    equippedCardBack: (raw.equippedCardBack as string) ?? "cb-default",
+    equippedBackground: (raw.equippedBackground as string) ?? "bg-default",
+    lastLoginDate: (raw.lastLoginDate as string) ?? "",
+    dailyStreak: (raw.dailyStreak as number) ?? 0,
+    createdAt: (raw.createdAt as number) ?? 0,
+    updatedAt: (raw.updatedAt as number) ?? 0,
+  };
+}
+
 /** Fetch a player's profile from Firestore. Returns null if not configured or not found. */
 export async function getProfile(uid: string): Promise<PlayerProfile | null> {
   if (!db) return null;
   const ref = profileRef(uid);
   if (!ref) return null;
   const snap = await getDoc(ref);
-  return snap.exists() ? (snap.data() as PlayerProfile) : null;
+  return snap.exists() ? normalizeProfile(snap.data() as Record<string, unknown>) : null;
 }
 
 /** Create or overwrite a player's profile. */
@@ -44,6 +64,12 @@ export function createDefaultProfile(uid: string, username: string): PlayerProfi
     points: 0,
     gamesPlayed: 0,
     vaultCardsUsed: 0,
+    coins: 0,
+    inventory: [],
+    equippedCardBack: "cb-default",
+    equippedBackground: "bg-default",
+    lastLoginDate: "",
+    dailyStreak: 0,
     createdAt: now,
     updatedAt: now,
   };

@@ -11,6 +11,7 @@ interface DrawFlyProps {
   targets: DrawFlyTarget[];
   playerOrder: string[];
   myId: string;
+  players: { id: string; equippedCardBack?: string }[];
 }
 
 const RING_SEAT_POINTS: Array<{ left: number; top: number }> = [
@@ -30,6 +31,7 @@ interface FlightCard {
   left: number;
   top: number;
   style: CSSProperties & Record<string, string>;
+  cardBack?: string;
 }
 
 function rectCenter(selector: string): { x: number; y: number } | null {
@@ -89,6 +91,7 @@ function computeCards(
   opponents: string[],
   playerCount: number,
   myId: string,
+  playerMap: Map<string, string | undefined>,
 ): FlightCard[] | null {
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -98,6 +101,7 @@ function computeCards(
   let order = 0;
   for (const target of targets) {
     const end = endPointFor(target, opponents, playerCount, myId, width, height);
+    const cardBack = playerMap.get(target.playerId);
     for (let i = 0; i < target.count; i += 1) {
       const mid = {
         x: (start.x + end.x) / 2,
@@ -106,6 +110,7 @@ function computeCards(
       cards.push({
         left: start.x - CARD_W / 2,
         top: start.y - CARD_H / 2,
+        cardBack,
         style: {
           "--dx": `${end.x - start.x}px`,
           "--dy": `${end.y - start.y}px`,
@@ -120,12 +125,13 @@ function computeCards(
   return cards;
 }
 
-export default function DrawFly({ targets, playerOrder, myId }: DrawFlyProps) {
+export default function DrawFly({ targets, playerOrder, myId, players }: DrawFlyProps) {
   const opponents = playerOrder.filter((id) => id !== myId);
+  const playerMap = new Map(players.map((p) => [p.id, p.equippedCardBack]));
   const [cards, setCards] = useState<FlightCard[] | null>(null);
 
   useLayoutEffect(() => {
-    const next = computeCards(targets, opponents, playerOrder.length, myId);
+    const next = computeCards(targets, opponents, playerOrder.length, myId, playerMap);
     setCards((prev) => {
       if (
         prev &&
@@ -173,7 +179,12 @@ export default function DrawFly({ targets, playerOrder, myId }: DrawFlyProps) {
             ...card.style,
           }}
         >
-          <GameCard faceDown size="md" style={{ width: CARD_W, height: CARD_H }} />
+          <GameCard
+            faceDown
+            size="md"
+            cardBack={card.cardBack}
+            style={{ width: CARD_W, height: CARD_H }}
+          />
         </div>
       ))}
     </div>

@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { getCard, type CardType, type CardView } from "@bruno/shared";
+import { CARD_BACK_THEMES, DEFAULT_CARD_BACK } from "./cardBacks.js";
 
 export type CardColor = "red" | "blue" | "green" | "yellow";
 export type CardSize = "xs" | "sm" | "md" | "lg" | "xl";
@@ -15,6 +16,7 @@ interface GameCardProps {
   dark?: boolean;
   lifted?: boolean;
   card?: CardView;
+  cardBack?: string;
   style?: CSSProperties;
 }
 
@@ -131,6 +133,7 @@ export default function GameCard({
   dark = false,
   lifted = false,
   card,
+  cardBack,
   style,
 }: GameCardProps) {
   const d = DIMS[size];
@@ -176,32 +179,35 @@ export default function GameCard({
   };
 
   if (faceDown) {
+    const theme =
+      CARD_BACK_THEMES[cardBack ?? DEFAULT_CARD_BACK] ?? CARD_BACK_THEMES[DEFAULT_CARD_BACK]!;
     return (
       <div
         style={{
           ...base,
-          background: "#0a0e18",
-          border: "1px solid rgba(0,238,255,0.55)",
-          boxShadow:
-            "0 0 0 1px rgba(0,238,255,0.18), 0 0 14px rgba(0,238,255,0.4), inset 0 0 18px rgba(0,238,255,0.06), 0 6px 18px rgba(0,0,0,0.88)",
+          background: theme.background,
+          border: theme.border,
+          boxShadow: theme.boxShadow,
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: HEX_BACK_BG,
-            backgroundSize: "24px 21px",
-            backgroundRepeat: "repeat",
-          }}
-        />
+        {theme.backgroundImage ? (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage: theme.backgroundImage,
+              backgroundSize: theme.backgroundSize ?? "24px 21px",
+              backgroundRepeat: "repeat",
+            }}
+          />
+        ) : null}
         <div
           style={{
             position: "absolute",
             inset: 5,
             borderRadius: d.r - 2,
-            border: "1px solid rgba(0,238,255,0.22)",
-            boxShadow: "inset 0 0 8px rgba(0,238,255,0.06)",
+            border: theme.innerBorder,
+            boxShadow: theme.innerShadow,
           }}
         />
         <span
@@ -209,14 +215,14 @@ export default function GameCard({
             fontFamily: "'Barlow Condensed'",
             fontWeight: 900,
             fontSize: d.fs * 0.62,
-            color: "#00eeff",
-            textShadow: "0 0 10px rgba(0,238,255,0.9), 0 0 24px rgba(0,238,255,0.5)",
+            color: theme.letterColor,
+            textShadow: theme.letterShadow,
             position: "relative",
             zIndex: 1,
             letterSpacing: "-0.02em",
           }}
         >
-          B
+          {theme.letter}
         </span>
       </div>
     );

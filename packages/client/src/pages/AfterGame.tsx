@@ -85,7 +85,7 @@ export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGam
       }}
     >
       <StarField />
-      <PageHeader label="Round Over" />
+      <PageHeader label="Round Over" onLogoClick={goRooms} />
 
       <div
         style={{
@@ -277,6 +277,19 @@ export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGam
                   {championPlayer.rankName ? ` · ${championPlayer.rankName}` : ""}
                 </p>
               ) : null}
+              {championPlayer && championPlayer.coinsEarned > 0 ? (
+                <p
+                  style={{
+                    margin: "2px 0 0",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "#ffcc00",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  +{championPlayer.coinsEarned} coins
+                </p>
+              ) : null}
             </div>
             <GameCard color="red" value="0" size="md" lifted />
             <span
@@ -414,6 +427,20 @@ export function AfterGame({ winner, players, reason, goHome, goRooms }: AfterGam
                       ? `${player.pointsDelta}`
                       : "—"}
                 </span>
+                {player.coinsEarned > 0 ? (
+                  <span
+                    style={{
+                      width: 52,
+                      textAlign: "right",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#ffcc00",
+                    }}
+                  >
+                    +{player.coinsEarned}
+                    {"\u{1FA99}"}
+                  </span>
+                ) : null}
               </div>
             ))}
           </div>

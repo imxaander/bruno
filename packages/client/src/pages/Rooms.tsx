@@ -6,14 +6,16 @@ import type {
   RoomCreateReturn,
   RoomSummary,
 } from "@bruno/shared";
+import { getShopItem } from "@bruno/shared";
 import { StatusBadge, StatusDot, type StatusType } from "../components/Badge.js";
 import { Button } from "../components/Button.js";
 import { PageHeader } from "../components/PageHeader.js";
-import { UpdatesPanel } from "../components/modals.js";
+import { UpdatesPanel, VaultGuide } from "../components/modals.js";
 import { hasUnseenUpdates, markUpdatesSeen } from "../changelog.js";
 import { ProfileModal } from "../firebase/ProfileModal.js";
 import type { BrunoSocket } from "../socket/client.js";
 import type { PlayerIdentity } from "../socket/useSocket.js";
+import type { VaultGuideEntry } from "@bruno/shared";
 
 interface RoomsProps {
   socket: BrunoSocket | null;
@@ -21,12 +23,15 @@ interface RoomsProps {
   goLobby: (gameId: string, gameName: string, maxPlayers?: number) => void;
   goRanks: () => void;
   goHelp: () => void;
+  goShop: () => void;
   profile: PlayerProfile | null;
   rank: RankTier | null;
   email: string | null;
   profileError: string | null;
   onEditProfile: () => void;
   onLeaderboard: () => void;
+  guest?: boolean;
+  signInGoogle?: () => Promise<void>;
 }
 
 function statusOf(room: RoomSummary): StatusType {
@@ -39,12 +44,15 @@ export function Rooms({
   goLobby,
   goRanks,
   goHelp,
+  goShop,
   profile,
   rank,
   email,
   profileError,
   onEditProfile,
   onLeaderboard,
+  guest,
+  signInGoogle,
 }: RoomsProps) {
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -53,6 +61,8 @@ export function Rooms({
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [error, setError] = useState<string | null>(null);
   const [updatesOpen, setUpdatesOpen] = useState(hasUnseenUpdates);
+  const [vaultGuideOpen, setVaultGuideOpen] = useState(false);
+  const [vaultCatalog, setVaultCatalog] = useState<VaultGuideEntry[] | null>(null);
 
   useEffect(() => {
     if (!socket) {
@@ -67,18 +77,29 @@ export function Rooms({
       }
     };
     const onError = (payload: ErrorEnvelope) => setError(payload.message);
+    const onCatalog = (payload: { implemented: VaultGuideEntry[] }) =>
+      setVaultCatalog(payload.implemented);
     socket.on("rooms:list:return", onList);
     socket.on("rooms:create:return", onCreate);
     socket.on("error", onError);
+    socket.on("vault:catalog:return", onCatalog);
     socket.emit("rooms:list");
     return () => {
       socket.off("rooms:list:return", onList);
       socket.off("rooms:create:return", onCreate);
       socket.off("error", onError);
+      socket.off("vault:catalog:return", onCatalog);
     };
   }, [socket, goLobby]);
 
   const refresh = () => socket?.emit("rooms:list");
+
+  const openVaultGuide = () => {
+    if (!vaultCatalog && socket) {
+      socket.emit("vault:catalog:get");
+    }
+    setVaultGuideOpen(true);
+  };
 
   const createRoom = () => {
     const trimmed = roomName.trim();
@@ -391,6 +412,7 @@ export function Rooms({
                     { label: "Wins", value: profile.wins },
                     { label: "Games", value: profile.gamesPlayed },
                     { label: "Vaults", value: profile.vaultCardsUsed },
+                    { label: "Coins", value: profile.coins ?? 0 },
                   ].map((stat) => (
                     <div key={stat.label} style={{ flex: 1, textAlign: "center" }}>
                       <div
@@ -430,6 +452,51 @@ export function Rooms({
                     {email}
                   </div>
                 ) : null}
+                {(() => {
+                  const cb = getShopItem(profile.equippedCardBack ?? "cb-default");
+                  const bg = getShopItem(profile.equippedBackground ?? "bg-default");
+                  if (!cb && !bg) return null;
+                  return (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {cb ? (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: "rgba(0,238,255,0.55)",
+                            background: "rgba(0,238,255,0.06)",
+                            border: "1px solid rgba(0,238,255,0.15)",
+                            borderRadius: 5,
+                            padding: "2px 8px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          {cb.preview} {cb.name}
+                        </span>
+                      ) : null}
+                      {bg ? (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: "rgba(0,238,255,0.55)",
+                            background: "rgba(0,238,255,0.06)",
+                            border: "1px solid rgba(0,238,255,0.15)",
+                            borderRadius: 5,
+                            padding: "2px 8px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          {bg.preview} {bg.name}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })()}
                 <Button variant="outline" size="sm" onClick={onEditProfile}>
                   EDIT PROFILE
                 </Button>
@@ -448,6 +515,36 @@ export function Rooms({
                     ? `Your profile couldn't be loaded from Firebase: ${profileError}`
                     : "Sign in with Google to build your profile, earn rank points and track your wins."}
                 </p>
+                {guest && signInGoogle ? (
+                  <button
+                    onClick={signInGoogle}
+                    style={{
+                      marginTop: 8,
+                      width: "100%",
+                      background: "rgba(66,133,244,0.08)",
+                      border: "1px solid rgba(66,133,244,0.35)",
+                      borderRadius: 7,
+                      padding: "9px 0",
+                      fontFamily: "'Rajdhani'",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      letterSpacing: "0.16em",
+                      color: "rgba(66,133,244,0.9)",
+                      cursor: "pointer",
+                      transition: "background 0.14s, box-shadow 0.14s",
+                    }}
+                    onMouseEnter={(event) => {
+                      event.currentTarget.style.background = "rgba(66,133,244,0.16)";
+                      event.currentTarget.style.boxShadow = "0 0 16px rgba(66,133,244,0.25)";
+                    }}
+                    onMouseLeave={(event) => {
+                      event.currentTarget.style.background = "rgba(66,133,244,0.08)";
+                      event.currentTarget.style.boxShadow = "none";
+                    }}
+                  >
+                    SIGN IN WITH GOOGLE
+                  </button>
+                ) : null}
               </>
             )}
           </div>
@@ -545,6 +642,60 @@ export function Rooms({
               {"\u2728"} WHAT'S NEW
             </button>
             <button
+              onClick={openVaultGuide}
+              style={{
+                width: "100%",
+                background: "rgba(0,238,255,0.05)",
+                border: "1px solid rgba(0,238,255,0.25)",
+                borderRadius: 7,
+                padding: "9px 0",
+                fontFamily: "'Rajdhani'",
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: "0.2em",
+                color: "rgba(0,238,255,0.75)",
+                cursor: "pointer",
+                transition: "background 0.14s, box-shadow 0.14s",
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.background = "rgba(0,238,255,0.12)";
+                event.currentTarget.style.boxShadow = "0 0 16px rgba(0,238,255,0.25)";
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.background = "rgba(0,238,255,0.05)";
+                event.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              VAULT GUIDE
+            </button>
+            <button
+              onClick={goShop}
+              style={{
+                width: "100%",
+                background: "rgba(255,204,0,0.05)",
+                border: "1px solid rgba(255,204,0,0.25)",
+                borderRadius: 7,
+                padding: "9px 0",
+                fontFamily: "'Rajdhani'",
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: "0.2em",
+                color: "rgba(255,204,0,0.75)",
+                cursor: "pointer",
+                transition: "background 0.14s, box-shadow 0.14s",
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.background = "rgba(255,204,0,0.12)";
+                event.currentTarget.style.boxShadow = "0 0 16px rgba(255,204,0,0.25)";
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.background = "rgba(255,204,0,0.05)";
+                event.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              {"\u{1FA99}"} ITEM SHOP
+            </button>
+            <button
               onClick={onLeaderboard}
               style={{
                 width: "100%",
@@ -582,6 +733,9 @@ export function Rooms({
             setUpdatesOpen(false);
           }}
         />
+      ) : null}
+      {vaultGuideOpen && vaultCatalog ? (
+        <VaultGuide entries={vaultCatalog} onClose={() => setVaultGuideOpen(false)} />
       ) : null}
       {createOpen ? (
         <div

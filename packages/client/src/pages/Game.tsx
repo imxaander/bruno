@@ -7,7 +7,8 @@ import type {
   PlayerView,
   VaultGuideEntry,
 } from "@bruno/shared";
-import { getCard, getMayhemEvent } from "@bruno/shared";
+import { getCard, getMayhemEvent, type PlayerProfile } from "@bruno/shared";
+import { BACKGROUND_THEMES, DEFAULT_BACKGROUND } from "../components/backgrounds.js";
 import { Button } from "../components/Button.js";
 import GameCard from "../components/GameCard.js";
 import { Seat } from "../components/Seat.js";
@@ -48,6 +49,7 @@ interface GameProps {
   onEnded: (payload: GameEndedPayload) => void;
   reconnecting?: boolean;
   onLeaderboard: () => void;
+  profile?: PlayerProfile | null;
 }
 
 // Fixed seat positions for the 8-player ring (clockwise from bottom-left).
@@ -70,6 +72,7 @@ export function Game({
   onEnded,
   reconnecting,
   onLeaderboard,
+  profile,
 }: GameProps) {
   const [view, setView] = useState<PlayerView | null>(null);
   const [log, setLog] = useState<string[]>([]);
@@ -444,9 +447,10 @@ export function Game({
   const isRing = view.playerCount > 4;
 
   const theme = locationRevealData?.theme;
-  const pageBackground = theme
-    ? `${theme.page}, ${theme.background}`
-    : "radial-gradient(ellipse at 50% 40%, #0c0c1a 0%, #080810 60%, #060610 100%)";
+  const bgTheme =
+    BACKGROUND_THEMES[profile?.equippedBackground ?? DEFAULT_BACKGROUND] ??
+    BACKGROUND_THEMES[DEFAULT_BACKGROUND]!;
+  const pageBackground = theme ? `${theme.page}, ${theme.background}` : bgTheme.page;
 
   const header = (
     <div
@@ -497,7 +501,16 @@ export function Game({
           {view.playerCount}P
         </span>
       </div>
-      <div style={{ flex: 1 }} />
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {view.startedAt ? <GameTimer startedAt={view.startedAt} /> : null}
+      </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 8 }}>
         <div
           style={{
@@ -677,7 +690,6 @@ export function Game({
   const board = isRing ? (
     <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
       <TurnIndicator myTurn={myTurn} />
-      {view.startedAt ? <GameTimer startedAt={view.startedAt} /> : null}
       <div
         style={{
           position: "absolute",
@@ -726,6 +738,8 @@ export function Game({
           pileEffect={view.pileEffect}
           fleetingPileTop={view.fleetingPileTop}
           direction={view.currentDirection}
+          deckCardBack={profile?.equippedCardBack}
+          tableBackground={theme ? undefined : bgTheme.table}
         />
       </div>
 
@@ -826,6 +840,8 @@ export function Game({
           pileEffect={view.pileEffect}
           fleetingPileTop={view.fleetingPileTop}
           direction={view.currentDirection}
+          deckCardBack={profile?.equippedCardBack}
+          tableBackground={theme ? undefined : bgTheme.table}
         />
         <div style={{ position: "absolute", right: 60, top: "50%", transform: "translateY(-50%)" }}>
           {timerControls}
@@ -929,6 +945,7 @@ export function Game({
           targets={drawTargets}
           playerOrder={view.players.map((player) => player.id)}
           myId={identity.id}
+          players={view.players}
         />
       ) : null}
       {(view.revealed ?? []).length > 0 && prompt?.kind !== "pick-cards" ? (

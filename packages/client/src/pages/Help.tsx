@@ -5,6 +5,7 @@ import { PageHeader } from "../components/PageHeader.js";
 interface HelpProps {
   goHome: () => void;
   goRanks: () => void;
+  goRooms: () => void;
 }
 
 const FONT_DISPLAY = "'Barlow Condensed', sans-serif";
@@ -133,7 +134,7 @@ const VAULT_TIERS = [
   },
 ];
 
-export function Help({ goHome, goRanks }: HelpProps) {
+export function Help({ goHome, goRanks, goRooms }: HelpProps) {
   return (
     <div
       style={{
@@ -145,7 +146,7 @@ export function Help({ goHome, goRanks }: HelpProps) {
         flexDirection: "column",
       }}
     >
-      <PageHeader label="HOW TO PLAY" />
+      <PageHeader label="HOW TO PLAY" onLogoClick={goRooms} />
 
       <div
         style={{

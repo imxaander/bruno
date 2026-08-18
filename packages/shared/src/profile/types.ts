@@ -7,8 +7,20 @@ export interface PlayerProfile {
   points: number;
   gamesPlayed: number;
   vaultCardsUsed: number;
+  coins: number;
+  inventory: InventoryItem[];
+  equippedCardBack: string;
+  equippedBackground: string;
+  lastLoginDate: string;
+  dailyStreak: number;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface InventoryItem {
+  id: string;
+  type: "card-back" | "background";
+  purchasedAt: number;
 }
 
 /** A single rank tier (e.g., "Bronze 3", "Gold 1"). */
@@ -138,4 +150,89 @@ export function calculatePointChanges(
   }
 
   return changes;
+}
+
+/** Coin reward for game end. */
+export interface CoinChange {
+  uid: string;
+  placement: number;
+  vaultBonus: number;
+  bonus: number;
+  total: number;
+}
+
+/**
+ * Calculate coins earned for each player after a game.
+ * - Winner: +20
+ * - Best loser: +8
+ * - Worst loser: +2
+ * - Middle pack: +5
+ * - +1 per vault card used
+ */
+export function calculateCoins(
+  players: {
+    uid: string | null;
+    isWinner: boolean;
+    cardsRemaining: number;
+    vaultCardsUsed: number;
+  }[],
+): CoinChange[] {
+  const losers = players.filter((p) => !p.isWinner);
+  const minCards = losers.length > 0 ? Math.min(...losers.map((p) => p.cardsRemaining)) : 0;
+  const maxCards = losers.length > 0 ? Math.max(...losers.map((p) => p.cardsRemaining)) : 0;
+
+  const changes: CoinChange[] = [];
+
+  for (const player of players) {
+    if (!player.uid) continue;
+
+    let placement = 0;
+    if (player.isWinner) {
+      placement = 20;
+    } else if (player.cardsRemaining === minCards && losers.length > 1) {
+      placement = 8;
+    } else if (player.cardsRemaining === maxCards && losers.length > 1) {
+      placement = 2;
+    } else {
+      placement = 5;
+    }
+
+    const vaultBonus = player.vaultCardsUsed;
+    const bonus = player.isWinner && player.cardsRemaining === 0 ? 10 : 0;
+
+    changes.push({
+      uid: player.uid,
+      placement,
+      vaultBonus,
+      bonus,
+      total: placement + vaultBonus + bonus,
+    });
+  }
+
+  return changes;
+}
+
+/** Daily login reward tiers. Returns coins for the given streak day. */
+export function dailyLoginReward(streak: number): number {
+  if (streak <= 1) return 5;
+  if (streak === 2) return 8;
+  if (streak === 3) return 12;
+  return 15;
+}
+
+/** Returns today's date as "YYYY-MM-DD" in UTC. */
+export function todayDateString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Compute the new daily streak given the last login date. */
+export function computeDailyStreak(lastLoginDate: string, today: string): number {
+  if (!lastLoginDate) return 1;
+  const last = new Date(lastLoginDate + "T00:00:00Z");
+  const now = new Date(today + "T00:00:00Z");
+  const diffMs = now.getTime() - last.getTime();
+  const diffDays = Math.round(diffMs / 86_400_000);
+  if (diffDays <= 0) return 0; // already claimed today
+  if (diffDays === 1) return -1; // consecutive (caller increments)
+  return 1; // streak broken, restart at 1
 }

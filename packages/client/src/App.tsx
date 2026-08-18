@@ -9,6 +9,7 @@ import {
 import { AuthProvider, useAuth } from "./firebase/AuthProvider.js";
 import { ProfileModal } from "./firebase/ProfileModal.js";
 import { LeaderboardModal } from "./components/modals.js";
+import { DailyReward } from "./components/DailyReward.js";
 import { AfterGame } from "./pages/AfterGame.js";
 import { Game } from "./pages/Game.js";
 import { Help } from "./pages/Help.js";
@@ -16,13 +17,23 @@ import { Home } from "./pages/Home.js";
 import { Lobby } from "./pages/Lobby.js";
 import { Ranks } from "./pages/Ranks.js";
 import { Rooms } from "./pages/Rooms.js";
+import { ShopPage } from "./pages/Shop.js";
 
-type Screen = "home" | "rooms" | "lobby" | "game" | "aftergame" | "ranks" | "help";
+type Screen = "home" | "rooms" | "lobby" | "game" | "aftergame" | "ranks" | "help" | "shop";
 
 function AppContent() {
   const { socket, identity, saveIdentity, setRoomId: setSocketRoomId, reconnecting } = useSocket();
-  const { profile, rank, user, profileError, displayName, guest, available, refreshProfile } =
-    useAuth();
+  const {
+    profile,
+    rank,
+    user,
+    profileError,
+    displayName,
+    guest,
+    available,
+    refreshProfile,
+    signInGoogle,
+  } = useAuth();
   const [screen, setScreen] = useState<Screen>(() => (readSavedGame() ? "game" : "home"));
   const [roomId, setRoomId] = useState<string | null>(() => readSavedGame());
   const [roomName, setRoomName] = useState("");
@@ -31,6 +42,8 @@ function AppContent() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null);
+  const [dailyRewardOpen, setDailyRewardOpen] = useState(false);
+  const [dailyClaimed, setDailyClaimed] = useState(false);
   const pendingRejoin = useRef(!!readSavedGame());
 
   useEffect(() => {
@@ -67,6 +80,19 @@ function AppContent() {
   }, [socket, screen, setSocketRoomId]);
 
   const isSignedIn = available && !!user && !guest;
+
+  // Trigger daily reward prompt once for signed-in users per session.
+  useEffect(() => {
+    if (isSignedIn && !dailyClaimed && screen !== "home" && screen !== "game") {
+      setDailyRewardOpen(true);
+      setDailyClaimed(true);
+    }
+  }, [isSignedIn, dailyClaimed, screen]);
+
+  const handleDailyClose = useCallback(() => {
+    setDailyRewardOpen(false);
+    void refreshProfile();
+  }, [refreshProfile]);
   // Signed-in players are the Firebase uid + their profile username; guests keep
   // the locally stored guest handle. Never clobber the guest identity with the
   // signed-in name so it survives sign-out.
@@ -97,6 +123,10 @@ function AppContent() {
   const goHelp = useCallback(() => {
     setEnded(null);
     setScreen("help");
+  }, []);
+  const goShop = useCallback(() => {
+    setEnded(null);
+    setScreen("shop");
   }, []);
   const goLobby = useCallback(
     (gameId: string, name: string, roomMaxPlayers = 8) => {
@@ -161,10 +191,10 @@ function AppContent() {
       );
     }
     if (screen === "ranks") {
-      return <Ranks goHome={goHome} goHelp={goHelp} />;
+      return <Ranks goHome={goHome} goHelp={goHelp} goRooms={goRooms} />;
     }
     if (screen === "help") {
-      return <Help goHome={goHome} goRanks={goRanks} />;
+      return <Help goHome={goHome} goRanks={goRanks} goRooms={goRooms} />;
     }
     if (screen === "rooms") {
       return (
@@ -174,12 +204,15 @@ function AppContent() {
           goLobby={goLobby}
           goRanks={goRanks}
           goHelp={goHelp}
+          goShop={goShop}
           profile={profile}
           rank={rank}
           email={user?.email ?? null}
           profileError={profileError}
           onEditProfile={handleProfileClick}
           onLeaderboard={openLeaderboard}
+          guest={guest}
+          signInGoogle={signInGoogle}
         />
       );
     }
@@ -206,6 +239,17 @@ function AppContent() {
           onEnded={handleEnded}
           reconnecting={reconnecting}
           onLeaderboard={openLeaderboard}
+          profile={profile}
+        />
+      );
+    }
+    if (screen === "shop" && profile && socket) {
+      return (
+        <ShopPage
+          socket={socket}
+          profile={profile}
+          goRooms={goRooms}
+          refreshProfile={refreshProfile}
         />
       );
     }
@@ -239,6 +283,9 @@ function AppContent() {
           myUid={user?.uid ?? null}
           onClose={() => setLeaderboardOpen(false)}
         />
+      ) : null}
+      {dailyRewardOpen && socket ? (
+        <DailyReward socket={socket} onClose={handleDailyClose} />
       ) : null}
     </>
   );

@@ -1,8 +1,9 @@
 interface PageHeaderProps {
   label?: string;
+  onLogoClick?: () => void;
 }
 
-export function PageHeader({ label }: PageHeaderProps) {
+export function PageHeader({ label, onLogoClick }: PageHeaderProps) {
   return (
     <div
       style={{
@@ -17,6 +18,7 @@ export function PageHeader({ label }: PageHeaderProps) {
       }}
     >
       <span
+        onClick={onLogoClick}
         style={{
           fontFamily: "'Barlow Condensed'",
           fontWeight: 900,
@@ -24,6 +26,14 @@ export function PageHeader({ label }: PageHeaderProps) {
           color: "#00eeff",
           textShadow: "0 0 16px rgba(0,238,255,0.7)",
           letterSpacing: "0.06em",
+          cursor: onLogoClick ? "pointer" : undefined,
+          transition: "opacity 0.15s",
+        }}
+        onMouseEnter={(e) => {
+          if (onLogoClick) e.currentTarget.style.opacity = "0.7";
+        }}
+        onMouseLeave={(e) => {
+          if (onLogoClick) e.currentTarget.style.opacity = "1";
         }}
       >
         BRUNO

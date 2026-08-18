@@ -5,11 +5,25 @@ export interface UpdateEntry {
   bullets: string[];
 }
 
-export const UPDATES_LATEST_VERSION = "0.7.0";
+export const UPDATES_LATEST_VERSION = "0.8.0";
 
 export const UPDATES_STORAGE_KEY = "bruno_updates_seen";
 
 export const CHANGELOG: UpdateEntry[] = [
+  {
+    version: "0.8.0",
+    date: "2026-08-18",
+    title: "Item shop, coin rewards & cosmetic skins",
+    bullets: [
+      "Item shop — spend coins on card backs and table backgrounds, then equip them from the shop.",
+      "Coin rewards — earn coins every game (winner +20, best loser +8, middle +5, vault bonuses).",
+      "Daily login streak — sign in each day for a growing coin bonus (up to +15 per day).",
+      "Your equipped card back shows on the deck, your seat fan, and flying draw cards.",
+      "Your equipped background themes the game table and page while you play.",
+      "Opponent seats show each player's own card back — everyone's cosmetics are visible.",
+      "Rooms profile card displays your currently equipped card back and background.",
+    ],
+  },
   {
     version: "0.7.0",
     date: "2026-08-17",
